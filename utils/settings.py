@@ -16,8 +16,6 @@ class Settings:
         - local file (default path: ./settings.yaml)
         - environment variables
         - arguments of the command line (with "--" in front)
-
-    TODO create a parent class to wrap all the logic
     """
 
     # Name of the run to save the result ('tmp' for temporary files)
@@ -45,7 +43,7 @@ class Settings:
     test_point_per_class: int = 200
 
     # ========================= Training settings =========================
-    seed: int = 42  # FIXME allow to set is as None from args or settings file
+    seed: int = 42
     device: str = 'auto'
     learning_rate: float = 0.001
     momentum: float = 0.9
@@ -56,8 +54,6 @@ class Settings:
         """
         Validate settings.
         """
-        # TODO automatically check type based on type hint
-        # TODO check if run_name have valid character for a file
         possible_log_levels = ('CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET')
         assert self.logger_console_level.upper() in possible_log_levels or isinstance(self.logger_console_level, int), \
             f"Invalid console log level '{self.logger_console_level}'"
@@ -69,7 +65,6 @@ class Settings:
         assert self.train_point_per_class > 0, 'At least one training point is required'
         assert self.test_point_per_class > 0, 'At least one testing point is required'
 
-        # TODO should also accept "cuda:1" format
         assert self.device in ('auto', 'cpu', 'cuda'), f'Not valid torch device name: {self.device}'
         assert self.batch_size > 0, 'Batch size should be a positive integer'
         assert self.nb_epoch > 0, 'Number of epoch should be at least 1'
@@ -108,7 +103,6 @@ class Settings:
                        help='path to custom configuration file')
 
         # Create argument for each attribute of this class
-        # TODO create automatic helper with doc string or annotation
         for name, value in asdict(self).items():
             p.add_argument(f'--{name.replace("_", "-")}',
                            f'--{name}',
@@ -116,7 +110,6 @@ class Settings:
                            required=False,
                            type=str_to_bool if type(value) == bool else type(value))
 
-        # TODO deal with unknown arguments with a warning
         # Load arguments form file, environment and command line to override the defaults
         for name, value in vars(p.parse_args()).items():
             if name == 'settings':

@@ -5,10 +5,6 @@ from utils.settings import settings
 
 
 def start_planner(runs_planner: BasePlanner, skip_validation: bool = False):
-    # TODO add train once option
-    # TODO skip existing runs names
-    # TODO add loading bar
-    # TODO number of errors before to stop (and deal with user stop)
 
     # Typical settings override for planner runs
     settings.run_name = None  # The name should be override during the runs

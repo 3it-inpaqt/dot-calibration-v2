@@ -28,8 +28,6 @@ def init_out_directory() -> None:
     Prepare the output directory.
     """
 
-    # TODO check if the name is valid for file path
-
     # Skip saving if the name of the run is not set
     if not settings.run_name:
         logger.warning('Nothing will be saved because the name of the run is not set. '
@@ -197,8 +195,6 @@ def load_network(network: Module, file_path: Union[str, Path]) -> bool:
     :return: True if the file exist and is loaded, False if the file is not found.
     """
 
-    # TODO move this function as the network method
-
     cache_path = Path(file_path) if isinstance(file_path, str) else file_path
     if cache_path.is_file():
         network.load_state_dict(torch.load(cache_path))
@@ -235,7 +231,6 @@ def load_runs(pattern: str) -> pd.DataFrame:
     :param pattern: The pattern to filter runs
     :return: A dataframe containing all information, with the columns as "file.key"
     """
-    # TODO accept a list of patterns
     data = []
 
     runs_dir = Path(OUT_DIR)
@@ -244,5 +239,4 @@ def load_runs(pattern: str) -> pd.DataFrame:
 
     logger.info(f'{len(data)} run(s) loaded with the pattern "{runs_dir}/{pattern}"')
 
-    # TODO remove columns where nothing change and return them as a vector
     return pd.DataFrame(data)

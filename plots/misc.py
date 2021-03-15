@@ -68,13 +68,9 @@ def plot_confusion_matrix(nb_labels_predictions: np.ndarray, class_names: List[s
     :param annotations: If true the accuracy will be written in every cell
     """
 
-    # TODO add info columns as Supplementary Table 1 of
-    #  https://static-content.springer.com/esm/art%3A10.1038%2Fs41467-018-04484-2/MediaObjects/41467_2018_4484_MOESM1_ESM.pdf
-
     overall_accuracy = nb_labels_predictions.trace() / nb_labels_predictions.sum()
     rate_labels_predictions = nb_labels_predictions / nb_labels_predictions.sum(axis=1).reshape((-1, 1))
 
-    # TODO dynamic font size
     sns.heatmap(rate_labels_predictions,
                 vmin=0,
                 vmax=1,

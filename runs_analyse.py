@@ -3,7 +3,6 @@ import seaborn as sns
 
 from utils.output import load_runs, set_plot_style
 
-# TODO create a notebook to compare several runs
 if __name__ == '__main__':
     # Set plot style
     set_plot_style()

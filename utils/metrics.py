@@ -8,7 +8,6 @@ from utils.logger import logger
 from utils.output import save_network_info
 
 
-# TODO plot the network topology
 def network_metrics(network: Module, input_dim: List, device: Optional[torch.device],
                     save_output: bool = True) -> dict:
     """
@@ -20,7 +19,6 @@ def network_metrics(network: Module, input_dim: List, device: Optional[torch.dev
     :param save_output: If true the metrics will be saved in a text file in the run directory
     :return: A dictionary of metrics with their values
     """
-    # TODO check input info arguments
     network_info = summary(network, input_size=input_dim, device=device, verbose=0)
 
     logger.debug('Network info:\n' + str(network_info))
@@ -36,8 +34,6 @@ def network_metrics(network: Module, input_dim: List, device: Optional[torch.dev
         'MAC_operations': network_info.total_mult_adds,
         'input_dimension': input_dim
     }
-    # TODO add layers info
-    # TODO add number of bytes
 
     if save_output:
         save_network_info(metrics)

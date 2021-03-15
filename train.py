@@ -66,12 +66,9 @@ def train(network: Module, train_dataset: Dataset, test_dataset: Dataset, device
                 loss = network.training_step(inputs, labels)
                 progress.update(loss=loss)
                 loss_evolution.append(float(loss))
-                # TODO Log progress and loss based on time interval in debug
 
             # Epoch statistics
             _record_epoch_stats(epochs_stats, loss_evolution[-len(train_loader):])
-
-    # TODO clear memory after the run (stuck in GPU), for train and test
 
     if len(accuracy_evolution) == 0:
         save_results(epochs_stats=epochs_stats)
@@ -103,7 +100,6 @@ def _checkpoint(network: Module, batch_num: int, train_dataset: Dataset, test_da
     # Save the current network
     if settings.checkpoint_save_network:
         save_network(network, f'{batch_num:n}_checkpoint_network')
-        # TODO add a setting to save the network only if the accuracy is improved
 
     # Start tests
     if settings.checkpoint_test_size > 0:

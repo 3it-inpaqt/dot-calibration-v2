@@ -6,9 +6,7 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-# TODO add a setup.py file
 def main():
-    # TODO move all of this in run
     # Prepare the environment
     preparation()
 
@@ -33,7 +31,6 @@ def main():
         raise  # Let it go to stop the runs planner if needed
     except Exception:
         logger.critical('Run interrupted by an unexpected error.', exc_info=True)
-        # TODO deal with this error in runs planner (eg. stop after a count)
     finally:
         # Clean up the environment, ready for a new run
         clean_up()
