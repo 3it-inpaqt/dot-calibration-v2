@@ -3,17 +3,16 @@ from pathlib import Path
 from typing import List, Tuple, Union
 from zipfile import ZipFile
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import torch
 from shapely.geometry import LineString
 from torch.utils.data import Dataset
 from typing.io import IO
 
+from classes.diagram import Diagram
+from utils.logger import logger
 from utils.miscs import clip
-from utils.output import save_plot
 
 DATA_DIR = Path('data')
 
@@ -23,15 +22,18 @@ class QDSD(Dataset):
     Quantum Dots Stability Diagrams (QDSD) dataset.
     """
 
-    def __init__(self, patch_size: Tuple[int, int] = (5, 5), overlap: Tuple[int, int] = (0, 0)):
+    def __init__(self, test: bool = False, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0)):
         """
         Create the dataset.
 
+        :param test: If True load the testing data
         :param patch_size: The size in pixel (x, y) of the patch to process (sub-area of the stability diagram)
+        :param overlap: The overlapping size in pixel (x, y) of the patch
         """
 
-        # Stored as an array of tuples as: (file_basename, x, y, values)
         self._diagrams = []
+        self._patches = []
+        self._patches_labels = []
 
         # Open the file containing transition line annotations as a dataframe
         lines_annotations_df = pd.read_csv(Path(DATA_DIR, 'transition_lines.csv'),
@@ -45,18 +47,25 @@ class QDSD(Dataset):
                 with zip_file.open(diagram_name) as diagram_file:
                     # Load values from CSV file
                     x, y, values = QDSD._load_interpolated_csv(gzip.open(diagram_file))
-                    self._diagrams.append((file_basename, x, y, values))
 
                     transition_lines = QDSD._load_lines_annotations(lines_annotations_df, f'{file_basename}.png', x, y,
                                                                     snap=1)
 
-                    plot_image(x, y, values, file_basename, 'nearest', x[1] - x[0], charge_regions, transition_lines)
+                    diagram = Diagram(file_basename, x, y, values, transition_lines)
+                    self._diagrams.append(diagram)
+                    diagram.plot()
+
+        # Cut diagram into patches
+        for diagram in self._diagrams:
+            self._patches.extend(diagram.get_patches(patch_size, overlap))
+
+        logger.debug(f'{len(self._patches)} patches loaded from {len(self._diagrams)} diagrams')
 
     def __len__(self):
-        return len(self._labels)
+        return len(self._patches)
 
     def __getitem__(self, index):
-        return self._features[index], self._labels[index]
+        return self._patches[index], self._patches_labels[index]
 
     def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
            copy: bool = False):
@@ -66,19 +75,10 @@ class QDSD(Dataset):
         The arguments correspond to the torch tensor "to" signature.
         See https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to.
         """
-        self._features = self._features.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
-        self._labels = self._labels.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
-
-    def show_plot(self) -> None:
-        """
-        Create a plot that represent the dataset and show it.
-        """
-        sns.scatterplot(x=self._features[:, 0],
-                        y=self._features[:, 1],
-                        hue=self._labels,
-                        markers=True)
-        plt.title(f'Data from {self._nb_classes} classes')
-        save_plot('mock_dataset')
+        # TODO
+        # self._features = self._features.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
+        # self._labels = self._labels.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
+        pass
 
     @staticmethod
     def _load_interpolated_csv(file_path: Union[IO, str, Path]) -> Tuple:
@@ -103,7 +103,7 @@ class QDSD(Dataset):
         return x, y, values
 
     @staticmethod
-    def _load_lines_annotations(lines_annotations_df, image_name: str, x, y, snap: int = 1):
+    def _load_lines_annotations(lines_annotations_df, image_name: str, x, y, snap: int = 1) -> List[LineString]:
         """
         Load transition line annotations for an image.
 

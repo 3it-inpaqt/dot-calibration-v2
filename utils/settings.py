@@ -38,9 +38,10 @@ class Settings:
     checkpoint_save_network: bool = False
 
     # ============================== Dataset ==============================
-    nb_classes: int = 4
-    train_point_per_class: int = 500
-    test_point_per_class: int = 200
+    patch_size_x: int = 10
+    patch_size_y: int = 10
+    patch_overlap_x: int = 5
+    patch_overlap_y: int = 5
 
     # ========================= Training settings =========================
     seed: int = 42
@@ -61,9 +62,12 @@ class Settings:
             f"Invalid file log level '{self.logger_file_level}'"
 
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'
-        assert self.nb_classes > 0, 'At least one class is required'
-        assert self.train_point_per_class > 0, 'At least one training point is required'
-        assert self.test_point_per_class > 0, 'At least one testing point is required'
+        assert self.patch_size_x > 0, 'Patch size should be higher than 0'
+        assert self.patch_size_y > 0, 'Patch size should be higher than 0'
+        assert self.patch_overlap_x >= 0, 'Patch overlapping should be 0 or more'
+        assert self.patch_overlap_y >= 0, 'Patch overlapping should be 0 or more'
+        assert self.patch_overlap_x < self.patch_size_x, 'Patch overlapping should be lower than the patch size'
+        assert self.patch_overlap_y < self.patch_size_y, 'Patch overlapping should be lower than the patch size'
 
         assert self.device in ('auto', 'cpu', 'cuda'), f'Not valid torch device name: {self.device}'
         assert self.batch_size > 0, 'Batch size should be a positive integer'

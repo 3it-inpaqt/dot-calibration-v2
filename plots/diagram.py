@@ -15,9 +15,9 @@ REGION_SHORT = {
 }
 
 
-def plot_image(x_i, y_i, pixels, image_name: str, interpolation_method: str, pixel_size: float,
-               charge_regions: Iterable[Tuple[str, Polygon]] = None, transition_lines: Iterable[LineString] = None,
-               focus_area: Optional[Tuple] = None) -> None:
+def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, pixel_size: float,
+                 charge_regions: Iterable[Tuple[str, Polygon]] = None, transition_lines: Iterable[LineString] = None,
+                 focus_area: Optional[Tuple] = None) -> None:
     """
     Plot the interpolated image.
 

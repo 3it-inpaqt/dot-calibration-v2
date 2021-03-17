@@ -1,4 +1,4 @@
-from datasets.mock_classification_dataset import MockClassificationDataset
+from datasets.qdsd import QDSD
 from networks.simple_classifier import SimpleClassifier
 from run import clean_up, preparation, run
 from utils.logger import logger
@@ -15,14 +15,15 @@ def main():
     try:
         with SectionTimer('datasets loading', 'debug'):
             # Load the training dataset
-            train_set = MockClassificationDataset(settings.nb_classes, settings.train_point_per_class)
-            train_set.show_plot()  # Plot and show the data
+            train_set = QDSD(test=False, patch_size=(settings.patch_size_x, settings.patch_size_y),
+                             overlap=(settings.patch_overlap_x, settings.patch_overlap_y))
 
             # Load test testing dataset
-            test_set = MockClassificationDataset(settings.nb_classes, settings.test_point_per_class)
+            test_set = QDSD(test=True, patch_size=(settings.patch_size_x, settings.patch_size_y),
+                            overlap=(settings.patch_overlap_x, settings.patch_overlap_y))
 
         # Build the network
-        net = SimpleClassifier(input_size=2, nb_classes=len(train_set.classes))
+        net = SimpleClassifier(input_size=100, nb_classes=2)
 
         # Run the training and the test
         run(train_set, test_set, net)
