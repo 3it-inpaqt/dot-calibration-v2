@@ -14,6 +14,7 @@ from typing.io import IO
 from classes.diagram import Diagram
 from utils.logger import logger
 from utils.miscs import clip
+from utils.output import save_results
 
 DATA_DIR = Path('data')
 
@@ -24,20 +25,23 @@ class QDSDLines(Dataset):
     Transition line classification task.
     """
 
-    def __init__(self, patches: List[Tuple]):
+    def __init__(self, patches: List[Tuple], role: str):
         """
         Create a dataset of transition lines patches.
         Should be build with QDSDLines.build_split_datasets.
 
         :param patches: The list of patches as (2D array of values, labels as boolean)
+        :param role: The role of this dataset ("train" or "test" or "validation")
         """
+
+        self.role = role
 
         # Get patches and their labels (using ninja unzip)
         self._patches, self._patches_labels = zip(*patches)
 
         # Convert to torch tensor
         self._patches = torch.Tensor(self._patches)
-        self._patches_labels = torch.Tensor(self._patches_labels)
+        self._patches_labels = torch.Tensor(self._patches_labels).bool()
 
     def __len__(self):
         return len(self._patches)
@@ -56,6 +60,18 @@ class QDSDLines(Dataset):
         self._patches = self._patches.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
         self._patches_labels = self._patches_labels.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
 
+    def get_stats(self) -> dict:
+        """
+        :return: Some statistics about this dataset
+        """
+        nb_patche = len(self)
+        nb_line = torch.sum(self._patches_labels)
+        return {
+            f'{self.role}_dataset_size': nb_patche,
+            f'{self.role}_dataset_nb_line': nb_line,
+            f'{self.role}_dataset_nb_noline': nb_patche - nb_line,
+        }
+
     @staticmethod
     def build_split_datasets(test_ratio: float, validation_ratio: float = 0, patch_size: Tuple[int, int] = (10, 10),
                              overlap: Tuple[int, int] = (0, 0)) -> Tuple["QDSDLines", ...]:
@@ -67,7 +83,7 @@ class QDSDLines(Dataset):
         :param validation_ratio: The ratio of patches reserved for validation data (ignored if 0)
         :param patch_size: The size in pixel (x, y) of the patch to process (sub-area of the stability diagram)
         :param overlap: The overlapping size in pixel (x, y) of the patch
-        :return A tuple of dataset: (train, test, validation) or (train, test) if validation_ratio is 0
+        :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
         patches = []
         # Open the file containing transition line annotations as a dataframe
@@ -94,26 +110,37 @@ class QDSDLines(Dataset):
                     patches.extend(diagram.get_patches(patch_size, overlap))
 
         nb_patches = len(patches)
-        logger.debug(f'{nb_patches} patches loaded from {nb_diagram} diagrams')
+        logger.info(f'{nb_patches} patches loaded from {nb_diagram} diagrams')
 
         # Shuffle patches before to split them into different the datasets
         shuffle(patches)
 
         test_index = round(nb_patches * test_ratio)
-        test_set = QDSDLines(patches[:test_index])
+        test_set = QDSDLines(patches[:test_index], 'test')
 
         # With validation dataset
         if validation_ratio != 0:
             valid_index = test_index + round(nb_patches * validation_ratio)
-            valid_set = QDSDLines(patches[test_index:valid_index])
-            train_set = QDSDLines(patches[valid_index:])
+            valid_set = QDSDLines(patches[test_index:valid_index], 'validation')
+            train_set = QDSDLines(patches[valid_index:], 'train')
 
-            return train_set, test_set, valid_set
+            datasets = (train_set, test_set, valid_set)
 
         # No validation dataset
-        train_set = QDSDLines(patches[test_index:])
+        else:
+            train_set = QDSDLines(patches[test_index:], 'train')
 
-        return train_set, test_set
+            datasets = (train_set, test_set)
+
+        # Print and save stats about datasets
+        stats = {}
+        for dataset in datasets:
+            stats.update(dataset.get_stats())
+
+        logger.debug('Dataset:' + ''.join([f'\n\t{key}: {value}' for key, value in stats.items()]))
+        save_results(**stats)
+
+        return datasets
 
     @staticmethod
     def _load_interpolated_csv(file_path: Union[IO, str, Path]) -> Tuple:
