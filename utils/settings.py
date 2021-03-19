@@ -42,6 +42,8 @@ class Settings:
     patch_size_y: int = 10
     patch_overlap_x: int = 5
     patch_overlap_y: int = 5
+    test_ratio: float = 0.2
+    validation_ratio: float = 0  # 0 to disable validation
 
     # ========================= Training settings =========================
     seed: int = 42
@@ -68,6 +70,8 @@ class Settings:
         assert self.patch_overlap_y >= 0, 'Patch overlapping should be 0 or more'
         assert self.patch_overlap_x < self.patch_size_x, 'Patch overlapping should be lower than the patch size'
         assert self.patch_overlap_y < self.patch_size_y, 'Patch overlapping should be lower than the patch size'
+        assert self.test_ratio + self.validation_ratio < 1, 'test_ratio + validation_ratio should be less than 0 to' \
+                                                            ' have training data'
 
         assert self.device in ('auto', 'cpu', 'cuda'), f'Not valid torch device name: {self.device}'
         assert self.batch_size > 0, 'Batch size should be a positive integer'

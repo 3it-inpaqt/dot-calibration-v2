@@ -1,5 +1,6 @@
 import gzip
 from pathlib import Path
+from random import shuffle
 from typing import List, Tuple, Union
 from zipfile import ZipFile
 
@@ -20,52 +21,23 @@ DATA_DIR = Path('data')
 class QDSDLines(Dataset):
     """
     Quantum Dots Stability Diagrams (QDSD) dataset.
+    Transition line classification task.
     """
 
-    def __init__(self, test: bool = False, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0)):
+    def __init__(self, patches: List[Tuple]):
         """
-        Create the dataset.
+        Create a dataset of transition lines patches.
+        Should be build with QDSDLines.build_split_datasets.
 
-        :param test: If True load the testing data
-        :param patch_size: The size in pixel (x, y) of the patch to process (sub-area of the stability diagram)
-        :param overlap: The overlapping size in pixel (x, y) of the patch
+        :param patches: The list of patches as (2D array of values, labels as boolean)
         """
 
-        self._diagrams = []
-        self._patches = []
-        self._patches_labels = []
-
-        # Open the file containing transition line annotations as a dataframe
-        lines_annotations_df = pd.read_csv(Path(DATA_DIR, 'transition_lines.csv'),
-                                           usecols=[1, 2, 3, 4, 5],
-                                           names=['x1', 'y1', 'x2', 'y2', 'image_name'])
-
-        # Open the zip file and iterate over all csv files
-        with ZipFile(Path(DATA_DIR, 'interpolated_csv.zip'), 'r') as zip_file:
-            for diagram_name in zip_file.namelist():
-                file_basename = Path(diagram_name).stem  # Remove extension
-                with zip_file.open(diagram_name) as diagram_file:
-                    # Load values from CSV file
-                    x, y, values = QDSDLines._load_interpolated_csv(gzip.open(diagram_file))
-
-                    transition_lines = QDSDLines._load_lines_annotations(lines_annotations_df, f'{file_basename}.png',
-                                                                         x, y, snap=1)
-
-                    diagram = Diagram(file_basename, x, y, values, transition_lines)
-                    self._diagrams.append(diagram)
-                    diagram.plot()
-
-                    # Get patches and their labels (using ninja unzip)
-                    patches, labels = zip(*list(diagram.get_patches(patch_size, overlap)))
-
-                    self._patches.extend(patches)
-                    self._patches_labels.extend(labels)
+        # Get patches and their labels (using ninja unzip)
+        self._patches, self._patches_labels = zip(*patches)
 
         # Convert to torch tensor
         self._patches = torch.Tensor(self._patches)
         self._patches_labels = torch.Tensor(self._patches_labels)
-
-        logger.debug(f'{len(self._patches)} patches loaded from {len(self._diagrams)} diagrams')
 
     def __len__(self):
         return len(self._patches)
@@ -83,7 +55,65 @@ class QDSDLines(Dataset):
         """
         self._patches = self._patches.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
         self._patches_labels = self._patches_labels.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
-        pass
+
+    @staticmethod
+    def build_split_datasets(test_ratio: float, validation_ratio: float = 0, patch_size: Tuple[int, int] = (10, 10),
+                             overlap: Tuple[int, int] = (0, 0)) -> Tuple["QDSDLines", ...]:
+        """
+        Initialize dataset of transition lines patches.
+        The sizes of the test and validation dataset depend on the ratio. The train dataset get all remaining data.
+
+        :param test_ratio: The ratio of patches reserved for test data
+        :param validation_ratio: The ratio of patches reserved for validation data (ignored if 0)
+        :param patch_size: The size in pixel (x, y) of the patch to process (sub-area of the stability diagram)
+        :param overlap: The overlapping size in pixel (x, y) of the patch
+        :return A tuple of dataset: (train, test, validation) or (train, test) if validation_ratio is 0
+        """
+        patches = []
+        # Open the file containing transition line annotations as a dataframe
+        lines_annotations_df = pd.read_csv(Path(DATA_DIR, 'transition_lines.csv'),
+                                           usecols=[1, 2, 3, 4, 5],
+                                           names=['x1', 'y1', 'x2', 'y2', 'image_name'])
+
+        # Open the zip file and iterate over all csv files
+        with ZipFile(Path(DATA_DIR, 'interpolated_csv.zip'), 'r') as zip_file:
+            diagram_names = zip_file.namelist()
+            nb_diagram = len(diagram_names)
+            for diagram_name in diagram_names:
+                file_basename = Path(diagram_name).stem  # Remove extension
+                with zip_file.open(diagram_name) as diagram_file:
+                    # Load values from CSV file
+                    x, y, values = QDSDLines._load_interpolated_csv(gzip.open(diagram_file))
+
+                    transition_lines = QDSDLines._load_lines_annotations(lines_annotations_df, f'{file_basename}.png',
+                                                                         x, y, snap=1)
+
+                    diagram = Diagram(file_basename, x, y, values, transition_lines)
+                    diagram.plot()
+
+                    patches.extend(diagram.get_patches(patch_size, overlap))
+
+        nb_patches = len(patches)
+        logger.debug(f'{nb_patches} patches loaded from {nb_diagram} diagrams')
+
+        # Shuffle patches before to split them into different the datasets
+        shuffle(patches)
+
+        test_index = round(nb_patches * test_ratio)
+        test_set = QDSDLines(patches[:test_index])
+
+        # With validation dataset
+        if validation_ratio != 0:
+            valid_index = test_index + round(nb_patches * validation_ratio)
+            valid_set = QDSDLines(patches[test_index:valid_index])
+            train_set = QDSDLines(patches[valid_index:])
+
+            return train_set, test_set, valid_set
+
+        # No validation dataset
+        train_set = QDSDLines(patches[test_index:])
+
+        return train_set, test_set
 
     @staticmethod
     def _load_interpolated_csv(file_path: Union[IO, str, Path]) -> Tuple:
