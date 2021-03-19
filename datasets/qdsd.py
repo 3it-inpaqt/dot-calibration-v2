@@ -25,6 +25,8 @@ class QDSDLines(Dataset):
     Transition line classification task.
     """
 
+    classes = ['line', 'no line']
+
     def __init__(self, patches: List[Tuple], role: str):
         """
         Create a dataset of transition lines patches.
@@ -47,7 +49,8 @@ class QDSDLines(Dataset):
         return len(self._patches)
 
     def __getitem__(self, index):
-        return self._patches[index], self._patches_labels[index]
+        # TODO Use a more generic transform method
+        return torch.flatten(self._patches[index]), self._patches_labels[index]
 
     def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
            copy: bool = False):

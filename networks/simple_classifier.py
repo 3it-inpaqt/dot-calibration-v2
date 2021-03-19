@@ -22,9 +22,9 @@ class SimpleClassifier(nn.Module):
         """
         super().__init__()
 
-        self.fc1 = nn.Linear(input_size, 50)  # Input -> Hidden 1
-        self.fc2 = nn.Linear(50, 50)  # Hidden 1 -> Hidden 2
-        self.fc3 = nn.Linear(50, nb_classes)  # Hidden 2 -> Output
+        self.fc1 = nn.Linear(input_size, 400)  # Input -> Hidden 1
+        self.fc2 = nn.Linear(400, 200)  # Hidden 1 -> Hidden 2
+        self.fc3 = nn.Linear(200, nb_classes)  # Hidden 2 -> Output
 
         # Convert the tensor to long before to call the CrossEntropy to match with the expected data type.
         self._criterion = nn.CrossEntropyLoss()
@@ -37,6 +37,7 @@ class SimpleClassifier(nn.Module):
         :param x: One input of the dataset
         :return: The output of the network
         """
+        # Flatten the image
         x = f.relu(self.fc1(x))
         x = f.relu(self.fc2(x))
         x = self.fc3(x)

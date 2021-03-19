@@ -14,14 +14,14 @@ def main():
     # noinspection PyBroadException
     try:
         with SectionTimer('datasets loading', 'debug'):
-            train_set, test_set = QDSDLines.build_split_datasets(test_ratio=0.2,
+            train_set, test_set = QDSDLines.build_split_datasets(test_ratio=settings.test_ratio,
                                                                  patch_size=(settings.patch_size_x,
                                                                              settings.patch_size_y),
                                                                  overlap=(settings.patch_overlap_x,
                                                                           settings.patch_overlap_y))
 
         # Build the network
-        net = SimpleClassifier(input_size=100, nb_classes=2)
+        net = SimpleClassifier(input_size=settings.patch_size_x * settings.patch_size_y, nb_classes=2)
 
         # Run the training and the test
         run(train_set, test_set, net)
