@@ -17,7 +17,7 @@ from utils.miscs import clip
 DATA_DIR = Path('data')
 
 
-class QDSD(Dataset):
+class QDSDLines(Dataset):
     """
     Quantum Dots Stability Diagrams (QDSD) dataset.
     """
@@ -46,18 +46,24 @@ class QDSD(Dataset):
                 file_basename = Path(diagram_name).stem  # Remove extension
                 with zip_file.open(diagram_name) as diagram_file:
                     # Load values from CSV file
-                    x, y, values = QDSD._load_interpolated_csv(gzip.open(diagram_file))
+                    x, y, values = QDSDLines._load_interpolated_csv(gzip.open(diagram_file))
 
-                    transition_lines = QDSD._load_lines_annotations(lines_annotations_df, f'{file_basename}.png', x, y,
-                                                                    snap=1)
+                    transition_lines = QDSDLines._load_lines_annotations(lines_annotations_df, f'{file_basename}.png',
+                                                                         x, y, snap=1)
 
                     diagram = Diagram(file_basename, x, y, values, transition_lines)
                     self._diagrams.append(diagram)
                     diagram.plot()
 
-        # Cut diagram into patches
-        for diagram in self._diagrams:
-            self._patches.extend(diagram.get_patches(patch_size, overlap))
+                    # Get patches and their labels (using ninja unzip)
+                    patches, labels = zip(*list(diagram.get_patches(patch_size, overlap)))
+
+                    self._patches.extend(patches)
+                    self._patches_labels.extend(labels)
+
+        # Convert to torch tensor
+        self._patches = torch.Tensor(self._patches)
+        self._patches_labels = torch.Tensor(self._patches_labels)
 
         logger.debug(f'{len(self._patches)} patches loaded from {len(self._diagrams)} diagrams')
 
@@ -75,9 +81,8 @@ class QDSD(Dataset):
         The arguments correspond to the torch tensor "to" signature.
         See https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to.
         """
-        # TODO
-        # self._features = self._features.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
-        # self._labels = self._labels.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
+        self._patches = self._patches.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
+        self._patches_labels = self._patches_labels.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
         pass
 
     @staticmethod
@@ -128,8 +133,8 @@ class QDSD(Dataset):
             line_x = [l['x1'], l['x2']]
             line_y = [l['y1'], l['y2']]
 
-            line_x = QDSD._coord_to_volt(line_x, min_x, max_x, x[0], step, snap)
-            line_y = QDSD._coord_to_volt(line_y, min_y, max_y, y[0], step, snap, True)
+            line_x = QDSDLines._coord_to_volt(line_x, min_x, max_x, x[0], step, snap)
+            line_y = QDSDLines._coord_to_volt(line_y, min_y, max_y, y[0], step, snap, True)
 
             line = LineString(zip(line_x, line_y))
             lines.append(line)

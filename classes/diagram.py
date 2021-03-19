@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Generator, List, Optional, Sequence, Tuple
 
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Polygon
 
 from plots.diagram import plot_diagram
 
@@ -37,16 +37,37 @@ class Diagram:
         overlap_size_x, overlap_size_y = overlap
         diagram_size_y, diagram_size_x = self.values.shape
 
+        # Extract each patches
         i = 0
         for patch_y in range(0, diagram_size_y - patch_size_y, patch_size_y - overlap_size_y):
+            # Patch coordinates (indexes)
             start_y = patch_y
             end_y = patch_y + patch_size_y
+            # Patch coordinates (voltage)
+            start_y_v = self.y[start_y]
+            end_y_v = self.y[end_y]
             for patch_x in range(0, diagram_size_x - patch_size_x, patch_size_x - overlap_size_x):
                 i += 1
+                # Patch coordinates (indexes)
                 start_x = patch_x
                 end_x = patch_x + patch_size_x
-                # self.plot((self.x[start_x], self.x[end_x], self.y[start_y], self.y[end_y]), f' - patch {i:n}')
-                yield self.values[start_x:end_x, start_y:end_y]
+                # Patch coordinates (voltage)
+                start_x_v = self.x[start_x]
+                end_x_v = self.x[end_x]
+
+                # Create patch shape to find line intersection
+                patch_shape = Polygon([(start_x_v, start_y_v),
+                                       (end_x_v, start_y_v),
+                                       (end_x_v, end_y_v),
+                                       (start_x_v, end_y_v)])
+
+                # Extract patch value
+                patch = self.values[start_y:end_y, start_x:end_x]
+                # Label is True if any line intersect the patch shape
+                label = any([line.intersects(patch_shape) for line in self.transition_lines])
+
+                # self.plot((start_x_v, end_x_v, start_y_v, end_y_v), f' - patch {i:n} - line {label}')
+                yield patch, label
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         """

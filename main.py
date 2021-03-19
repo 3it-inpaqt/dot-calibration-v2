@@ -1,4 +1,4 @@
-from datasets.qdsd import QDSD
+from datasets.qdsd import QDSDLines
 from networks.simple_classifier import SimpleClassifier
 from run import clean_up, preparation, run
 from utils.logger import logger
@@ -15,12 +15,12 @@ def main():
     try:
         with SectionTimer('datasets loading', 'debug'):
             # Load the training dataset
-            train_set = QDSD(test=False, patch_size=(settings.patch_size_x, settings.patch_size_y),
-                             overlap=(settings.patch_overlap_x, settings.patch_overlap_y))
+            train_set = QDSDLines(test=False, patch_size=(settings.patch_size_x, settings.patch_size_y),
+                                  overlap=(settings.patch_overlap_x, settings.patch_overlap_y))
 
             # Load test testing dataset
-            test_set = QDSD(test=True, patch_size=(settings.patch_size_x, settings.patch_size_y),
-                            overlap=(settings.patch_overlap_x, settings.patch_overlap_y))
+            test_set = QDSDLines(test=True, patch_size=(settings.patch_size_x, settings.patch_size_y),
+                                 overlap=(settings.patch_overlap_x, settings.patch_overlap_y))
 
         # Build the network
         net = SimpleClassifier(input_size=100, nb_classes=2)
