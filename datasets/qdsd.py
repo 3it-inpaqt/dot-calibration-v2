@@ -25,7 +25,10 @@ class QDSDLines(Dataset):
     Transition line classification task.
     """
 
-    classes = ['line', 'no line']
+    classes = [
+        'no line',  # False (0)
+        'line'  # True (1)
+    ]
 
     def __init__(self, patches: List[Tuple], role: str):
         """

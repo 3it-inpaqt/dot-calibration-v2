@@ -3,7 +3,7 @@ from typing import Generator, List, Optional, Sequence, Tuple
 
 from shapely.geometry import LineString, Polygon
 
-from plots.diagram import plot_diagram
+from plots.data import plot_diagram
 
 
 @dataclass

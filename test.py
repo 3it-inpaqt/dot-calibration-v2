@@ -5,7 +5,7 @@ import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader, Dataset
 
-from plots.misc import plot_confusion_matrix
+from plots.results import plot_confusion_matrix
 from utils.logger import logger
 from utils.output import save_results
 from utils.progress_bar import ProgressBar, ProgressBarMetrics

@@ -3,8 +3,10 @@ from typing import Iterable, Optional, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 from shapely.geometry import LineString, Polygon
+from torch.utils.data import DataLoader, Dataset
 
 from utils.output import save_plot
+from utils.settings import settings
 
 REGION_SHORT = {
     '0_electron': '0',
@@ -56,4 +58,47 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     if focus_area:
         plt.axis(focus_area)
 
-    save_plot(f'diagram-{image_name}')
+    save_plot(f'diagram_{image_name}')
+
+
+def plot_patch_sample(dataset: Dataset, number_per_class: int) -> None:
+    """
+    Plot randomly sampled patches grouped by class.
+
+    :param dataset: The patches dataset to sample from.
+    :param number_per_class: The number of sample per class.
+    """
+    # Local import to avoid circular mess
+    from datasets.qdsd import QDSDLines
+
+    # Data loader for random sample
+    data_loader = DataLoader(dataset, shuffle=True)
+
+    nb_classes = len(QDSDLines.classes)
+    data_per_class = [list() for _ in range(nb_classes)]
+
+    # Random sample
+    for data, label in data_loader:
+        label = int(label)  # Convert boolean to integer
+        if len(data_per_class[label]) < number_per_class:
+            data_per_class[label].append(data)
+
+            # Stop of we sampled enough data
+            if all([len(cl) == number_per_class for cl in data_per_class]):
+                break
+
+    # Create subplots
+    fig, axs = plt.subplots(nrows=nb_classes, ncols=number_per_class,
+                            figsize=(number_per_class * 2, nb_classes * 2 + 1))
+
+    for i, cl in enumerate(data_per_class):
+        axs[i, 0].set_title(f'{number_per_class} examples of "{QDSDLines.classes[i]}"', loc='left',
+                            fontsize='xx-large', fontweight='bold')
+        for j, class_data in enumerate(cl):
+            axs[i, j].imshow(class_data.reshape(settings.patch_size_x, settings.patch_size_y),
+                             interpolation='none',
+                             cmap='copper')
+
+            axs[i, j].axis('off')
+
+    save_plot('patch_sample')

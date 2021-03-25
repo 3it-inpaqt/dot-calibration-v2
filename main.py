@@ -1,5 +1,6 @@
 from datasets.qdsd import QDSDLines
 from networks.simple_classifier import SimpleClassifier
+from plots.data import plot_patch_sample
 from run import clean_up, preparation, run
 from utils.logger import logger
 from utils.settings import settings
@@ -19,6 +20,7 @@ def main():
                                                                              settings.patch_size_y),
                                                                  overlap=(settings.patch_overlap_x,
                                                                           settings.patch_overlap_y))
+            plot_patch_sample(test_set, 8)
 
         # Build the network
         net = SimpleClassifier(input_size=settings.patch_size_x * settings.patch_size_y, nb_classes=2)

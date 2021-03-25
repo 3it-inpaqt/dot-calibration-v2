@@ -6,7 +6,7 @@ import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader, Dataset
 
-from plots.misc import plot_train_progress
+from plots.results import plot_train_progress
 from test import test
 from utils.logger import logger
 from utils.output import load_network, save_network, save_results
