@@ -14,7 +14,8 @@ from typing.io import IO
 from classes.diagram import Diagram
 from utils.logger import logger
 from utils.miscs import clip
-from utils.output import save_results
+from utils.output import load_data_cache, save_data_cache, save_results
+from utils.settings import settings
 
 DATA_DIR = Path('data')
 
@@ -96,32 +97,44 @@ class QDSDLines(Dataset):
         :param overlap: The overlapping size in pixel (x, y) of the patch
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
-        patches = []
-        # Open the file containing transition line annotations as a dataframe
-        lines_annotations_df = pd.read_csv(Path(DATA_DIR, 'transition_lines.csv'),
-                                           usecols=[1, 2, 3, 4, 5],
-                                           names=['x1', 'y1', 'x2', 'y2', 'image_name'])
 
-        # Open the zip file and iterate over all csv files
-        with ZipFile(Path(DATA_DIR, 'interpolated_csv.zip'), 'r') as zip_file:
-            diagram_names = zip_file.namelist()
-            nb_diagram = len(diagram_names)
-            for diagram_name in diagram_names:
-                file_basename = Path(diagram_name).stem  # Remove extension
-                with zip_file.open(diagram_name) as diagram_file:
-                    # Load values from CSV file
-                    x, y, values = QDSDLines._load_interpolated_csv(gzip.open(diagram_file))
+        cache_path = Path(DATA_DIR, 'cache', f'qdsd_lines_{patch_size[0]}-{patch_size[1]}_{overlap[0]}-{overlap[1]}.p')
+        if settings.use_data_cache and cache_path.is_file():
+            # Fast load from cache
+            patches = load_data_cache(cache_path)
+        else:
+            patches = []
+            # Open the file containing transition line annotations as a dataframe
+            lines_annotations_df = pd.read_csv(Path(DATA_DIR, 'transition_lines.csv'),
+                                               usecols=[1, 2, 3, 4, 5],
+                                               names=['x1', 'y1', 'x2', 'y2', 'image_name'])
 
-                    transition_lines = QDSDLines._load_lines_annotations(lines_annotations_df, f'{file_basename}.png',
-                                                                         x, y, snap=1)
+            # Open the zip file and iterate over all csv files
+            with ZipFile(Path(DATA_DIR, 'interpolated_csv.zip'), 'r') as zip_file:
+                diagram_names = zip_file.namelist()
+                nb_diagram = len(diagram_names)
+                for diagram_name in diagram_names:
+                    file_basename = Path(diagram_name).stem  # Remove extension
+                    with zip_file.open(diagram_name) as diagram_file:
+                        # Load values from CSV file
+                        x, y, values = QDSDLines._load_interpolated_csv(gzip.open(diagram_file))
 
-                    diagram = Diagram(file_basename, x, y, values, transition_lines)
-                    diagram.plot()
+                        transition_lines = QDSDLines._load_lines_annotations(lines_annotations_df,
+                                                                             f'{file_basename}.png',
+                                                                             x, y, snap=1)
 
-                    patches.extend(diagram.get_patches(patch_size, overlap))
+                        diagram = Diagram(file_basename, x, y, values, transition_lines)
+                        diagram.plot()
+
+                        patches.extend(diagram.get_patches(patch_size, overlap))
+
+            logger.info(f'{len(patches)} items loaded from {nb_diagram} diagrams')
+
+            if settings.use_data_cache:
+                # Save in cache for later runs
+                save_data_cache(cache_path, patches)
 
         nb_patches = len(patches)
-        logger.info(f'{nb_patches} patches loaded from {nb_diagram} diagrams')
 
         # Shuffle patches before to split them into different the datasets
         shuffle(patches)

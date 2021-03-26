@@ -1,7 +1,8 @@
+import pickle
 import re
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, List, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -168,6 +169,18 @@ def save_network(network: Module, file_name: str = 'network') -> None:
     logger.debug(f'Network saved in {cache_path}')
 
 
+def save_data_cache(file_path: Path, data: List[Any]) -> None:
+    """
+    Save data in pickle file for later fast load.
+
+    :param file_path: The full path to the cache file to write (shouldn't exist)
+    :param data: A list of items
+    """
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    pickle.dump(data, open(file_path, 'wb'))
+    logger.debug(f'Data saved in cache ({file_path})')
+
+
 def save_timers() -> None:
     """
     Save the named timers in a file in the output directory.
@@ -202,6 +215,18 @@ def load_network(network: Module, file_path: Union[str, Path]) -> bool:
         return True
     logger.warning(f'Network cache not found in "{cache_path}"')
     return False
+
+
+def load_data_cache(file_path: Path) -> List:
+    """
+    Load data from pickle file (from previous run).
+
+    :param file_path: The full path to the file to load.
+    :return: A list of items.
+    """
+    data = pickle.load(open(file_path, 'rb'))
+    logger.info(f'{len(data)} items loaded from cache ({file_path})')
+    return data
 
 
 def load_run_files(dir_path: Path) -> dict:

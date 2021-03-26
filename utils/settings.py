@@ -38,6 +38,7 @@ class Settings:
     checkpoint_save_network: bool = False
 
     # ============================== Dataset ==============================
+    use_data_cache: bool = True
     patch_size_x: int = 10
     patch_size_y: int = 10
     patch_overlap_x: int = 5
