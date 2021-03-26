@@ -23,7 +23,7 @@ def main():
             plot_patch_sample(test_set, 8)
 
         # Build the network
-        net = SimpleClassifier(input_size=settings.patch_size_x * settings.patch_size_y, nb_classes=2)
+        net = SimpleClassifier(input_size=settings.patch_size_x * settings.patch_size_y)
 
         # Run the training and the test
         run(train_set, test_set, net)

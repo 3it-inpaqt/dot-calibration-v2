@@ -1,7 +1,7 @@
 from typing import Any
 
+import torch
 import torch.nn as nn
-import torch.nn.functional as f
 from torch import optim
 
 from utils.settings import settings
@@ -13,7 +13,7 @@ class SimpleClassifier(nn.Module):
     Should be use as an example.
     """
 
-    def __init__(self, input_size: int, nb_classes: int):
+    def __init__(self, input_size: int):
         """
         Create a new network with 2 hidden layers fully connected.
 
@@ -22,13 +22,13 @@ class SimpleClassifier(nn.Module):
         """
         super().__init__()
 
-        self.fc1 = nn.Linear(input_size, 400)  # Input -> Hidden 1
-        self.fc2 = nn.Linear(400, 200)  # Hidden 1 -> Hidden 2
-        self.fc3 = nn.Linear(200, nb_classes)  # Hidden 2 -> Output
+        self.fc1 = nn.Linear(input_size, 200)  # Input -> Hidden 1
+        self.fc2 = nn.Linear(200, 100)  # Hidden 1 -> Hidden 2
+        self.fc3 = nn.Linear(100, 1)  # Hidden 2 -> Output
 
-        # Convert the tensor to long before to call the CrossEntropy to match with the expected data type.
-        self._criterion = nn.CrossEntropyLoss()
-        self._optimizer = optim.SGD(self.parameters(), lr=settings.learning_rate, momentum=settings.momentum)
+        self._criterion = nn.BCELoss()  # Binary Cross Entropy
+        # self._optimizer = optim.SGD(self.parameters(), lr=settings.learning_rate, momentum=settings.momentum)
+        self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
     def forward(self, x: Any) -> Any:
         """
@@ -37,11 +37,10 @@ class SimpleClassifier(nn.Module):
         :param x: One input of the dataset
         :return: The output of the network
         """
-        # Flatten the image
-        x = f.relu(self.fc1(x))
-        x = f.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
+        x = torch.sigmoid(self.fc1(x))
+        x = torch.sigmoid(self.fc2(x))
+        x = torch.sigmoid(self.fc3(x))  # Last activation function should output in [0;1] for BCELoss
+        return x.flatten()
 
     def training_step(self, inputs: Any, labels: Any):
         """
@@ -56,7 +55,7 @@ class SimpleClassifier(nn.Module):
 
         # Forward + Backward + Optimize
         outputs = self(inputs)
-        loss = self._criterion(outputs, labels.long())
+        loss = self._criterion(outputs, labels.float())
         loss.backward()
         self._optimizer.step()
 

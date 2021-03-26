@@ -50,7 +50,7 @@ class Settings:
     device: str = 'auto'
     learning_rate: float = 0.001
     momentum: float = 0.9
-    batch_size: int = 16
+    batch_size: int = 32
     nb_epoch: int = 8
 
     def validate(self):

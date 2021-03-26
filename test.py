@@ -58,7 +58,7 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
 
             # Forward
             outputs = network(inputs)
-            _, predicted = torch.max(outputs, 1)  # Get the index of the max value for each image of the batch
+            predicted = torch.round(outputs).bool()  # Round to 0 or 1
 
             # Count the result
             nb_total += len(labels)

@@ -48,6 +48,11 @@ class QDSDLines(Dataset):
         self._patches = torch.Tensor(self._patches)
         self._patches_labels = torch.Tensor(self._patches_labels).bool()
 
+        # TODO the normalisation should be done for train and test at the same time
+        # Normalise data voltage
+        self._patches -= torch.min(self._patches)
+        self._patches /= torch.max(self._patches)
+
     def __len__(self):
         return len(self._patches)
 
