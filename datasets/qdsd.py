@@ -73,8 +73,8 @@ class QDSDLines(Dataset):
         nb_line = torch.sum(self._patches_labels)
         return {
             f'{self.role}_dataset_size': nb_patche,
-            f'{self.role}_dataset_nb_line': nb_line,
-            f'{self.role}_dataset_nb_noline': nb_patche - nb_line,
+            f'{self.role}_dataset_nb_line': int(nb_line),
+            f'{self.role}_dataset_nb_noline': int(nb_patche - nb_line),
         }
 
     @staticmethod

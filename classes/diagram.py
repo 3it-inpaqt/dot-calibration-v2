@@ -68,10 +68,16 @@ class Diagram:
                                        (start_x_v, end_y_v)])
 
                 # Extract patch value
-                patch = self.values[start_y:end_y, start_x:end_x]
+                # Invert Y axis because the diagram origin (0,0) is top left
+                patch = self.values[diagram_size_y - end_y:diagram_size_y - start_y, start_x:end_x]
                 # Label is True if any line intersect the patch shape
                 label = any([line.intersects(patch_shape) for line in self.transition_lines])
 
+                # Verification plots
+                # plot_diagram(self.x[start_x:end_x], self.y[start_y:end_y],
+                #              self.values[diagram_size_y-end_y:diagram_size_y-start_y, start_x:end_x],
+                #              self.file_basename + f' - patch {i:n} - line {label} - REAL',
+                #              'nearest', self.x[1] - self.x[0])
                 # self.plot((start_x_v, end_x_v, start_y_v, end_y_v), f' - patch {i:n} - line {label}')
                 yield patch, label
 
