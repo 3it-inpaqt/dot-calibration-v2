@@ -72,3 +72,10 @@ class SimpleClassifier(nn.Module):
         :return: The name of the optimiser function.
         """
         return type(self._optimizer).__name__
+
+    @staticmethod
+    def get_transforms():
+        """
+        Define the data pre-processing to apply on the datasets before to use this neural network.
+        """
+        return [lambda x: torch.flatten(x)]  # Flatten the image

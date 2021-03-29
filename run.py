@@ -68,6 +68,11 @@ def run(train_dataset: Dataset, test_dataset: Dataset, network: Module) -> None:
     :param test_dataset: The testing dataset
     :param network: The neural network to train
     """
+
+    # Define transformation methods based on the network (for data pre-processing)
+    train_dataset.add_transform(network.get_transforms())
+    test_dataset.add_transform(network.get_transforms())
+
     # Automatically chooses between CPU and GPU if not specified
     if settings.device is None or settings.device == 'auto':
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

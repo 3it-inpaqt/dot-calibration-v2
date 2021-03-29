@@ -1,6 +1,6 @@
 from pathlib import Path
 from random import shuffle
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 import torch
 from torch.utils.data import Dataset
@@ -42,6 +42,8 @@ class QDSDLines(Dataset):
         self._patches = torch.Tensor(self._patches)
         self._patches_labels = torch.Tensor(self._patches_labels).bool()
 
+        self.transform: List[Callable] = []
+
         # TODO the normalisation should be done for train and test at the same time
         # Normalise data voltage
         self._patches -= torch.min(self._patches)
@@ -51,8 +53,21 @@ class QDSDLines(Dataset):
         return len(self._patches)
 
     def __getitem__(self, index):
-        # TODO Use a more generic transform method
-        return torch.flatten(self._patches[index]), self._patches_labels[index]
+        patch = self._patches[index]
+        # Apply transformation before to get it
+        if len(self.transform) > 0:
+            for transform_function in self.transform:
+                patch = transform_function(patch)
+
+        return patch, self._patches_labels[index]
+
+    def add_transform(self, transform_functions: List[Callable]) -> None:
+        """
+        Add a list of transformation function for data pre-processing.
+
+        :param transform_functions: The list of transformation function.
+        """
+        self.transform.extend(transform_functions)
 
     def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
            copy: bool = False):
@@ -96,6 +111,7 @@ class QDSDLines(Dataset):
             # Fast load from cache
             patches = load_data_cache(cache_path)
         else:
+            # Load fom files
             diagrams = Diagram.load_diagrams(Path(DATA_DIR, 'interpolated_csv.zip'),
                                              Path(DATA_DIR, 'transition_lines.csv'))
 
