@@ -217,7 +217,7 @@ def load_network(network: Module, file_path: Union[str, Path]) -> bool:
     return False
 
 
-def load_data_cache(file_path: Path) -> List:
+def load_data_cache(file_path: Path) -> List[Any]:
     """
     Load data from pickle file (from previous run).
 
