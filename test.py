@@ -5,7 +5,7 @@ import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader, Dataset
 
-from plots.results import plot_confusion_matrix
+from plots.results import plot_classification_sample, plot_confusion_matrix
 from utils.logger import logger
 from utils.output import save_results
 from utils.progress_bar import ProgressBar, ProgressBarMetrics
@@ -44,7 +44,9 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
 
     nb_correct = 0
     nb_total = 0
-    nb_labels_predictions = np.zeros((nb_classes, nb_classes))
+    nb_labels_predictions = np.zeros((nb_classes, nb_classes), dtype=int)
+    nb_samples_per_case = 16
+    samples_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
 
     # Disable gradient for performances
     with torch.no_grad(), SectionTimer(f'network testing{test_name}', 'info' if final else 'debug'), \
@@ -64,8 +66,12 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
             nb_total += len(labels)
             nb_correct += torch.eq(predicted, labels).sum()
             progress.update(accuracy=float(nb_correct / nb_total))
-            for label, pred in zip(labels, predicted):
+            for j, (label, pred) in enumerate(zip(labels, predicted)):
+                # Count for accuracy per class
                 nb_labels_predictions[label][pred] += 1
+                # Save samples for later plots
+                if final and len(samples_per_case[label][pred]) < nb_samples_per_case:
+                    samples_per_case[label][pred].append(inputs[j].cpu())
 
     accuracy = float(nb_correct / nb_total)
 
@@ -79,12 +85,14 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
 
         save_results(final_accuracy=accuracy, final_classes_accuracy=classes_accuracy)
         plot_confusion_matrix(nb_labels_predictions, class_names=test_dataset.classes)
+        plot_classification_sample(samples_per_case, test_dataset.classes)
 
     return accuracy
 
 
 class ProgressBarTesting(ProgressBar):
     """ Override the ProgressBar to define print configuration adapted to testing. """
+
     def __init__(self, nb_batch: int, auto_display: bool = True):
         super().__init__(nb_batch, 1, 'Testing ', auto_display=auto_display,
                          metrics=(

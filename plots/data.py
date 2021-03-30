@@ -1,4 +1,5 @@
-from typing import Iterable, Optional, Tuple
+from math import ceil, sqrt
+from typing import Iterable, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -102,3 +103,28 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int) -> None:
             axs[i, j].axis('off')
 
     save_plot('patch_sample')
+
+
+def plot_samples(samples: List, title: str, file_name: str) -> None:
+    """
+    Plot a group of patches.
+
+    :param samples: The list of patches to plot.
+    :param title: The title of the plot.
+    :param file_name: The file name of the plot if saved.
+    """
+    plot_length = ceil(sqrt(len(samples)))
+
+    # Create subplots
+    fig, axs = plt.subplots(nrows=plot_length, ncols=plot_length, figsize=(plot_length * 2, plot_length * 2 + 1))
+
+    for i, s in enumerate(samples):
+        axs[i // plot_length, i % plot_length].imshow(s.reshape(settings.patch_size_x, settings.patch_size_y),
+                                                      interpolation='none',
+                                                      cmap='copper')
+
+        axs[i // plot_length, i % plot_length].axis('off')
+
+    fig.suptitle(f'{title}\nSample of {len(samples)} patches')
+
+    save_plot(f'sample_{file_name}')

@@ -5,6 +5,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter
 
+from plots.data import plot_samples
 from utils.output import save_plot
 from utils.settings import settings
 
@@ -86,3 +87,20 @@ def plot_confusion_matrix(nb_labels_predictions: np.ndarray, class_names: List[s
     plt.xlabel('Predictions')
     plt.ylabel('Labels')
     save_plot('confusion_matrix')
+
+
+def plot_classification_sample(samples_per_case: List[List[List]], class_names: List[str]) -> None:
+    """
+    Plot samples of every classification cases.
+
+    :param samples_per_case: The list of cases as: [label class index][prediction class index][patch value]
+    :param class_names: The class name to convert the indexes
+    """
+    for label, predictions in enumerate(samples_per_case):
+        for prediction, patchs in enumerate(predictions):
+            if label == prediction:
+                title = f'Good classification of "{class_names[label]}"'
+            else:
+                title = f'Bad classification of "{class_names[label]}" (detected as {class_names[prediction]})'
+
+            plot_samples(patchs, title, f'classification_{class_names[label]}-{class_names[prediction]}')
