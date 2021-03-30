@@ -7,24 +7,30 @@ from torch import optim
 from utils.settings import settings
 
 
-class SimpleClassifier(nn.Module):
+class FeedForward(nn.Module):
     """
-    Simple classifier neural network.
-    Should be use as an example.
+    Simple fully connected feed forward classifier neural network.
     """
 
     def __init__(self, input_size: int):
         """
-        Create a new network with 2 hidden layers fully connected.
+        Create a new network with fully connected hidden layers.
+        The number hidden layers is based on the settings.
 
         :param input_size: The size of one item of the dataset used for the training
-        :param nb_classes: Number of class to classify
         """
         super().__init__()
 
-        self.fc1 = nn.Linear(input_size, 200)  # Input -> Hidden 1
-        self.fc2 = nn.Linear(200, 100)  # Hidden 1 -> Hidden 2
-        self.fc3 = nn.Linear(100, 1)  # Hidden 2 -> Output
+        # Number of neurons per layer
+        # eg: input_size, hidden size 1, hidden size 2, ..., nb_classes
+        layers_size = [input_size]
+        layers_size.extend(settings.hidden_layers_size)
+        layers_size.append(1)
+
+        # Create fully connected linear layers
+        self.fc_layers = nn.ModuleList()
+        for i in range(len(layers_size) - 1):
+            self.fc_layers.append(nn.Linear(layers_size[i], layers_size[i + 1]))
 
         self._criterion = nn.BCELoss()  # Binary Cross Entropy
         # self._optimizer = optim.SGD(self.parameters(), lr=settings.learning_rate, momentum=settings.momentum)
@@ -37,10 +43,11 @@ class SimpleClassifier(nn.Module):
         :param x: One input of the dataset
         :return: The output of the network
         """
-        x = torch.sigmoid(self.fc1(x))
-        x = torch.sigmoid(self.fc2(x))
-        x = torch.sigmoid(self.fc3(x))  # Last activation function should output in [0;1] for BCELoss
-        return x.flatten()
+
+        for fc in self.fc_layers:
+            x = torch.sigmoid(fc(x))  # Last activation function should output in [0;1] for BCELoss
+
+        return torch.flatten(x)
 
     def training_step(self, inputs: Any, labels: Any):
         """

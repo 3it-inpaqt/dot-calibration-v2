@@ -1,8 +1,10 @@
 import argparse
+import re
 from dataclasses import asdict, dataclass
-from typing import Union
+from typing import Sequence, Union
 
 import configargparse
+from numpy.distutils.misc_util import is_sequence
 
 from utils.logger import logger
 
@@ -18,53 +20,133 @@ class Settings:
         - arguments of the command line (with "--" in front)
     """
 
-    # Name of the run to save the result ('tmp' for temporary files)
+    # ==================================================================================================================
+    # ==================================================== General =====================================================
+    # ==================================================================================================================
+
+    # Name of the run to save the result ('tmp' for temporary files).
+    # If empty or None thing is saved.
     run_name: str = ''
 
-    # ======================== Logging and outputs ========================
+    # The seed to use for all random number generator during this run.
+    seed: int = 42
+
+    # ==================================================================================================================
+    # ============================================== Logging and Outputs ===============================================
+    # ==================================================================================================================
+
+    # The minimal logging level to show in the console (see https://docs.python.org/3/library/logging.html#levels).
     logger_console_level: Union[str, int] = 'INFO'
+
+    # The minimal logging level to write in the log file (see https://docs.python.org/3/library/logging.html#levels).
     logger_file_level: Union[str, int] = 'DEBUG'
+
+    # If True a log file is created for each run with a valid run_name.
+    # The console logger could be enable at the same time.
+    # If False the logging will only be in console.
     logger_file_enable: bool = True
-    logger_progress_frequency: int = 10  # sec
+
+    # If True use a visual progress bar in the console during training and loading.
+    # Should be use with a logger_console_level as INFO or more for better output.
     visual_progress_bar: bool = True
+
+    # If True show matplotlib images when they are ready.
     show_images: bool = True
+
+    # If True and the run have a valid name, save matplotlib images in the run directory
+    save_images: bool = True
+
+    # If True and the run have a valid name, save the neural network parameters in the run directory at the end of the
+    # training.
     save_network: bool = True
-    trained_network_cache_path: str = ''
 
-    # ============================ Checkpoints ============================
-    checkpoints_per_epoch: int = 0
-    checkpoint_test_size: int = 200
-    checkpoint_train_size: int = 200
-    checkpoint_save_network: bool = False
+    # ==================================================================================================================
+    # ==================================================== Dataset =====================================================
+    # ==================================================================================================================
 
-    # ============================== Dataset ==============================
+    # If true the data will be loaded from cache is possible.
     use_data_cache: bool = True
+
+    # The size of a diagram patch send to the network input (number of pixel)
     patch_size_x: int = 10
     patch_size_y: int = 10
+
+    # The patch overlapping (number of pixel)
     patch_overlap_x: int = 5
     patch_overlap_y: int = 5
-    test_ratio: float = 0.2
-    validation_ratio: float = 0  # 0 to disable validation
 
-    # ========================= Training settings =========================
-    seed: int = 42
+    # The percentage of data kept for testing only
+    test_ratio: float = 0.2
+
+    # The percentage of data kept for testing only (0 to disable validation)
+    validation_ratio: float = 0
+
+    # ==================================================================================================================
+    # ==================================================== Networks ====================================================
+    # ==================================================================================================================
+
+    # The number hidden layer and their respective number of neurons
+    hidden_layers_size: Sequence = (200, 200)
+
+    # ==================================================================================================================
+    # ==================================================== Training ====================================================
+    # ==================================================================================================================
+
+    # If a valid path to a file containing neural network parameters is set, they will be loaded in the current neural
+    # network and the training step will be skipped.
+    trained_network_cache_path: str = ''
+
+    # The pytorch device to use for training and testing. Can be 'cpu', 'cuda' or 'auto'.
+    # The automatic setting will use CUDA is a compatible hardware is detected.
     device: str = 'auto'
+
+    # The learning rate value used by the SGD for parameters update.
     learning_rate: float = 0.001
+
+    # The momentum value used by the SGD for parameters update.
     momentum: float = 0.9
+
+    # The size of the mini-batch for the training and testing.
     batch_size: int = 32
+
+    # The number of training epoch.
     nb_epoch: int = 8
+
+    # ==================================================================================================================
+    # ================================================== Checkpoints ===================================================
+    # ==================================================================================================================
+
+    # The number of checkpoints per training epoch, if 0 no checkpoint is processed
+    checkpoints_per_epoch: int = 0
+
+    # The number of data in the checkpoint training subset.
+    # Set to 0 to don't compute the train accuracy during checkpoints.
+    checkpoint_train_size: int = 200
+
+    # The number of data in the checkpoint testing subset.
+    # Set to 0 to don't compute the test accuracy during checkpoints.
+    checkpoint_test_size: int = 200
+
+    # If True and the run have a valid name, save the neural network parameters in the run directory at each checkpoint.
+    checkpoint_save_network: bool = False
 
     def validate(self):
         """
         Validate settings.
         """
+
+        # General
+        assert self.run_name is None or not re.search('[/:"*?<>|\\\\]+', self.run_name), \
+            'Invalid character in run name (should be a valid directory name)'
+
+        # Logging and Outputs
         possible_log_levels = ('CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET')
         assert self.logger_console_level.upper() in possible_log_levels or isinstance(self.logger_console_level, int), \
             f"Invalid console log level '{self.logger_console_level}'"
         assert self.logger_file_level.upper() in possible_log_levels or isinstance(self.logger_file_level, int), \
             f"Invalid file log level '{self.logger_file_level}'"
 
-        assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'
+        # Dataset
         assert self.patch_size_x > 0, 'Patch size should be higher than 0'
         assert self.patch_size_y > 0, 'Patch size should be higher than 0'
         assert self.patch_overlap_x >= 0, 'Patch overlapping should be 0 or more'
@@ -75,9 +157,17 @@ class Settings:
         assert self.test_ratio + self.validation_ratio < 1, 'test_ratio + validation_ratio should be less than 1 to' \
                                                             ' have training data'
 
+        # Networks
+        assert all((a > 0 for a in self.hidden_layers_size)), 'Hidden layer size should be more than 0'
+
+        # Training
+        # TODO should also accept "cuda:1" format
         assert self.device in ('auto', 'cpu', 'cuda'), f'Not valid torch device name: {self.device}'
         assert self.batch_size > 0, 'Batch size should be a positive integer'
         assert self.nb_epoch > 0, 'Number of epoch should be at least 1'
+
+        # Checkpoints
+        assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'
 
     def __init__(self):
         """
@@ -106,6 +196,18 @@ class Settings:
                 return True
             raise argparse.ArgumentTypeError(f'{arg_value} is not a valid boolean value')
 
+        def type_mapping(arg_value):
+            if type(arg_value) == bool:
+                return str_to_bool
+            if is_sequence(arg_value):
+                if len(arg_value) == 0:
+                    return str
+                else:
+                    return type_mapping(arg_value[0])
+
+            # Default same as current value
+            return type(arg_value)
+
         p = configargparse.get_argument_parser(default_config_files=['./settings.yaml'])
 
         # Spacial argument
@@ -118,7 +220,8 @@ class Settings:
                            f'--{name}',
                            dest=name,
                            required=False,
-                           type=str_to_bool if type(value) == bool else type(value))
+                           action='append' if is_sequence(value) else 'store',
+                           type=type_mapping(value))
 
         # Load arguments form file, environment and command line to override the defaults
         for name, value in vars(p.parse_args()).items():
