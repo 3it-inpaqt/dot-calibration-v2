@@ -98,9 +98,10 @@ def plot_classification_sample(samples_per_case: List[List[List]], class_names: 
     """
     for label, predictions in enumerate(samples_per_case):
         for prediction, patchs in enumerate(predictions):
-            if label == prediction:
-                title = f'Good classification of "{class_names[label]}"'
-            else:
-                title = f'Bad classification of "{class_names[label]}" (detected as {class_names[prediction]})'
+            if len(patchs) > 0:
+                if label == prediction:
+                    title = f'Good classification of "{class_names[label]}"'
+                else:
+                    title = f'Bad classification of "{class_names[label]}" (detected as {class_names[prediction]})'
 
-            plot_samples(patchs, title, f'classification_{class_names[label]}-{class_names[prediction]}')
+                plot_samples(patchs, title, f'classification_{class_names[label]}-{class_names[prediction]}')
