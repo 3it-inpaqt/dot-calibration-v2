@@ -6,6 +6,7 @@ from codetiming import Timer
 from torch.nn import Module
 from torch.utils.data import Dataset
 
+from baselines.std_baseline import StdBaseline
 from test import test
 from train import train
 from utils.logger import logger
@@ -59,6 +60,25 @@ def clean_up() -> None:
         logger.disable_log_file()
 
 
+@SectionTimer('baselines', 'debug')
+def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.device) -> None:
+    """
+    Run the baselines.
+
+    :param train_dataset: The dataset to use for model training.
+    :param test_dataset: The dataset to use for model testing.
+    :param device: The processing device (cpu or cuda)
+    """
+
+    # Standard deviation baseline
+    std = StdBaseline()
+    std.train(train_dataset)
+    std_accuracy = test(std, test_dataset, device)
+    save_results(baseline_std_test_accuracy=std_accuracy)
+
+    logger.info(f'Baselines accuracies:\n\tstd: {std_accuracy:.2%}')
+
+
 @SectionTimer('run')
 def run(train_dataset: Dataset, test_dataset: Dataset, network: Module) -> None:
     """
@@ -89,6 +109,10 @@ def run(train_dataset: Dataset, test_dataset: Dataset, network: Module) -> None:
 
     # Save network stats and show if debug enable
     network_metrics(network, test_dataset[0][0].shape, device)
+
+    if settings.evaluate_baselines:
+        # Run the baselines with the same data
+        run_baselines(train_dataset, test_dataset, device)
 
     # Start the training
     train(network, train_dataset, test_dataset, device)

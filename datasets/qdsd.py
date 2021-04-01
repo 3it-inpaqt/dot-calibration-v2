@@ -61,6 +61,18 @@ class QDSDLines(Dataset):
 
         return patch, self._patches_labels[index]
 
+    def get_data(self) -> torch.Tensor:
+        """
+        :return: The whole patches matrice of values (no transformation apply)
+        """
+        return self._patches
+
+    def get_labels(self) -> torch.Tensor:
+        """
+        :return: The whole patches matrice of labels (no transformation apply)
+        """
+        return self._patches_labels
+
     def add_transform(self, transform_functions: List[Callable]) -> None:
         """
         Add a list of transformation function for data pre-processing.

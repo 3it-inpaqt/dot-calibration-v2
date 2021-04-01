@@ -31,6 +31,9 @@ class Settings:
     # The seed to use for all random number generator during this run.
     seed: int = 42
 
+    # If true every baselines are run before the real training. If false this step is skipped.
+    evaluate_baselines: bool = True
+
     # ==================================================================================================================
     # ============================================== Logging and Outputs ===============================================
     # ==================================================================================================================
