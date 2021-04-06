@@ -31,16 +31,19 @@ class Diagram:
     # The transition lines annotations
     transition_lines: List[LineString]
 
-    def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0)) -> Generator:
+    def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),
+                    label_offset: Tuple[int, int] = (0, 0)) -> Generator:
         """
         Create patches from diagrams sub-area.
 
-        :param patch_size: The size of the desired patches in number of pixels (x, y)
-        :param overlap: The size of the patches overlapping in number of pixels (x, y)
+        :param patch_size: The size of the desired patches, in number of pixels (x, y)
+        :param overlap: The size of the patches overlapping, in number of pixels (x, y)
+        :param label_offset: The width of the border to ignore during the patch labeling, in number of pixel (x, y)
         :return: A generator of patches.
         """
         patch_size_x, patch_size_y = patch_size
         overlap_size_x, overlap_size_y = overlap
+        label_offset_x, label_offset_y = label_offset
         diagram_size_y, diagram_size_x = self.values.shape
 
         # Extract each patches
@@ -50,16 +53,16 @@ class Diagram:
             start_y = patch_y
             end_y = patch_y + patch_size_y
             # Patch coordinates (voltage)
-            start_y_v = self.y[start_y]
-            end_y_v = self.y[end_y]
+            start_y_v = self.y[start_y + label_offset_y]
+            end_y_v = self.y[end_y - label_offset_y]
             for patch_x in range(0, diagram_size_x - patch_size_x, patch_size_x - overlap_size_x):
                 i += 1
                 # Patch coordinates (indexes)
                 start_x = patch_x
                 end_x = patch_x + patch_size_x
-                # Patch coordinates (voltage)
-                start_x_v = self.x[start_x]
-                end_x_v = self.x[end_x]
+                # Patch coordinates (voltage) for label area
+                start_x_v = self.x[start_x + label_offset_x]
+                end_x_v = self.x[end_x - label_offset_x]
 
                 # Create patch shape to find line intersection
                 patch_shape = Polygon([(start_x_v, start_y_v),

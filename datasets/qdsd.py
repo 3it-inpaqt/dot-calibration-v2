@@ -105,8 +105,11 @@ class QDSDLines(Dataset):
         }
 
     @staticmethod
-    def build_split_datasets(test_ratio: float, validation_ratio: float = 0, patch_size: Tuple[int, int] = (10, 10),
-                             overlap: Tuple[int, int] = (0, 0)) -> Tuple["QDSDLines", ...]:
+    def build_split_datasets(test_ratio: float,
+                             validation_ratio: float = 0,
+                             patch_size: Tuple[int, int] = (10, 10),
+                             overlap: Tuple[int, int] = (0, 0),
+                             label_offset: Tuple[int, int] = (0, 0)) -> Tuple["QDSDLines", ...]:
         """
         Initialize dataset of transition lines patches.
         The sizes of the test and validation dataset depend on the ratio. The train dataset get all remaining data.
@@ -114,11 +117,14 @@ class QDSDLines(Dataset):
         :param test_ratio: The ratio of patches reserved for test data
         :param validation_ratio: The ratio of patches reserved for validation data (ignored if 0)
         :param patch_size: The size in pixel (x, y) of the patch to process (sub-area of the stability diagram)
-        :param overlap: The overlapping size in pixel (x, y) of the patch
+        :param overlap: The overlapping size, in pixel (x, y) of the patch
+        :param label_offset: The width of the border to ignore during the patch labeling, in number of pixel (x, y)
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
 
-        cache_path = Path(DATA_DIR, 'cache', f'qdsd_lines_{patch_size[0]}-{patch_size[1]}_{overlap[0]}-{overlap[1]}.p')
+        cache_path = Path(DATA_DIR, 'cache',
+                          f'qdsd_lines_{patch_size[0]}-{patch_size[1]}_{overlap[0]}-{overlap[1]}_'
+                          f'{label_offset[0]}-{label_offset[1]}.p')
         if settings.use_data_cache and cache_path.is_file():
             # Fast load from cache
             patches = load_data_cache(cache_path)
@@ -129,7 +135,7 @@ class QDSDLines(Dataset):
 
             patches = []
             for diagram in diagrams:
-                patches.extend(diagram.get_patches(patch_size, overlap))
+                patches.extend(diagram.get_patches(patch_size, overlap, label_offset))
 
             logger.info(f'{len(patches)} items loaded from {len(diagrams)} diagrams')
 

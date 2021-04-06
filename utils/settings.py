@@ -67,7 +67,7 @@ class Settings:
     # ==================================================== Dataset =====================================================
     # ==================================================================================================================
 
-    # If true the data will be loaded from cache is possible.
+    # If true the data will be loaded from cache if possible.
     use_data_cache: bool = True
 
     # The size of a diagram patch send to the network input (number of pixel)
@@ -77,6 +77,12 @@ class Settings:
     # The patch overlapping (number of pixel)
     patch_overlap_x: int = 5
     patch_overlap_y: int = 5
+
+    # The width of the border to ignore during the patch labeling (number of pixel)
+    # Eg.: If one line touch only 1 pixel at the right of the patch and the label_offset_x is >1 then the patch will be
+    # labeled as "no_line"
+    label_offset_x: int = 0
+    label_offset_y: int = 0
 
     # The percentage of data kept for testing only
     test_ratio: float = 0.2
@@ -124,11 +130,11 @@ class Settings:
 
     # The number of data in the checkpoint training subset.
     # Set to 0 to don't compute the train accuracy during checkpoints.
-    checkpoint_train_size: int = 200
+    checkpoint_train_size: int = 640
 
     # The number of data in the checkpoint testing subset.
     # Set to 0 to don't compute the test accuracy during checkpoints.
-    checkpoint_test_size: int = 200
+    checkpoint_test_size: int = 640
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at each checkpoint.
     checkpoint_save_network: bool = False
@@ -156,6 +162,8 @@ class Settings:
         assert self.patch_overlap_y >= 0, 'Patch overlapping should be 0 or more'
         assert self.patch_overlap_x < self.patch_size_x, 'Patch overlapping should be lower than the patch size'
         assert self.patch_overlap_y < self.patch_size_y, 'Patch overlapping should be lower than the patch size'
+        assert self.label_offset_x < (self.patch_size_x // 2), 'Label offset should be lower than patch size // 2'
+        assert self.label_offset_y < (self.patch_size_y // 2), 'Label offset should be lower than patch size // 2'
         assert self.test_ratio > 0, 'Test data ratio should be more than 0'
         assert self.test_ratio + self.validation_ratio < 1, 'test_ratio + validation_ratio should be less than 1 to' \
                                                             ' have training data'
