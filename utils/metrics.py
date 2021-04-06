@@ -6,6 +6,7 @@ from torchinfo import summary
 
 from utils.logger import logger
 from utils.output import save_network_info
+from utils.settings import settings
 
 
 def network_metrics(network: Module, input_dim: List, device: Optional[torch.device],
@@ -19,6 +20,7 @@ def network_metrics(network: Module, input_dim: List, device: Optional[torch.dev
     :param save_output: If true the metrics will be saved in a text file in the run directory
     :return: A dictionary of metrics with their values
     """
+    input_dim = [settings.batch_size] + list(input_dim)
     network_info = summary(network, input_size=input_dim, device=device, verbose=0)
 
     logger.debug('Network info:\n' + str(network_info))

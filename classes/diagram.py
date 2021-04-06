@@ -9,7 +9,7 @@ import pandas as pd
 from shapely.geometry import LineString, Polygon
 
 from plots.data import plot_diagram
-from utils.miscs import clip
+from utils.misc import clip
 
 
 @dataclass
