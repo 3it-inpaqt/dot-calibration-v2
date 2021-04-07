@@ -24,9 +24,18 @@ def plot_train_progress(loss_evolution: List[float], accuracy_evolution: List[di
 
         # Vertical lines for each batch
         if batch_per_epoch:
+            if len(loss_evolution) / batch_per_epoch > 400:
+                batch_per_epoch *= 100
+                label = '100 epochs'
+            elif len(loss_evolution) / batch_per_epoch > 40:
+                batch_per_epoch *= 10
+                label = '10 epochs'
+            else:
+                label = 'epoch'
+
             for epoch in range(0, len(loss_evolution) + 1, batch_per_epoch):
                 ax1.axvline(x=epoch, color='black', linestyle=':', alpha=0.2,
-                            label='epoch' if epoch == 0 else '')  # only one label for the legend
+                            label=label if epoch == 0 else '')  # only one label for the legend
 
         # Plot loss
         ax1.plot(loss_evolution, label='loss', color='tab:gray')
