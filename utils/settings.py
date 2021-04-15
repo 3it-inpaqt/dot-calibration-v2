@@ -63,6 +63,10 @@ class Settings:
     # training.
     save_network: bool = True
 
+    # If True the diagrams will be plotted when they are loaded.
+    # Always skipped if patches are loaded from cache.
+    plot_diagrams: bool = False
+
     # ==================================================================================================================
     # ==================================================== Dataset =====================================================
     # ==================================================================================================================
@@ -253,7 +257,6 @@ class Settings:
         """
         logger.debug(f'Setting "{name}" changed from "{getattr(self, name)}" to "{value}".')
         self.__dict__[name] = value
-        self.validate()
 
     def __delattr__(self, name):
         raise AttributeError('Removing a setting is forbidden for the sake of consistency.')

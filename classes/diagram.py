@@ -10,6 +10,7 @@ from shapely.geometry import LineString, Polygon
 
 from plots.data import plot_diagram
 from utils.misc import clip
+from utils.settings import settings
 
 
 @dataclass
@@ -124,8 +125,9 @@ class Diagram:
                                                                        x, y, snap=1)
 
                     diagram = Diagram(file_basename, x, y, values, transition_lines)
-                    diagram.plot()
                     diagrams.append(diagram)
+                    if settings.plot_diagrams:
+                        diagram.plot()
 
         return diagrams
 
