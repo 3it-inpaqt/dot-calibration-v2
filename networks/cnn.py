@@ -40,7 +40,7 @@ class CNN(nn.Module):
         for i in range(len(fc_layer_sizes) - 1):
             self.fc_layers.append(nn.Linear(fc_layer_sizes[i], fc_layer_sizes[i + 1]))
 
-        self._criterion = nn.BCELoss()  # Binary Cross Entropy
+        self._criterion = nn.BCEWithLogitsLoss()  # Binary Cross Entropy including sigmoid layer
         # self._optimizer = optim.SGD(self.parameters(), lr=settings.learning_rate, momentum=settings.momentum)
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
@@ -60,11 +60,14 @@ class CNN(nn.Module):
         x = torch.flatten(x, 1)
 
         # Run fully connected layers
-        for fc in self.fc_layers:
-            x = torch.sigmoid(fc(x))  # Last activation function should output in [0;1] for BCELoss
+        for fc in self.fc_layers[:-1]:
+            x = torch.relu(fc(x))
+
+        # Last layer doesn't use sigmoid because it's include in the loss function
+        x = self.fc_layers[-1](x)
 
         # Flatten [batch_size, 1] to [batch_size]
-        return torch.flatten(x)
+        return torch.squeeze(x)
 
     def training_step(self, inputs: Any, labels: Any):
         """
@@ -84,6 +87,17 @@ class CNN(nn.Module):
         self._optimizer.step()
 
         return loss
+
+    def infer(self, inputs) -> bool:
+        """
+        Use network inference for classification a set of input.
+
+        :param inputs: The inputs to classify.
+        :return: The class inferred by the network.
+        """
+        outputs = self(inputs)
+        # Use sigmoid to convert the output into probability (during the training it's done inside BCEWithLogitsLoss)
+        return torch.round(torch.sigmoid(outputs)).bool()  # Round to 0 or 1
 
     def get_loss_name(self) -> str:
         """

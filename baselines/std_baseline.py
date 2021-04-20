@@ -64,6 +64,16 @@ class StdBaseline:
         """ Method created to fake a torch.Module behaviour """
         pass
 
+    def infer(self, inputs) -> bool:
+        """
+        Simulate network inference for classification a set of input.
+
+        :param inputs: The inputs to classify.
+        :return: The class inferred by this method.
+        """
+        outputs = self(inputs)
+        return torch.round(outputs).bool()  # Round to 0 or 1
+
     def __call__(self, patch_batch: torch.Tensor) -> torch.Tensor:
         """
         Classify a batch of patches, based on the threshold value.

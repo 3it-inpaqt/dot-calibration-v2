@@ -59,8 +59,7 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
                 break
 
             # Forward
-            outputs = network(inputs)
-            predicted = torch.round(outputs).bool()  # Round to 0 or 1
+            predicted = network.infer(inputs)
 
             # Count the result
             nb_total += len(labels)

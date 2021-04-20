@@ -70,6 +70,16 @@ class FeedForward(nn.Module):
 
         return loss
 
+    def infer(self, inputs) -> bool:
+        """
+        Use network inference for classification a set of input.
+
+        :param inputs: The inputs to classify.
+        :return: The class inferred by the network.
+        """
+        outputs = self(inputs)
+        return torch.round(outputs).bool()  # Round to 0 or 1
+
     def get_loss_name(self) -> str:
         """
         :return: The name of the loss function (criterion).
