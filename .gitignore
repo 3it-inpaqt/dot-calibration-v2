@@ -266,3 +266,6 @@ pip-selfcheck.json
 
 # Dataset files
 /data
+
+# Cache
+/cache/
