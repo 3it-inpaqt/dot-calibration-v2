@@ -1,5 +1,5 @@
 from datasets.qdsd import QDSDLines
-from networks.feed_forward import FeedForward
+from networks.cnn import CNN
 from plots.data import plot_patch_sample
 from run import clean_up, preparation, run
 from utils.logger import logger
@@ -15,20 +15,21 @@ def main():
     # noinspection PyBroadException
     try:
         with SectionTimer('datasets loading', 'debug'):
-            train_set, test_set = QDSDLines.build_split_datasets(test_ratio=settings.test_ratio,
-                                                                 patch_size=(settings.patch_size_x,
-                                                                             settings.patch_size_y),
-                                                                 overlap=(settings.patch_overlap_x,
-                                                                          settings.patch_overlap_y),
-                                                                 label_offset=(settings.label_offset_x,
-                                                                               settings.label_offset_y))
+            train_set, test_set, valid_set = QDSDLines.build_split_datasets(test_ratio=settings.test_ratio,
+                                                                            validation_ratio=settings.validation_ratio,
+                                                                            patch_size=(settings.patch_size_x,
+                                                                                        settings.patch_size_y),
+                                                                            overlap=(settings.patch_overlap_x,
+                                                                                     settings.patch_overlap_y),
+                                                                            label_offset=(settings.label_offset_x,
+                                                                                          settings.label_offset_y))
             plot_patch_sample(test_set, 8)
 
         # Build the network
-        net = FeedForward(input_shape=(settings.patch_size_x, settings.patch_size_y))
+        net = CNN(input_shape=(settings.patch_size_x, settings.patch_size_y))
 
         # Run the training and the test
-        run(train_set, test_set, net)
+        run(train_set, test_set, valid_set, net)
     except KeyboardInterrupt:
         logger.error('Run interrupted by the user.')
         raise  # Let it go to stop the runs planner if needed

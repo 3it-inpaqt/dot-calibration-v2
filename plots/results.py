@@ -11,13 +11,15 @@ from utils.settings import settings
 
 
 def plot_train_progress(loss_evolution: List[float], accuracy_evolution: List[dict] = None,
-                        batch_per_epoch: int = 0) -> None:
+                        batch_per_epoch: int = 0, best_checkpoint: dict = None) -> None:
     """
     Plot the evolution of the loss and the accuracy during the training.
 
     :param loss_evolution: A list of loss for each batch.
-    :param accuracy_evolution: A list of dictionaries as {batch_num, test_accuracy, train_accuracy}.
+    :param accuracy_evolution: A list of dictionaries as {batch_num, validation_accuracy, train_accuracy}.
     :param batch_per_epoch: The number of batch per epoch to plot x ticks.
+    :param best_checkpoint: A dictionary containing information about the best version of the network according to
+        validation score processed during checkpoints.
     """
     with sns.axes_style("ticks"):
         fig, ax1 = plt.subplots()
@@ -34,8 +36,8 @@ def plot_train_progress(loss_evolution: List[float], accuracy_evolution: List[di
                 label = 'epoch'
 
             for epoch in range(0, len(loss_evolution) + 1, batch_per_epoch):
-                ax1.axvline(x=epoch, color='black', linestyle=':', alpha=0.2,
-                            label=label if epoch == 0 else '')  # only one label for the legend
+                # Only one with label for clean legend
+                ax1.axvline(x=epoch, color='black', linestyle=':', alpha=0.2, label=label if epoch == 0 else '')
 
         # Plot loss
         ax1.plot(loss_evolution, label='loss', color='tab:gray')
@@ -43,22 +45,31 @@ def plot_train_progress(loss_evolution: List[float], accuracy_evolution: List[di
         ax1.set_ylim(bottom=0)
 
         if accuracy_evolution:
+            legend_y_anchor = -0.25
+
             # Plot the accuracy evolution if available
             ax2 = plt.twinx()
             checkpoint_batches = [a['batch_num'] for a in accuracy_evolution]
-            ax2.plot(checkpoint_batches, [a['test_accuracy'] for a in accuracy_evolution],
-                     label='test accuracy',
-                     color='tab:green')
             ax2.plot(checkpoint_batches, [a['train_accuracy'] for a in accuracy_evolution],
                      label='train accuracy',
                      color='tab:orange')
+            ax2.plot(checkpoint_batches, [a['validation_accuracy'] for a in accuracy_evolution],
+                     label='validation accuracy',
+                     color='tab:green')
+
+            # Star marker for best validation accuracy
+            if best_checkpoint and best_checkpoint['batch_num'] is not None:
+                ax2.plot(best_checkpoint['batch_num'], best_checkpoint['validation_accuracy'], color='tab:green',
+                         marker='*', markeredgecolor='k', markersize=10, label='best valid. accuracy')
+                legend_y_anchor -= 0.1
+
             ax2.yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.0%}'.format(y)))
             ax2.set_ylabel('Accuracy')
             ax2.set_ylim(bottom=0, top=1)
 
             # Place legends at the bottom
-            ax1.legend(loc="lower left", bbox_to_anchor=(-0.1, -0.25))
-            ax2.legend(loc="lower right", bbox_to_anchor=(1.2, -0.25))
+            ax1.legend(loc="lower left", bbox_to_anchor=(-0.1, legend_y_anchor))
+            ax2.legend(loc="lower right", bbox_to_anchor=(1.2, legend_y_anchor))
         else:
             # Default legend position if there is only loss
             ax1.legend()

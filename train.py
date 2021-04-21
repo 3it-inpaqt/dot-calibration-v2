@@ -9,23 +9,23 @@ from torch.utils.data import DataLoader, Dataset
 from plots.results import plot_train_progress
 from test import test
 from utils.logger import logger
-from utils.output import load_network, save_network, save_results
+from utils.output import load_network_, load_previous_network_version_, save_network, save_results
 from utils.progress_bar import ProgressBar, ProgressBarMetrics
 from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def train(network: Module, train_dataset: Dataset, test_dataset: Dataset, device: torch.device) -> None:
+def train(network: Module, train_dataset: Dataset, validation_dataset: Dataset, device: torch.device) -> None:
     """
     Train the network using the dataset.
 
     :param network: The network to train in place.
     :param train_dataset: The dataset used to train the network.
-    :param test_dataset: The dataset used to run intermediate test on the network during the training.
+    :param validation_dataset: The dataset used to run intermediate test on the network during the training.
     :param device: The device used to store the network and datasets (it can influence the behaviour of the training)
     """
     # If path set, try to load a pre trained network from cache
-    if settings.trained_network_cache_path and load_network(network, settings.trained_network_cache_path):
+    if settings.trained_network_cache_path and load_network_(network, settings.trained_network_cache_path):
         return  # Stop here if the network parameters are successfully loaded from cache file
 
     # Turn on the training mode of the network
@@ -40,10 +40,11 @@ def train(network: Module, train_dataset: Dataset, test_dataset: Dataset, device
     # Eg.: with 'nb_batch' = 100 and 'checkpoints_per_epoch' = 3, then the indexes will be [0, 33, 66]
     checkpoints_i = [int(i / settings.checkpoints_per_epoch * nb_batch) for i in range(settings.checkpoints_per_epoch)]
 
-    # Store the loss values for plot
+    # Metrics to monitoring the training and draw plots
     loss_evolution: List[float] = []
     accuracy_evolution: List[dict] = []
     epochs_stats: List[dict] = []
+    best_checkpoint: dict = {'validation_accuracy': 0, 'batch_num': None}
 
     # Use timer and progress bar
     with SectionTimer('network training') as timer, ProgressBarTraining(nb_batch) as progress:
@@ -57,8 +58,9 @@ def train(network: Module, train_dataset: Dataset, test_dataset: Dataset, device
                 # Checkpoint if enable for this batch
                 if i in checkpoints_i:
                     timer.pause()
-                    check_results = _checkpoint(network, epoch * nb_batch + i, train_dataset, test_dataset, device)
-                    progress.update(accuracy=check_results['test_accuracy'])
+                    check_results = _checkpoint(network, epoch * nb_batch + i, train_dataset, validation_dataset,
+                                                best_checkpoint, device)
+                    progress.update(accuracy=check_results['validation_accuracy'])
                     accuracy_evolution.append(check_results)
                     timer.resume()
 
@@ -75,25 +77,34 @@ def train(network: Module, train_dataset: Dataset, test_dataset: Dataset, device
     else:
         # Do one last checkpoint to complet the plot
         accuracy_evolution.append(
-            _checkpoint(network, settings.nb_epoch * (nb_batch + 1), train_dataset, test_dataset, device))
+            _checkpoint(network, settings.nb_epoch * nb_batch, train_dataset, validation_dataset, best_checkpoint,
+                        device))
         save_results(epochs_stats=epochs_stats, accuracy_evolution=accuracy_evolution)
 
     if settings.save_network:
-        save_network(network, 'trained_network')
+        save_network(network, 'final_network')
+
+    if best_checkpoint['batch_num'] is not None:
+        save_results(best_validation_accuracy=best_checkpoint['validation_accuracy'],
+                     best_validation_accuracy_batch=best_checkpoint['batch_num'])
+
+        # Apply early stopping by loading best version
+        if settings.early_stopping:
+            _apply_early_stopping(network, best_checkpoint, nb_batch)
 
     # Post train plots
-    plot_train_progress(loss_evolution, accuracy_evolution, nb_batch)
+    plot_train_progress(loss_evolution, accuracy_evolution, nb_batch, best_checkpoint)
 
 
-def _checkpoint(network: Module, batch_num: int, train_dataset: Dataset, test_dataset: Dataset,
-                device: torch.device) -> dict:
+def _checkpoint(network: Module, batch_num: int, train_dataset: Dataset, validation_dataset: Dataset,
+                best_checkpoint: dict, device: torch.device) -> dict:
     """
     Pause the training to do some jobs, like intermediate testing and network backup.
 
     :param network: The current neural network
     :param batch_num: The batch number since the beginning of the training (used as checkpoint id)
     :param train_dataset: The training dataset
-    :param test_dataset: The testing dataset
+    :param validation_dataset: The validation dataset
     :return: A dictionary with the tests results
     """
 
@@ -101,10 +112,21 @@ def _checkpoint(network: Module, batch_num: int, train_dataset: Dataset, test_da
     if settings.checkpoint_save_network:
         save_network(network, f'{batch_num:n}_checkpoint_network')
 
-    # Start tests
-    if settings.checkpoint_test_size > 0:
-        test_accuracy = test(network, test_dataset, device, test_name='checkpoint test',
-                             limit=settings.checkpoint_test_size)
+    validation_accuracy = train_accuracy = None
+    # Test on a the validation dataset
+    if settings.checkpoint_validation:
+        validation_accuracy = test(network, validation_dataset, device, test_name='checkpoint validation', )
+        # Check if this is the new best score
+        if validation_accuracy > best_checkpoint['validation_accuracy']:
+            logger.debug(f'New best validation accuracy: {validation_accuracy:5.2%}')
+            best_checkpoint['validation_accuracy'] = validation_accuracy
+            best_checkpoint['batch_num'] = batch_num
+            # Save new best parameters
+            if settings.early_stopping:
+                # TODO find a workaround to save it if this is an unnamed run.
+                save_network(network, 'best_network')
+
+    # Test on a subset of train dataset
     if settings.checkpoint_train_size > 0:
         train_accuracy = test(network, train_dataset, device, test_name='checkpoint train',
                               limit=settings.checkpoint_train_size)
@@ -113,12 +135,12 @@ def _checkpoint(network: Module, batch_num: int, train_dataset: Dataset, test_da
     network.train()
 
     logger.debug(f'Checkpoint {batch_num:<6n} '
-                 f'| test accuracy: {test_accuracy:5.2%} '
-                 f'| train accuracy: {train_accuracy:5.2%}')
+                 f'| validation accuracy: {validation_accuracy or 0:5.2%} '
+                 f'| train accuracy: {train_accuracy or 0:5.2%}')
 
     return {
         'batch_num': batch_num,
-        'test_accuracy': test_accuracy,
+        'validation_accuracy': validation_accuracy,
         'train_accuracy': train_accuracy
     }
 
@@ -149,8 +171,38 @@ def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> 
                  f"| std: {stats['losses_std']:.5f}")
 
 
+def _apply_early_stopping(network: Module, best_checkpoint: dict, nb_batch: int) -> None:
+    """
+    Apply early stopping by loading the best network according to the validation classification accuracy ran during
+    checkpoints.
+
+    :param network: The network to load (in place)
+    :param best_checkpoint: A dictionary containing at least 'batch_num' of the best one
+    :param nb_batch: The number of batch per epoch during this training
+    """
+    best_batch_num = best_checkpoint['batch_num']
+
+    # Skip if the last version of the network is already the best.
+    if best_batch_num == settings.nb_epoch * nb_batch:
+        logger.info('Early stopping not necessary here because the last epoch is th best. '
+                    f'The number of epoch ({settings.nb_epoch}) could be increased.')
+        return
+
+    best_epoch_num = best_batch_num // nb_batch + 1
+    last_batch_num = settings.nb_epoch * nb_batch
+    logger.info(f'Applying early stopping by loading the best version of the network: '
+                f'batch {best_batch_num:n}/{last_batch_num:n} '
+                f'({best_batch_num / last_batch_num:.0%}) - '
+                f'epoch {best_epoch_num}/{settings.nb_epoch}')
+
+    # Load network in place
+    if not load_previous_network_version_(network, 'best_network'):
+        logger.error('Impossible to load previous version of the network to apply early stopping.')
+
+
 class ProgressBarTraining(ProgressBar):
     """ Override the ProgressBar to define print configuration adapted to training. """
+
     def __init__(self, nb_batch: int):
         super().__init__(nb_batch, settings.nb_epoch, 'Training', 'ep.', auto_display=settings.visual_progress_bar,
                          metrics=(

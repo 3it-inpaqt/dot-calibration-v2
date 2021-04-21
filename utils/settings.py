@@ -60,7 +60,8 @@ class Settings:
     save_images: bool = True
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at the end of the
-    # training.
+    # training. Saved before applying early stopping if enable.
+    # The file will be at the root of run directory, under then name: "final_network.pt"
     save_network: bool = True
 
     # If True the diagrams will be plotted when they are loaded.
@@ -91,8 +92,8 @@ class Settings:
     # The percentage of data kept for testing only
     test_ratio: float = 0.2
 
-    # The percentage of data kept for testing only (0 to disable validation)
-    validation_ratio: float = 0
+    # The percentage of data kept for testing only
+    validation_ratio: float = 0.1
 
     # ==================================================================================================================
     # ==================================================== Networks ====================================================
@@ -125,6 +126,12 @@ class Settings:
     # The number of training epoch.
     nb_epoch: int = 8
 
+    # Save the best network state during the training based on the test accuracy.
+    # Then load it when the training is complet.
+    # The file will be at the root of run directory, under then name: "best_network.pt"
+    # Required checkpoint_train_size > 0 and checkpoint_test_size > 0
+    early_stopping: bool = True
+
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================
     # ==================================================================================================================
@@ -136,12 +143,27 @@ class Settings:
     # Set to 0 to don't compute the train accuracy during checkpoints.
     checkpoint_train_size: int = 640
 
-    # The number of data in the checkpoint testing subset.
-    # Set to 0 to don't compute the test accuracy during checkpoints.
-    checkpoint_test_size: int = 640
+    # If the inference accuracy of the validation dataset should be computed, or not, during checkpoint.
+    checkpoint_validation: bool = True
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at each checkpoint.
     checkpoint_save_network: bool = False
+
+    def is_named_run(self) -> bool:
+        """ Return True only if the name of the run is set (could be a temporary name). """
+        return len(self.run_name) > 0
+
+    def is_unnamed_run(self) -> bool:
+        """ Return True only if the name of the run is NOT set. """
+        return len(self.run_name) == 0
+
+    def is_temporary_run(self) -> bool:
+        """ Return True only if the name of the run is set and is temporary name. """
+        return self.run_name == 'tmp'
+
+    def is_saved_run(self) -> bool:
+        """ Return True only if the name of the run is set and is NOT temporary name. """
+        return self.is_named_run() and not self.is_temporary_run()
 
     def validate(self):
         """

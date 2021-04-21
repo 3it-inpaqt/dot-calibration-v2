@@ -85,18 +85,23 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
 
 
 @SectionTimer('run')
-def run(train_dataset: Dataset, test_dataset: Dataset, network: Module) -> None:
+def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: Module) -> None:
     """
     Run the training and the testing of the network.
 
     :param train_dataset: The training dataset
     :param test_dataset: The testing dataset
+    :param validation_dataset: The validation dataset
     :param network: The neural network to train
     """
+
+    logger.info(f'Datasets size: train {len(train_dataset):n} - test {len(test_dataset):n} - '
+                f'validation {len(validation_dataset):n}')
 
     # Define transformation methods based on the network (for data pre-processing)
     train_dataset.add_transform(network.get_transforms())
     test_dataset.add_transform(network.get_transforms())
+    validation_dataset.add_transform(network.get_transforms())
 
     # Automatically chooses between CPU and GPU if not specified
     if settings.device is None or settings.device == 'auto':
@@ -111,6 +116,7 @@ def run(train_dataset: Dataset, test_dataset: Dataset, network: Module) -> None:
     network.to(device)
     train_dataset.to(device)
     test_dataset.to(device)
+    validation_dataset.to(device)
 
     # Save network stats and show if debug enable
     network_metrics(network, test_dataset[0][0].shape, device)
@@ -120,7 +126,7 @@ def run(train_dataset: Dataset, test_dataset: Dataset, network: Module) -> None:
         run_baselines(train_dataset, test_dataset, device)
 
     # Start the training
-    train(network, train_dataset, test_dataset, device)
+    train(network, train_dataset, validation_dataset, device)
 
     # Start normal test
     test(network, test_dataset, device, final=True)
