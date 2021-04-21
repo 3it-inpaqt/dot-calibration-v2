@@ -95,6 +95,9 @@ class Settings:
     # The percentage of data kept for testing only
     validation_ratio: float = 0.1
 
+    # If True, data augmentation methods will be apply to increase the size of the train dataset.
+    train_data_augmentation: bool = True
+
     # ==================================================================================================================
     # ==================================================== Networks ====================================================
     # ==================================================================================================================

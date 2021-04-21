@@ -44,7 +44,7 @@ class QDSDLines(Dataset):
 
         self.transform: List[Callable] = []
 
-        # TODO the normalisation should be done for train and test at the same time
+        # TODO the normalisation should be done for test with the same value than train
         # Normalise data voltage
         self._patches -= torch.min(self._patches)
         self._patches /= torch.max(self._patches)
@@ -103,6 +103,18 @@ class QDSDLines(Dataset):
             f'{self.role}_dataset_nb_line': int(nb_line),
             f'{self.role}_dataset_nb_noline': int(nb_patche - nb_line),
         }
+
+    def data_augmentation(self) -> None:
+        """
+        Apply data augmentation methods to the current dataset
+        """
+
+        # 180 degrees rotation to keep the orientation of the lines
+        rotated_patches = self._patches.rot90(k=2, dims=(1, 2))
+
+        # Extends dataset with rotation (label are un changed)
+        self._patches = torch.cat((self._patches, rotated_patches))
+        self._patches_labels = torch.cat((self._patches_labels, self._patches_labels))
 
     @staticmethod
     def build_split_datasets(test_ratio: float,

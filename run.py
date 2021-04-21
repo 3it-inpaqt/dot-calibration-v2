@@ -84,6 +84,32 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
     logger.info(f'Baselines accuracies:\n\tstd: {std_accuracy:.2%}')
 
 
+def train_data_augmentation(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset) -> None:
+    """
+    Run data augmentations methods on train if this setting is enable.
+
+    :param train_dataset: The training dataset
+    :param test_dataset: The testing dataset
+    :param validation_dataset: The validation dataset
+    """
+    if settings.train_data_augmentation:
+        train_size = len(train_dataset)
+        train_dataset.data_augmentation()
+        train_size_aug = len(train_dataset)
+        aug_rate = (train_size_aug / train_size) - 1
+        logger.info(f'Datasets size:'
+                    f'\n\ttrain {train_size:n} --> augmented to {train_size_aug:n} ({aug_rate:+.0%})'
+                    f'\n\ttest {len(test_dataset):n}'
+                    f'\n\tvalidation {len(validation_dataset):n}')
+        save_results(train_dataset_augmentation=train_size_aug - train_size)
+    else:
+        logger.info(f'Datasets size:'
+                    f'\n\ttrain {len(train_dataset):n}'
+                    f'\n\ttest {len(test_dataset):n}'
+                    f'\n\tvalidation {len(validation_dataset):n}')
+        save_results(train_dataset_augmentation=0)
+
+
 @SectionTimer('run')
 def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: Module) -> None:
     """
@@ -95,8 +121,8 @@ def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Datas
     :param network: The neural network to train
     """
 
-    logger.info(f'Datasets size: train {len(train_dataset):n} - test {len(test_dataset):n} - '
-                f'validation {len(validation_dataset):n}')
+    # Run data augmentations methods on train if this setting is enable
+    train_data_augmentation(train_dataset, test_dataset, validation_dataset)
 
     # Define transformation methods based on the network (for data pre-processing)
     train_dataset.add_transform(network.get_transforms())

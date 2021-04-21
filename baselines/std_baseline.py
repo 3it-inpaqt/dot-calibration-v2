@@ -56,7 +56,7 @@ class StdBaseline:
         save_results(baseline_std_train_accuracy=train_accuracy)
 
         plot_data_feature_distribution(patches_std, labels, 'standard deviation',
-                                       'Standard deviation distribution in patches values by class',
+                                       'Standard deviation distribution in patches values\nby class',
                                        self.threshold,
                                        train_dataset.classes)
 
