@@ -36,6 +36,7 @@ def main():
         logger.critical('Run interrupted by an unexpected error.', exc_info=True)
     finally:
         # Clean up the environment, ready for a new run
+        del train_set, test_set, net
         clean_up()
 
 

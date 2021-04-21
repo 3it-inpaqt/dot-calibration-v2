@@ -1,3 +1,4 @@
+import gc
 import random
 
 import numpy as np
@@ -58,6 +59,10 @@ def clean_up() -> None:
     # Disable the log file, so a new one can be set later
     if settings.run_name and settings.logger_file_enable:
         logger.disable_log_file()
+
+    # Free CUDA memory
+    gc.collect()
+    torch.cuda.empty_cache()
 
 
 @SectionTimer('baselines', 'debug')

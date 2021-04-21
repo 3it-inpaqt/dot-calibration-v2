@@ -86,7 +86,7 @@ class CNN(nn.Module):
         loss.backward()
         self._optimizer.step()
 
-        return loss
+        return loss.item()
 
     def infer(self, inputs) -> bool:
         """
