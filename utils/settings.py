@@ -127,13 +127,13 @@ class Settings:
     batch_size: int = 32
 
     # The number of training epoch.
-    nb_epoch: int = 8
+    nb_epoch: int = 20
 
     # Save the best network state during the training based on the test accuracy.
     # Then load it when the training is complet.
     # The file will be at the root of run directory, under then name: "best_network.pt"
-    # Required checkpoint_train_size > 0 and checkpoint_test_size > 0
-    early_stopping: bool = True
+    # Required checkpoints_per_epoch > 0 and checkpoint_validation = True
+    early_stopping: bool = False
 
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================

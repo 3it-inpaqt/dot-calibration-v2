@@ -41,7 +41,6 @@ class CNN(nn.Module):
             self.fc_layers.append(nn.Linear(fc_layer_sizes[i], fc_layer_sizes[i + 1]))
 
         self._criterion = nn.BCEWithLogitsLoss()  # Binary Cross Entropy including sigmoid layer
-        # self._optimizer = optim.SGD(self.parameters(), lr=settings.learning_rate, momentum=settings.momentum)
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
     def forward(self, x: Any) -> Any:
