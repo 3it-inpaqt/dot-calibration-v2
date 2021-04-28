@@ -8,7 +8,7 @@ def start_planner(runs_planner: BasePlanner, skip_validation: bool = False):
 
     # Typical settings override for planner runs
     settings.run_name = None  # The name should be override during the runs
-    settings.visual_progress_bar = False
+    settings.visual_progress_bar = True
     settings.show_images = False
     settings.use_data_cache = False
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
             Planner('patch_size_x', size_range),
             Planner('patch_size_y', size_range),
         ]),
-        Planner('seed', range(3, 4))
-    ], runs_basename='patch_size-seed-2')
+        Planner('seed', range(5, 7))
+    ], runs_basename='patch_size_cnn-seed_2')
 
     start_planner(patch_size)
