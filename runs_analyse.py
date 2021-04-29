@@ -7,6 +7,25 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
+    data = load_runs('layers_size*')
+
+    # print(data['settings.hidden_layers_size'])
+    # raise InterruptedError('Stop here')
+
+    # Hidden size -> Accuracy
+    plt.axhline(y=data['results.baseline_std_test_accuracy'][0], label='STD Baseline', color='r')
+    sns.lineplot(data=data, x='network_info.total_params', y='results.final_accuracy', label='Feed Forward')
+    plt.title('Evolution of the accuracy in function of number of parameters')
+    plt.xlabel('Total number of parameters')
+    plt.ylabel('Classification accuracy')
+
+    # plt.xlim(right=10_000)
+    # plt.xlim(left=0)
+
+    plt.show(block=False)
+
+    raise InterruptedError('Stop here')
+
     # Load selected runs' files
     data = load_runs('patch_size_cnn*')
 

@@ -1,6 +1,6 @@
 from main import main
 from utils.logger import logger
-from utils.planner import BasePlanner, CombinatorPlanner, ParallelPlanner, Planner
+from utils.planner import BasePlanner, CombinatorPlanner, ParallelPlanner, Planner, SequencePlanner
 from utils.settings import settings
 
 
@@ -10,7 +10,7 @@ def start_planner(runs_planner: BasePlanner, skip_validation: bool = False):
     settings.run_name = None  # The name should be override during the runs
     settings.visual_progress_bar = True
     settings.show_images = False
-    settings.use_data_cache = False
+    settings.use_data_cache = True
 
     if not skip_validation:
         logger.info('Start validation of the runs planner...')
@@ -53,6 +53,17 @@ if __name__ == '__main__':
             Planner('patch_size_y', size_range),
         ]),
         Planner('seed', range(5, 7))
-    ], runs_basename='patch_size_cnn-seed_2')
+    ], runs_basename='patch_size_cnn')
 
-    start_planner(patch_size)
+    # Hidden layer size study
+    layers_size = CombinatorPlanner([
+        SequencePlanner([
+            Planner('hidden_layers_size', [[a] for a in range(5, 50, 5)]),
+            Planner('hidden_layers_size', [[a] for a in range(50, 100, 10)]),
+            # Planner('hidden_layers_size', [[a] for a in range(200, 1000, 100)]),
+            # Planner('hidden_layers_size', [[a] for a in range(1000, 5000, 250)])
+        ]),
+        Planner('seed', range(2, 4))
+    ], runs_basename='layers_size-seed_2')
+
+    start_planner(layers_size)
