@@ -98,6 +98,10 @@ class Settings:
     # If True, data augmentation methods will be apply to increase the size of the train dataset.
     train_data_augmentation: bool = True
 
+    # The number of data loader workers, to take advantage of multithreading. Always disable with CUDA.
+    # 0 means automatic setting (using cpu count).
+    nb_loader_workers: int = 0
+
     # ==================================================================================================================
     # ==================================================== Networks ====================================================
     # ==================================================================================================================

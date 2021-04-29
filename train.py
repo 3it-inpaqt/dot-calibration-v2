@@ -1,4 +1,3 @@
-import os
 from typing import List
 
 import numpy as np
@@ -9,6 +8,7 @@ from torch.utils.data import DataLoader, Dataset
 from plots.results import plot_train_progress
 from test import test
 from utils.logger import logger
+from utils.misc import get_nb_loader_workers
 from utils.output import load_network_, load_previous_network_version_, save_network, save_results
 from utils.progress_bar import ProgressBar, ProgressBarMetrics
 from utils.settings import settings
@@ -32,8 +32,8 @@ def train(network: Module, train_dataset: Dataset, validation_dataset: Dataset, 
     network.train()
 
     # Use the pyTorch data loader
-    num_workers = 0 if device.type == 'cuda' else os.cpu_count()  # cuda doesn't support multithreading for data loading
-    train_loader = DataLoader(train_dataset, batch_size=settings.batch_size, shuffle=True, num_workers=num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=settings.batch_size, shuffle=True,
+                              num_workers=get_nb_loader_workers(device))
     nb_batch = len(train_loader)
 
     # Define the indexes of checkpoints for each epoch

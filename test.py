@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import torch
 from torch.nn import Module
@@ -7,6 +5,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from plots.results import plot_classification_sample, plot_confusion_matrix
 from utils.logger import logger
+from utils.misc import get_nb_loader_workers
 from utils.output import save_results
 from utils.progress_bar import ProgressBar, ProgressBarMetrics
 from utils.settings import settings
@@ -37,8 +36,8 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
     network.eval()
 
     # Use the pyTorch data loader
-    num_workers = 0 if device.type == 'cuda' else os.cpu_count()  # cuda doesn't support multithreading for data loading
-    test_loader = DataLoader(test_dataset, batch_size=settings.batch_size, shuffle=True, num_workers=num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=settings.batch_size, shuffle=True,
+                             num_workers=get_nb_loader_workers(device))
     nb_batch = min(len(test_loader), nb_test_items // settings.batch_size)
     nb_classes = len(test_dataset.classes)
 
