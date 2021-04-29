@@ -7,6 +7,7 @@ from codetiming import Timer
 from torch.nn import Module
 from torch.utils.data import Dataset
 
+from baselines.gap_baseline import GapBaseline
 from baselines.std_baseline import StdBaseline
 from test import test
 from train import train
@@ -81,7 +82,15 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
     std_accuracy = test(std, test_dataset, device)
     save_results(baseline_std_test_accuracy=std_accuracy)
 
-    logger.info(f'Baselines accuracies:\n\tstd: {std_accuracy:.2%}')
+    # Gap baseline (Max - Min)
+    gap = GapBaseline()
+    gap.train(train_dataset)
+    gap_accuracy = test(gap, test_dataset, device)
+    save_results(baseline_gap_test_accuracy=gap_accuracy)
+
+    logger.info(f'Baselines accuracies:'
+                f'\n\tstd: {std_accuracy:.2%}'
+                f'\n\tgap: {gap_accuracy:.2%}')
 
 
 def train_data_augmentation(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset) -> None:
