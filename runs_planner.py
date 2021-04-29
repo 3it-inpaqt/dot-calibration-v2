@@ -1,11 +1,11 @@
 from main import main
 from utils.logger import logger
+from utils.output import ExistingRunName
 from utils.planner import BasePlanner, CombinatorPlanner, ParallelPlanner, Planner, SequencePlanner
 from utils.settings import settings
 
 
-def start_planner(runs_planner: BasePlanner, skip_validation: bool = False):
-
+def start_planner(runs_planner: BasePlanner, skip_validation: bool = False, skip_existing_runs: bool = False):
     # Typical settings override for planner runs
     settings.run_name = None  # The name should be override during the runs
     settings.visual_progress_bar = True
@@ -28,14 +28,28 @@ def start_planner(runs_planner: BasePlanner, skip_validation: bool = False):
     nb_runs = len(runs_planner)
     logger.info(f'Starting a set of {nb_runs} runs with a planner')
 
+    skipped_runs = list()
+
     # At every iteration of the loop the settings will be update according to the planner current state
     for i, run_name in enumerate(runs_planner):
         logger.info(f'Run {i:02n}/{nb_runs:n} ({i / nb_runs:05.1%})')
         # Set the name of this run according to the planner
         # All other settings are already set during the "next" operation
         settings.run_name = run_name
-        # Start the run
-        main()
+        try:
+            # Start the run
+            main()
+        except ExistingRunName:
+            if skip_existing_runs:
+                logger.info(f'Skip existing run {run_name}')
+                skipped_runs.append(run_name)
+            else:
+                raise
+
+    if len(skipped_runs) == 1:
+        logger.warning(f'1 existing run skipped: {skipped_runs[0]}')
+    elif len(skipped_runs) > 1:
+        logger.warning(f'{len(skipped_runs)} existing runs skipped')
 
 
 if __name__ == '__main__':
@@ -66,4 +80,4 @@ if __name__ == '__main__':
         Planner('seed', range(2, 4))
     ], runs_basename='layers_size-seed_2')
 
-    start_planner(layers_size)
+    start_planner(layers_size, skip_existing_runs=True)
