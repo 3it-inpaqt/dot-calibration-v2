@@ -53,6 +53,9 @@ def start_planner(runs_planner: BasePlanner, skip_validation: bool = False, skip
 
 
 if __name__ == '__main__':
+    # Same run several times with the default settings but different seed
+    repeat = Planner('seed', range(5), runs_basename='tmp')
+
     # Patch size study
     size_range = range(7, 32)
     overlap_range = [s // 2 for s in size_range]
@@ -80,4 +83,4 @@ if __name__ == '__main__':
         Planner('seed', range(2, 4))
     ], runs_basename='layers_size-seed_2')
 
-    start_planner(layers_size, skip_existing_runs=True)
+    start_planner(repeat, skip_existing_runs=True)

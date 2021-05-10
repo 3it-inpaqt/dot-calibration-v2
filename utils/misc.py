@@ -5,7 +5,6 @@ import torch
 from torch import nn
 
 from utils.logger import logger
-from utils.output import save_results
 from utils.settings import settings
 
 
@@ -33,7 +32,6 @@ def get_nb_loader_workers(device: torch.device) -> int:
             nb_workers = os.cpu_count()
 
     logger.debug(f'Data loader using {nb_workers} workers')
-    save_results(nb_loader_workers=nb_workers)
 
     return nb_workers
 

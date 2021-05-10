@@ -3,14 +3,21 @@ import seaborn as sns
 
 from utils.output import load_runs, set_plot_style
 
-if __name__ == '__main__':
-    # Set plot style
-    set_plot_style()
 
+def repeat_analyse():
+    # Print average result of a repeated run with different seed
+    data = load_runs('tmp-*')
+
+    mean_acc = data["results.final_accuracy"].mean()
+    std_acc = data["results.final_accuracy"].std()
+    std_baseline = data['results.baseline_std_test_accuracy'][0]
+    print(f'{len(data):n} runs - avg accuracy: {mean_acc:.2%} (std:{std_acc:.2%}) - baseline: {std_baseline:.2%}')
+
+
+def layers_size_analyse():
     data = load_runs('layers_size*')
 
     # print(data['settings.hidden_layers_size'])
-    # raise InterruptedError('Stop here')
 
     # Hidden size -> Accuracy
     plt.axhline(y=data['results.baseline_std_test_accuracy'][0], label='STD Baseline', color='r')
@@ -24,8 +31,8 @@ if __name__ == '__main__':
 
     plt.show(block=False)
 
-    raise InterruptedError('Stop here')
 
+def patch_size_analyse():
     # Load selected runs' files
     data = load_runs('patch_size_cnn*')
 
@@ -45,3 +52,10 @@ if __name__ == '__main__':
     plt.xlabel('Patch size in pixel')
     plt.ylabel('Number of training patch')
     plt.show(block=False)
+
+
+if __name__ == '__main__':
+    # Set plot style
+    set_plot_style()
+
+    repeat_analyse()
