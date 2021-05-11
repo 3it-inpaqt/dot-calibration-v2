@@ -52,10 +52,13 @@ def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[nn.Conv2d
     """
     out_h, out_w = input_size
     for layer in layers:
-        out_h = (out_h + 2 * layer.padding[0] - layer.dilation[0] * (layer.kernel_size[0] - 1) - 1) \
-                / layer.stride[0] + 1
+        # Compatibility with BayesianConv2d where padding, dilation and stride are integer instead of tuple
+        padding = (layer.padding, layer.padding) if isinstance(layer.padding, int) else layer.padding
+        dilation = (layer.dilation, layer.dilation) if isinstance(layer.dilation, int) else layer.dilation
+        stride = (layer.stride, layer.stride) if isinstance(layer.stride, int) else layer.stride
 
-        out_w = (out_w + 2 * layer.padding[1] - layer.dilation[1] * (layer.kernel_size[1] - 1) - 1) \
-                / layer.stride[1] + 1
+        out_h = (out_h + 2 * padding[0] - dilation[0] * (layer.kernel_size[0] - 1) - 1) / stride[0] + 1
+
+        out_w = (out_w + 2 * padding[1] - dilation[1] * (layer.kernel_size[1] - 1) - 1) / stride[1] + 1
 
     return layers[-1].out_channels, int(out_h), int(out_w)

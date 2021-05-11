@@ -139,6 +139,12 @@ class Settings:
     # Required checkpoints_per_epoch > 0 and checkpoint_validation = True
     early_stopping: bool = False
 
+    # The number of sample used to compute the loss of bayesian networks.
+    bayesian_nb_sample: int = 3
+
+    # The weight of complexity cost part when computing the loss of bayesian networks.
+    bayesian_complexity_cost_weight: float = 1 / 50_000
+
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================
     # ==================================================================================================================
@@ -209,6 +215,7 @@ class Settings:
         assert self.device in ('auto', 'cpu', 'cuda'), f'Not valid torch device name: {self.device}'
         assert self.batch_size > 0, 'Batch size should be a positive integer'
         assert self.nb_epoch > 0, 'Number of epoch should be at least 1'
+        assert self.bayesian_nb_sample > 0, 'The number of bayesian sample should be at least 1'
 
         # Checkpoints
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'

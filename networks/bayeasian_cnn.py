@@ -3,20 +3,23 @@ from typing import Any, Tuple
 
 import torch
 import torch.nn as nn
+from blitz.modules import BayesianConv2d, BayesianLinear
+from blitz.utils import variational_estimator
 from torch import optim
 
 from utils.misc import calc_out_conv_layers
 from utils.settings import settings
 
 
-class CNN(nn.Module):
+@variational_estimator
+class BCNN(nn.Module):
     """
-    Convolutional classifier neural network.
+    Bayesian convolutional classifier neural network.
     """
 
     def __init__(self, input_shape: Tuple[int, int]):
         """
-        Create a new network with convolutional layers, followed by fully connected hidden layers.
+        Create a new bayesian network with convolutional layers, followed by fully connected hidden layers.
         The number hidden layers is based on the settings.
 
         :param input_shape: The dimension of one item of the dataset used for the training
@@ -24,8 +27,8 @@ class CNN(nn.Module):
         super().__init__()
 
         self.conv_layers = nn.ModuleList()
-        self.conv_layers.append(nn.Conv2d(in_channels=1, out_channels=12, kernel_size=4))
-        self.conv_layers.append(nn.Conv2d(in_channels=12, out_channels=24, kernel_size=4))
+        self.conv_layers.append(BayesianConv2d(in_channels=1, out_channels=12, kernel_size=(4, 4)))
+        self.conv_layers.append(BayesianConv2d(in_channels=12, out_channels=24, kernel_size=(4, 4)))
 
         # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
@@ -38,7 +41,7 @@ class CNN(nn.Module):
         # Create fully connected linear layers
         self.fc_layers = nn.ModuleList()
         for i in range(len(fc_layer_sizes) - 1):
-            self.fc_layers.append(nn.Linear(fc_layer_sizes[i], fc_layer_sizes[i + 1]))
+            self.fc_layers.append(BayesianLinear(fc_layer_sizes[i], fc_layer_sizes[i + 1]))
 
         self._criterion = nn.BCEWithLogitsLoss()  # Binary Cross Entropy including sigmoid layer
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
@@ -80,8 +83,12 @@ class CNN(nn.Module):
         self._optimizer.zero_grad()
 
         # Forward + Backward + Optimize
-        outputs = self(inputs)
-        loss = self._criterion(outputs, labels.float())
+        # TODO complexity_cost_weight = batch size ?
+        loss = self.sample_elbo(inputs=inputs,
+                                labels=labels.float(),
+                                criterion=self._criterion,
+                                sample_nbr=settings.bayesian_nb_sample,
+                                complexity_cost_weight=settings.bayesian_complexity_cost_weight)
         loss.backward()
         self._optimizer.step()
 
