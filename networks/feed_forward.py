@@ -33,6 +33,9 @@ class FeedForward(nn.Module):
         for i in range(len(layers_size) - 1):
             self.fc_layers.append(nn.Linear(layers_size[i], layers_size[i + 1]))
 
+        # Create a dropout layer if p > 0
+        self.dropout = nn.Dropout(settings.dropout) if settings.dropout > 0 else None
+
         self._criterion = nn.BCEWithLogitsLoss()  # Binary Cross Entropy including sigmoid layer
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
@@ -47,6 +50,8 @@ class FeedForward(nn.Module):
         # Run fully connected layers
         for fc in self.fc_layers[:-1]:
             x = torch.relu(fc(x))
+            if self.dropout:
+                x = self.dropout(x)
 
         # Last layer doesn't use sigmoid because it's include in the loss function
         x = self.fc_layers[-1](x)
