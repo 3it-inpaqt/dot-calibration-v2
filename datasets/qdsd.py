@@ -141,9 +141,10 @@ class QDSDLines(Dataset):
             # Fast load from cache
             patches = load_data_cache(cache_path)
         else:
-            # Load fom files
+            # Load fom files and labels (but lines only)
             diagrams = Diagram.load_diagrams(Path(DATA_DIR, 'interpolated_csv.zip'),
-                                             Path(DATA_DIR, 'transition_lines.csv'))
+                                             Path(DATA_DIR, 'labels.json'),
+                                             True, False)
 
             patches = []
             for diagram in diagrams:

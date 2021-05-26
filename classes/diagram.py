@@ -2,11 +2,10 @@ import gzip
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Generator, IO, List, Optional, Sequence, Tuple, Union
+from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Union
 from zipfile import ZipFile
 
 import numpy as np
-import pandas as pd
 from shapely.geometry import LineString, Polygon
 
 from plots.data import plot_diagram
@@ -101,27 +100,23 @@ class Diagram:
                      transition_lines=self.transition_lines, charge_regions=self.charge_area, focus_area=focus_area)
 
     @staticmethod
-    def load_diagrams(diagrams_path: Path, transition_lines_path: Path = None, charge_area_path: Path = None) \
+    def load_diagrams(diagrams_path: Path, labels_path: Path = None, load_lines: bool = True, load_areas: bool = True) \
             -> List["Diagram"]:
         """
         Load stability diagrams and annotions from files.
 
         :param diagrams_path: The path to the zip file containing all stability diagrams data.
-        :param transition_lines_path: The path to the csv file containing all transition line annotations.
-        :param charge_area_path: The path to the json file containing all charge area annotations.
+        :param labels_path: The path to the json file containing line and charge area labels.
+        :param load_lines: If True the line labels should be loaded.
+        :param load_areas: If True the charge area labels should be loaded.
         :return: A list of Diagram objects.
         """
 
-        if charge_area_path:
-            # Open the json file that can contain annotations for every diagrams
-            with open(charge_area_path, 'r') as annotations_file:
-                charge_annotations_json = json.load(annotations_file)
+        # Open the json file that contains annotations for every diagrams
+        with open(labels_path, 'r') as annotations_file:
+            labels_json = json.load(annotations_file)
 
-        if transition_lines_path:
-            # Open the file containing transition line annotations as a dataframe
-            lines_annotations_df = pd.read_csv(transition_lines_path,
-                                               usecols=[1, 2, 3, 4, 5],
-                                               names=['x1', 'y1', 'x2', 'y2', 'image_name'])
+        labels = {obj['External ID']: obj for obj in labels_json}
 
         diagrams = []
         # Open the zip file and iterate over all csv files
@@ -133,21 +128,21 @@ class Diagram:
                     # Load values from CSV file
                     x, y, values = Diagram._load_interpolated_csv(gzip.open(diagram_file))
 
-                    # Load transition line annotations
-                    if transition_lines_path:
-                        transition_lines = Diagram._load_lines_annotations(lines_annotations_df,
-                                                                           f'{file_basename}.png',
-                                                                           x, y, snap=1)
-                    else:
-                        transition_lines = None
+                    current_labels = labels[f'{file_basename}.png']['Label']['objects']
+                    transition_lines = None
+                    charge_area = None
 
-                    # Load charge area annotations
-                    if charge_area_path:
-                        charge_area = Diagram._load_charge_annotations(charge_annotations_json,
-                                                                       f'{file_basename}.png',
-                                                                       x, y, snap=1)
-                    else:
-                        charge_area = None
+                    if load_lines:
+                        # Load transition line annotations
+                        transition_lines = Diagram._load_lines_annotations(
+                            filter(lambda l: l['title'] == 'line', current_labels), x, y,
+                            snap=1)
+
+                    if load_areas:
+                        # Load charge area annotations
+                        charge_area = Diagram._load_charge_annotations(
+                            filter(lambda l: l['title'] != 'line', current_labels), x, y,
+                            snap=1)
 
                     diagram = Diagram(file_basename, x, y, values, transition_lines, charge_area)
                     diagrams.append(diagram)
@@ -179,19 +174,17 @@ class Diagram:
         return x, y, values
 
     @staticmethod
-    def _load_lines_annotations(lines_annotations_df, image_name: str, x, y, snap: int = 1) -> List[LineString]:
+    def _load_lines_annotations(lines: Iterable, x, y, snap: int = 1) -> List[LineString]:
         """
         Load transition line annotations for an image.
 
-        :param lines_annotations_df: The dataframe structure containing all annotations
-        :param image_name: The name of the image (should match with the name in the annotation file)
+        :param lines: List of line label as json object (from Labelbox export)
         :param x: The x axis of the diagram (in volt)
         :param y: The y axis of the diagram (in volt)
         :param snap: The snap margin, every points near to image border at this distance will be rounded to the image border
         (in number of pixels)
         :return: The list of line annotation for the image, as shapely.geometry.LineString
         """
-        current_file_lines = lines_annotations_df[lines_annotations_df['image_name'] == image_name]
 
         # Define borders for snap
         min_x, max_x = 0, len(x) - 1
@@ -199,26 +192,22 @@ class Diagram:
         # Step (should be the same for every measurement)
         step = x[1] - x[0]
 
-        lines = []
-        for _, l in current_file_lines.iterrows():
-            line_x = [l['x1'], l['x2']]
-            line_y = [l['y1'], l['y2']]
+        processed_lines = []
+        for line in lines:
+            line_x = Diagram._coord_to_volt((p['x'] for p in line['line']), min_x, max_x, x[0], step, snap)
+            line_y = Diagram._coord_to_volt((p['y'] for p in line['line']), min_y, max_y, y[0], step, snap, True)
 
-            line_x = Diagram._coord_to_volt(line_x, min_x, max_x, x[0], step, snap)
-            line_y = Diagram._coord_to_volt(line_y, min_y, max_y, y[0], step, snap, True)
+            line_obj = LineString(zip(line_x, line_y))
+            processed_lines.append(line_obj)
 
-            line = LineString(zip(line_x, line_y))
-            lines.append(line)
-
-        return lines
+        return processed_lines
 
     @staticmethod
-    def _load_charge_annotations(annotations_json, image_name: str, x, y, snap: int = 1) -> List[Tuple[str, Polygon]]:
+    def _load_charge_annotations(charge_areas: Iterable, x, y, snap: int = 1) -> List[Tuple[str, Polygon]]:
         """
         Load regions annotation for an image.
 
-        :param annotations_json: The json structure containing all annotations
-        :param image_name: The name of the image (should match with the name in the annotation file)
+        :param charge_areas: List of charge area label as json object (from Labelbox export)
         :param x: The x axis of the diagram (in volt)
         :param y: The y axis of the diagram (in volt)
         :param snap: The snap margin, every points near to image border at this distance will be rounded to the image border
@@ -226,38 +215,24 @@ class Diagram:
         :return: The list of regions annotation for the image, as (label, shapely.geometry.Polygon)
         """
 
-        if image_name not in annotations_json:
-            raise RuntimeError(f'"{image_name}" annotation not found')
-
-        annotation_json = annotations_json[image_name]
-
         # Define borders for snap
         min_x, max_x = 0, len(x) - 1
         min_y, max_y = 0, len(y) - 1
         # Step (should be the same for every measurement)
         step = x[1] - x[0]
 
-        regions = []
+        processed_areas = []
+        for area in charge_areas:
+            area_x = Diagram._coord_to_volt((p['x'] for p in area['polygon']), min_x, max_x, x[0], step, snap)
+            area_y = Diagram._coord_to_volt((p['y'] for p in area['polygon']), min_y, max_y, y[0], step, snap, True)
 
-        for region in annotation_json['regions'].values():
-            x_r = region['shape_attributes']['all_points_x']
-            y_r = region['shape_attributes']['all_points_y']
-            label_r = region['region_attributes']['label']
+            area_obj = Polygon(zip(area_x, area_y))
+            processed_areas.append((area['value'], area_obj))
 
-            x_r = Diagram._coord_to_volt(x_r, min_x, max_x, x[0], step, snap)
-            y_r = Diagram._coord_to_volt(y_r, min_y, max_y, y[0], step, snap, True)
-
-            # Close regions
-            x_r.append(x_r[-1])
-            y_r.append(y_r[-1])
-
-            polygon = Polygon(zip(x_r, y_r))
-            regions.append((label_r, polygon))
-
-        return regions
+        return processed_areas
 
     @staticmethod
-    def _coord_to_volt(coord: List[float], min_coord: int, max_coord: int, value_start: float, value_step: float,
+    def _coord_to_volt(coord: Iterable[float], min_coord: int, max_coord: int, value_start: float, value_step: float,
                        snap: int = 1, is_y: bool = False) -> List[float]:
         """
         Convert some coordinates to volt value for a specific stability diagram.

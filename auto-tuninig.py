@@ -10,7 +10,9 @@ TRAINED_NETWORK = 'out/base-ff/best_network.pt'
 
 
 def run_auto_tuning():
-    diagrams = Diagram.load_diagrams(Path(DATA_DIR, 'interpolated_csv.zip'), None, Path(DATA_DIR, 'charge_area.json'))
+    # Load fom files and labels (line and area)
+    diagrams = Diagram.load_diagrams(Path(DATA_DIR, 'interpolated_csv.zip'),
+                                     Path(DATA_DIR, 'labels.json'))
 
     model = FeedForward(input_shape=(settings.patch_size_x, settings.patch_size_y))
     if not load_network_(model, Path(TRAINED_NETWORK)):
