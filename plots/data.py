@@ -3,6 +3,7 @@ from typing import Iterable, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import patches
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
@@ -18,9 +19,11 @@ REGION_SHORT = {
 }
 
 
+# TODO factorise plotting code
+
 def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, pixel_size: float,
                  charge_regions: Iterable[Tuple[str, Polygon]] = None, transition_lines: Iterable[LineString] = None,
-                 focus_area: Optional[Tuple] = None) -> None:
+                 focus_area: Optional[Tuple] = None, show_offset: bool = True) -> None:
     """
     Plot the interpolated image.
 
@@ -33,6 +36,7 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     :param charge_regions: The charge region annotations to draw on top of the image
     :param transition_lines: The transition line annotation to draw on top of the image
     :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
+    :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
     """
 
     plt.imshow(pixels, interpolation='none', cmap='copper',
@@ -50,6 +54,18 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
             line_x, line_y = line.coords.xy
             plt.plot(line_x, line_y, color='lime', alpha=.5)
 
+    if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
+        focus_x, focus_y = focus_area if focus_area else 0, 0
+
+        # Create a Rectangle patch
+        rect = patches.Rectangle((settings.label_offset_x - 0.5, settings.label_offset_y - 0.5),
+                                 focus_x + settings.patch_size_x - 2 * settings.label_offset_x,
+                                 focus_y + settings.patch_size_y - 2 * settings.label_offset_y,
+                                 linewidth=1, edgecolor='tab:blue', facecolor='none')
+
+        # Add the patch to the Axes
+        plt.gca().add_patch(rect)
+
     plt.title(f'{image_name}\ninterpolated ({interpolation_method}) - pixel size {round(pixel_size, 10) * 1_000}mV')
     plt.xlabel('Gate 1 (V)')
     plt.xticks(rotation=30)
@@ -62,12 +78,13 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     save_plot(f'diagram_{image_name}')
 
 
-def plot_patch_sample(dataset: Dataset, number_per_class: int) -> None:
+def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool = True) -> None:
     """
     Plot randomly sampled patches grouped by class.
 
     :param dataset: The patches dataset to sample from.
     :param number_per_class: The number of sample per class.
+    :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
     """
     # Local import to avoid circular mess
     from datasets.qdsd import QDSDLines
@@ -100,18 +117,29 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int) -> None:
                              interpolation='none',
                              cmap='copper')
 
+            if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
+                # Create a rectangle patch that represent offset
+                rect = patches.Rectangle((settings.label_offset_x - 0.5, settings.label_offset_y - 0.5),
+                                         settings.patch_size_x - 2 * settings.label_offset_x,
+                                         settings.patch_size_y - 2 * settings.label_offset_y,
+                                         linewidth=1, edgecolor='tab:blue', facecolor='none')
+
+                # Add the offset rectangle to the axes
+                axs[i, j].add_patch(rect)
+
             axs[i, j].axis('off')
 
     save_plot('patch_sample')
 
 
-def plot_samples(samples: List, title: str, file_name: str) -> None:
+def plot_samples(samples: List, title: str, file_name: str, show_offset: bool = True) -> None:
     """
     Plot a group of patches.
 
     :param samples: The list of patches to plot.
     :param title: The title of the plot.
     :param file_name: The file name of the plot if saved.
+    :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
     """
     plot_length = ceil(sqrt(len(samples)))
 
@@ -119,11 +147,20 @@ def plot_samples(samples: List, title: str, file_name: str) -> None:
     fig, axs = plt.subplots(nrows=plot_length, ncols=plot_length, figsize=(plot_length * 2, plot_length * 2 + 1))
 
     for i, s in enumerate(samples):
-        axs[i // plot_length, i % plot_length].imshow(s.reshape(settings.patch_size_x, settings.patch_size_y),
-                                                      interpolation='none',
-                                                      cmap='copper')
+        ax = axs[i // plot_length, i % plot_length]
+        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='none', cmap='copper')
 
-        axs[i // plot_length, i % plot_length].axis('off')
+        if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
+            # Create a rectangle patch that represent offset
+            rect = patches.Rectangle((settings.label_offset_x - 0.5, settings.label_offset_y - 0.5),
+                                     settings.patch_size_x - 2 * settings.label_offset_x,
+                                     settings.patch_size_y - 2 * settings.label_offset_y,
+                                     linewidth=1, edgecolor='tab:blue', facecolor='none')
+
+            # Add the offset rectangle to the axes
+            ax.add_patch(rect)
+
+        ax.axis('off')
 
     fig.suptitle(f'{title}\nSample of {len(samples)} patches')
 
