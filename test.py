@@ -58,7 +58,7 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
                 break
 
             # Forward
-            predicted = network.infer(inputs)
+            predicted, confidences = network.infer(inputs)
 
             # Count the result
             nb_total += len(labels)
@@ -69,7 +69,7 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
                 nb_labels_predictions[label][pred] += 1
                 # Save samples for later plots
                 if final and len(samples_per_case[label][pred]) < nb_samples_per_case:
-                    samples_per_case[label][pred].append(inputs[j].cpu())
+                    samples_per_case[label][pred].append((inputs[j].cpu(), confidences[j]))
 
     accuracy = float(nb_correct / nb_total)
 
@@ -83,7 +83,7 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
 
         save_results(final_accuracy=accuracy, final_classes_accuracy=classes_accuracy)
         plot_confusion_matrix(nb_labels_predictions, class_names=test_dataset.classes)
-        plot_classification_sample(samples_per_case, test_dataset.classes)
+        plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
 
     return accuracy
 

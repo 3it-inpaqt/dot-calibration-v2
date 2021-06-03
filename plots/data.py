@@ -1,5 +1,5 @@
 from math import ceil, sqrt
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -132,13 +132,16 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
     save_plot('patch_sample')
 
 
-def plot_samples(samples: List, title: str, file_name: str, show_offset: bool = True) -> None:
+def plot_samples(samples: List, title: str, file_name: str, confidences: List[Union[float, Tuple[float]]] = None,
+                 show_offset: bool = True) -> None:
     """
     Plot a group of patches.
 
     :param samples: The list of patches to plot.
     :param title: The title of the plot.
     :param file_name: The file name of the plot if saved.
+    :param confidences: The list of confidence score for the prediction of each sample. If it's a tuple then we assume
+     it's (mean, std, entropy).
     :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
     """
     plot_length = ceil(sqrt(len(samples)))
@@ -149,6 +152,15 @@ def plot_samples(samples: List, title: str, file_name: str, show_offset: bool = 
     for i, s in enumerate(samples):
         ax = axs[i // plot_length, i % plot_length]
         ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='none', cmap='copper')
+
+        if confidences:
+            # If it's a tuple we assume it is: mean, std, entropy
+            if isinstance(confidences[i], tuple):
+                mean, std, entropy = confidences[i]
+                ax.title.set_text(f'{mean:.2} (std {std:.2})\nEntropy:{entropy:.2}')
+            # If it's not a tuple, we assume it is a float representing the confidence score
+            else:
+                ax.title.set_text(f'{confidences[i]:.2%}')
 
         if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
             # Create a rectangle patch that represent offset
@@ -162,6 +174,6 @@ def plot_samples(samples: List, title: str, file_name: str, show_offset: bool = 
 
         ax.axis('off')
 
-    fig.suptitle(f'{title}\nSample of {len(samples)} patches')
+    fig.suptitle(title)
 
     save_plot(f'sample_{file_name}')

@@ -88,6 +88,7 @@ def set_plot_style():
     """
     sns.set_theme(rc={
         'axes.titlesize': 15,
+        'figure.titlesize': 18,
         'axes.labelsize': 13,
         'figure.autolayout': True
     })

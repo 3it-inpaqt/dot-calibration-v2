@@ -1,5 +1,5 @@
 import math
-from typing import Any, Tuple
+from typing import Any, List, Tuple
 
 import torch
 import torch.nn as nn
@@ -80,16 +80,30 @@ class BFF(nn.Module):
 
         return loss.item()
 
-    def infer(self, inputs) -> bool:
+    def infer(self, inputs, nb_samples: int = 100) -> (List[bool], List[float]):
         """
         Use network inference for classification a set of input.
 
         :param inputs: The inputs to classify.
-        :return: The class inferred by the network.
+        :param nb_samples: The number of inference iteration to run on for each input. The inference will be done
+         on the mean value.
+        :return: The class inferred by the network and the confidences information.
         """
-        outputs = self(inputs)
+        # Prediction samples
         # Use sigmoid to convert the output into probability (during the training it's done inside BCEWithLogitsLoss)
-        return torch.round(torch.sigmoid(outputs)).bool()  # Round to 0 or 1
+        outputs = [torch.sigmoid(self(inputs)) for _ in range(nb_samples)]
+        outputs = torch.stack(outputs)
+
+        # Compute the mean, std and entropy
+        means = outputs.mean(axis=0)
+        stds = outputs.std(axis=0)
+        pi = torch.Tensor([math.pi])
+        entropies = torch.log(2 * pi * torch.pow(stds.cpu(), 2)) / 2 + 1 / 2
+        confidences = list(zip(*[means.cpu(), stds.cpu(), entropies.cpu()]))
+
+        # Round the samples mean value to 0 or 1
+        predictions = torch.round(means).bool()
+        return predictions, confidences
 
     def get_loss_name(self) -> str:
         """

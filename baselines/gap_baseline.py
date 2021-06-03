@@ -1,3 +1,5 @@
+from typing import List
+
 import torch
 
 from datasets.qdsd import QDSDLines
@@ -64,15 +66,17 @@ class GapBaseline:
         """ Method created to fake a torch.Module behaviour """
         pass
 
-    def infer(self, inputs) -> bool:
+    def infer(self, inputs) -> (List[bool], List[float]):
         """
         Simulate network inference for classification a set of input.
 
         :param inputs: The inputs to classify.
-        :return: The class inferred by this method.
+        :return: The classes inferred by this method and the confidences these this results (between 0 and 1).
         """
-        outputs = self(inputs)
-        return torch.round(outputs).bool()  # Round to 0 or 1
+        scores = self(inputs)
+        predictions = torch.round(scores).bool()  # Round to 0 or 1
+        confidences = 1  # Hardcode confidence at 100% for the baseline
+        return predictions, confidences
 
     def __call__(self, patch_batch: torch.Tensor) -> torch.Tensor:
         """

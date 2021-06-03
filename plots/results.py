@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -109,19 +109,30 @@ def plot_confusion_matrix(nb_labels_predictions: np.ndarray, class_names: List[s
     save_plot('confusion_matrix')
 
 
-def plot_classification_sample(samples_per_case: List[List[List]], class_names: List[str]) -> None:
+def plot_classification_sample(samples_per_case: List[List[List[Tuple[List, float]]]], class_names: List[str],
+                               nb_labels_predictions: List[List[int]]) -> None:
     """
     Plot samples of every classification cases.
 
-    :param samples_per_case: The list of cases as: [label class index][prediction class index][patch value]
+    :param samples_per_case: The list of cases as:
+        [label class index][prediction class index][(patch value, confidence)]
     :param class_names: The class name to convert the indexes
+    :param nb_labels_predictions: The count of each classification category [label class index][prediction class index]
     """
     for label, predictions in enumerate(samples_per_case):
         for prediction, patchs in enumerate(predictions):
             if len(patchs) > 0:
-                if label == prediction:
-                    title = f'Good classification of "{class_names[label]}"'
-                else:
-                    title = f'Bad classification of "{class_names[label]}" (detected as {class_names[prediction]})'
+                # TODO this zip / unzip chain is messy
+                patchs_values, confidences = zip(*patchs)
+                # Get the total number of item for the current label-prediction couple
+                category_size = nb_labels_predictions[label][prediction]
 
-                plot_samples(patchs, title, f'classification_{class_names[label]}-{class_names[prediction]}')
+                if label == prediction:
+                    title = f'Good classification of "{class_names[label]}"' \
+                            f'\nSample {len(patchs_values):n}/{category_size:n}'
+                else:
+                    title = f'Bad classification of "{class_names[label]}" (detected as {class_names[prediction]})' \
+                            f'\nSample {len(patchs_values):n}/{category_size:n}'
+
+                plot_samples(patchs_values, title, f'classification_{class_names[label]}-{class_names[prediction]}',
+                             confidences=confidences)

@@ -1,5 +1,5 @@
 import math
-from typing import Any, Tuple
+from typing import Any, List, Tuple
 
 import torch
 import torch.nn as nn
@@ -78,16 +78,20 @@ class FeedForward(nn.Module):
 
         return loss.item()
 
-    def infer(self, inputs) -> bool:
+    def infer(self, inputs) -> (List[bool], List[float]):
         """
         Use network inference for classification a set of input.
 
         :param inputs: The inputs to classify.
-        :return: The class inferred by the network.
+        :return: The class inferred by this method and the confidence it this result (between 0 and 1).
         """
-        outputs = self(inputs)
         # Use sigmoid to convert the output into probability (during the training it's done inside BCEWithLogitsLoss)
-        return torch.round(torch.sigmoid(outputs)).bool()  # Round to 0 or 1
+        outputs = torch.sigmoid(self(inputs))
+
+        # We assume that a value far from 0 or 1 mean low confidence (e.g. output:0.25 => class 0 with 50% confidence)
+        confidences = torch.abs(0.5 - outputs) * 2
+        predictions = torch.round(outputs).bool()  # Round to 0 or 1
+        return predictions, confidences.cpu()
 
     def get_loss_name(self) -> str:
         """
