@@ -3,7 +3,7 @@ import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader, Dataset
 
-from plots.results import plot_classification_sample, plot_confusion_matrix
+from plots.results import plot_classification_sample, plot_confidence, plot_confusion_matrix
 from utils.logger import logger
 from utils.misc import get_nb_loader_workers
 from utils.output import save_results
@@ -45,7 +45,11 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
     nb_total = 0
     nb_labels_predictions = np.zeros((nb_classes, nb_classes), dtype=int)
     nb_samples_per_case = 16
-    samples_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
+    if final:
+        samples_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
+        confidence_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
+    else:
+        samples_per_case = confidence_per_case = None
 
     # Disable gradient for performances
     with torch.no_grad(), SectionTimer(f'network testing{test_name}', 'info' if final else 'debug'), \
@@ -64,12 +68,17 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
             nb_total += len(labels)
             nb_correct += torch.eq(predicted, labels).sum()
             progress.update(accuracy=float(nb_correct / nb_total))
+
+            # Process each item of the batch to gather stats
             for j, (label, pred) in enumerate(zip(labels, predicted)):
                 # Count for accuracy per class
                 nb_labels_predictions[label][pred] += 1
-                # Save samples for later plots
-                if final and len(samples_per_case[label][pred]) < nb_samples_per_case:
-                    samples_per_case[label][pred].append((inputs[j].cpu(), confidences[j]))
+                if final:
+                    # Save confidence per class
+                    confidence_per_case[label][pred].append(confidences[j].item())
+                    # Save samples for later plots
+                    if len(samples_per_case[label][pred]) < nb_samples_per_case:
+                        samples_per_case[label][pred].append((inputs[j].cpu(), confidences[j]))
 
     accuracy = float(nb_correct / nb_total)
 
@@ -84,6 +93,7 @@ def test(network: Module, test_dataset: Dataset, device: torch.device, test_name
         save_results(final_accuracy=accuracy, final_classes_accuracy=classes_accuracy)
         plot_confusion_matrix(nb_labels_predictions, class_names=test_dataset.classes)
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
+        plot_confidence(confidence_per_case)
 
     return accuracy
 

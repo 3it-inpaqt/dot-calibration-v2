@@ -1,7 +1,9 @@
 from typing import List, Tuple
 
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter
 
@@ -136,3 +138,39 @@ def plot_classification_sample(samples_per_case: List[List[List[Tuple[List, floa
 
                 plot_samples(patchs_values, title, f'classification_{class_names[label]}-{class_names[prediction]}',
                              confidences=confidences)
+
+
+def plot_confidence(confidence_per_case: List[List[List[float]]]) -> None:
+    """
+    Plot the confidence density based on validity of the classification.
+
+    :param confidence_per_case: The list of confidence score per classification case
+      as [label class index][prediction class index]
+    """
+    good_pred_confidence = list()
+    bad_pred_confidence = list()
+
+    # Group confidence by prediction success
+    for label in range(len(confidence_per_case)):
+        for prediction in range(len(confidence_per_case[label])):
+            if label == prediction:
+                good_pred_confidence.extend(confidence_per_case[label][prediction])
+            else:
+                bad_pred_confidence.extend(confidence_per_case[label][prediction])
+
+    # Convert to dataframe to please seaborn
+    df = pd.DataFrame({'confidence': good_pred_confidence + bad_pred_confidence,
+                       'is_correct': [True] * len(good_pred_confidence) + [False] * len(bad_pred_confidence)})
+
+    palette = {True: "tab:green", False: "tab:red"}
+    sns.displot(df, x='confidence', hue='is_correct', kind='kde', fill=True, palette=palette, legend=False,
+                common_norm=False, common_grid=True)
+
+    plt.ylabel('Density')
+    plt.xlabel('Classification confidence')
+    plt.axis([0, 1, None, None])
+    plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+    plt.legend(labels=['Good classification', 'Bad classification'], loc='upper left')
+    plt.title(f'Classification confidence\nfor {len(df):n} test patches')
+
+    save_plot('confidence_distribution')
