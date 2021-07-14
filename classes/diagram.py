@@ -1,14 +1,15 @@
 import gzip
 import json
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Union
-from zipfile import ZipFile
 
 import numpy as np
 from shapely.geometry import LineString, Polygon
 
 from plots.data import plot_diagram
+from utils.logger import logger
 from utils.misc import clip
 from utils.settings import settings
 
@@ -97,11 +98,17 @@ class Diagram:
         :param label_extra: Optional extra information for the plot label.
         """
         plot_diagram(self.x, self.y, self.values, self.file_basename + label_extra, 'nearest', self.x[1] - self.x[0],
-                     transition_lines=self.transition_lines, charge_regions=self.charge_area, focus_area=focus_area)
+                     transition_lines=self.transition_lines, charge_regions=self.charge_area, focus_area=focus_area,
+                     show_offset=False)
 
     @staticmethod
-    def load_diagrams(diagrams_path: Path, labels_path: Path = None, load_lines: bool = True, load_areas: bool = True) \
-            -> List["Diagram"]:
+    def load_diagrams(pixel_size,
+                      research_group,
+                      diagrams_path: Path,
+                      labels_path: Path = None,
+                      single_dot: bool = True,
+                      load_lines: bool = True,
+                      load_areas: bool = True) -> List["Diagram"]:
         """
         Load stability diagrams and annotions from files.
 
@@ -116,38 +123,58 @@ class Diagram:
         with open(labels_path, 'r') as annotations_file:
             labels_json = json.load(annotations_file)
 
+        logger.debug(f'{len(labels_json)} labeled diagrams found')
         labels = {obj['External ID']: obj for obj in labels_json}
 
-        diagrams = []
         # Open the zip file and iterate over all csv files
-        with ZipFile(diagrams_path, 'r') as zip_file:
-            diagram_names = zip_file.namelist()
-            for diagram_name in diagram_names:
-                file_basename = Path(diagram_name).stem  # Remove extension
-                with zip_file.open(diagram_name) as diagram_file:
-                    # Load values from CSV file
-                    x, y, values = Diagram._load_interpolated_csv(gzip.open(diagram_file))
+        in_zip_path = Path(f'{pixel_size * 1000}mV', 'single' if single_dot else 'double', research_group)
+        zip_dir = zipfile.Path(diagrams_path, str(in_zip_path) + '/')
 
-                    current_labels = labels[f'{file_basename}.png']['Label']['objects']
-                    transition_lines = None
-                    charge_area = None
+        if not zip_dir.is_dir():
+            raise ValueError(f'Folder "{in_zip_path}" not found in the zip file "{diagrams_path}".'
+                             f'Check if pixel size and research group exist in this folder.')
 
-                    if load_lines:
-                        # Load transition line annotations
-                        transition_lines = Diagram._load_lines_annotations(
-                            filter(lambda l: l['title'] == 'line', current_labels), x, y,
-                            snap=1)
+        diagrams = []
+        nb_no_label = 0
+        # Iterate over all csv files inside the zip file
+        for diagram_name in zip_dir.iterdir():
+            file_basename = Path(str(diagram_name)).stem  # Remove extension
 
-                    if load_areas:
-                        # Load charge area annotations
-                        charge_area = Diagram._load_charge_annotations(
-                            filter(lambda l: l['title'] != 'line', current_labels), x, y,
-                            snap=1)
+            if f'{file_basename}.png' not in labels:
+                logger.debug(f'No label found for {file_basename}')
+                nb_no_label += 1
+                continue
 
-                    diagram = Diagram(file_basename, x, y, values, transition_lines, charge_area)
-                    diagrams.append(diagram)
-                    if settings.plot_diagrams:
-                        diagram.plot()
+            with diagram_name.open('r') as diagram_file:
+                # Load values from CSV file
+                x, y, values = Diagram._load_interpolated_csv(gzip.open(diagram_file))
+
+                current_labels = labels[f'{file_basename}.png']['Label']['objects']
+                transition_lines = None
+                charge_area = None
+
+                if load_lines:
+                    # Load transition line annotations
+                    transition_lines = Diagram._load_lines_annotations(
+                        filter(lambda l: l['title'] == 'line', current_labels), x, y,
+                        snap=1)
+
+                if load_areas:
+                    # Load charge area annotations
+                    charge_area = Diagram._load_charge_annotations(
+                        filter(lambda l: l['title'] != 'line', current_labels), x, y,
+                        snap=1)
+
+                diagram = Diagram(file_basename, x, y, values, transition_lines, charge_area)
+                diagrams.append(diagram)
+                if settings.plot_diagrams:
+                    diagram.plot()
+
+        if nb_no_label > 0:
+            logger.warning(f'{nb_no_label} diagrams skipped because no label found')
+
+        if len(diagrams) == 0:
+            logger.error(f'No diagram loaded (from {zip_dir})')
 
         return diagrams
 

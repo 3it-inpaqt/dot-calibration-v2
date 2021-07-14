@@ -117,7 +117,10 @@ class QDSDLines(Dataset):
         self._patches_labels = torch.cat((self._patches_labels, self._patches_labels))
 
     @staticmethod
-    def build_split_datasets(test_ratio: float,
+    def build_split_datasets(pixel_size,
+                             research_group,
+                             test_ratio: float,
+                             single_dot: bool = True,
                              validation_ratio: float = 0,
                              patch_size: Tuple[int, int] = (10, 10),
                              overlap: Tuple[int, int] = (0, 0),
@@ -135,15 +138,20 @@ class QDSDLines(Dataset):
         """
 
         cache_path = Path(DATA_DIR, 'cache',
-                          f'qdsd_lines_{patch_size[0]}-{patch_size[1]}_{overlap[0]}-{overlap[1]}_'
+                          f'qdsd_lines_{research_group}_{pixel_size}V_'
+                          f'{"single_" if single_dot else "double_"}'
+                          f'{patch_size[0]}-{patch_size[1]}_{overlap[0]}-{overlap[1]}_'
                           f'{label_offset[0]}-{label_offset[1]}.p')
         if settings.use_data_cache and cache_path.is_file():
             # Fast load from cache
             patches = load_data_cache(cache_path)
         else:
             # Load fom files and labels (but lines only)
-            diagrams = Diagram.load_diagrams(Path(DATA_DIR, 'interpolated_csv.zip'),
+            diagrams = Diagram.load_diagrams(pixel_size,
+                                             research_group,
+                                             Path(DATA_DIR, 'interpolated_csv.zip'),
                                              Path(DATA_DIR, 'labels.json'),
+                                             single_dot,
                                              True, False)
 
             patches = []

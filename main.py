@@ -22,7 +22,9 @@ def main():
                                                                             overlap=(settings.patch_overlap_x,
                                                                                      settings.patch_overlap_y),
                                                                             label_offset=(settings.label_offset_x,
-                                                                                          settings.label_offset_y))
+                                                                                          settings.label_offset_y),
+                                                                            pixel_size=settings.pixel_size,
+                                                                            research_group=settings.research_group)
             plot_patch_sample(test_set, 8)
 
         # Build the network

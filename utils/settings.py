@@ -89,6 +89,14 @@ class Settings:
     label_offset_x: int = 0
     label_offset_y: int = 0
 
+    # The size of the interpolated pixel in Volt.
+    # Should be available in the dataset folder.
+    pixel_size: float = 0.0025
+
+    # The name of the research group who provide the data (currently: 'louis_gaudreau' or 'michel_pioro_ladriere').
+    # Should be available in the dataset folder.
+    research_group: str = 'louis_gaudreau'
+
     # The percentage of data kept for testing only
     test_ratio: float = 0.2
 
