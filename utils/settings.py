@@ -110,6 +110,9 @@ class Settings:
     # 0 means automatic setting (using cpu count).
     nb_loader_workers: int = 0
 
+    # If True, loss will compensate imbalance number of training examples between classes with weights.
+    balance_with_weights: bool = False
+
     # ==================================================================================================================
     # ==================================================== Networks ====================================================
     # ==================================================================================================================

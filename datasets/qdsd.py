@@ -96,13 +96,22 @@ class QDSDLines(Dataset):
         """
         :return: Some statistics about this dataset
         """
-        nb_patche = len(self)
+        nb_patch = len(self)
         nb_line = torch.sum(self._patches_labels)
         return {
-            f'{self.role}_dataset_size': nb_patche,
+            f'{self.role}_dataset_size': nb_patch,
             f'{self.role}_dataset_nb_line': int(nb_line),
-            f'{self.role}_dataset_nb_noline': int(nb_patche - nb_line),
+            f'{self.role}_dataset_nb_noline': int(nb_patch - nb_line),
         }
+
+    def get_class_ratio(self) -> float:
+        """
+        :return: The class count ratio for: no_line / line
+        """
+        nb_patch = len(self)
+        nb_line = torch.sum(self._patches_labels)
+
+        return (nb_patch - nb_line) / nb_line
 
     def data_augmentation(self) -> None:
         """

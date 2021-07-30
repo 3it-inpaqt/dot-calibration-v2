@@ -13,12 +13,13 @@ class FeedForward(nn.Module):
     Simple fully connected feed forward classifier neural network.
     """
 
-    def __init__(self, input_shape: Tuple[int, int]):
+    def __init__(self, input_shape: Tuple[int, int], class_ratio: float = None):
         """
         Create a new network with fully connected hidden layers.
         The number hidden layers is based on the settings.
 
         :param input_shape: The dimension of one item of the dataset used for the training
+        :param class_ratio: The class ratio for: no_line / line
         """
         super().__init__()
 
@@ -36,7 +37,14 @@ class FeedForward(nn.Module):
         # Create a dropout layer if p > 0
         self.dropout = nn.Dropout(settings.dropout) if settings.dropout > 0 else None
 
-        self._criterion = nn.BCEWithLogitsLoss()  # Binary Cross Entropy including sigmoid layer
+        # Balance or not the loss function
+        if settings.balance_with_weights:
+            pos_weight = torch.Tensor([class_ratio])
+        else:
+            pos_weight = None
+
+        # Binary Cross Entropy including sigmoid layer
+        self._criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
     def forward(self, x: Any) -> Any:
