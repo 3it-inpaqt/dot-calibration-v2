@@ -18,3 +18,8 @@ and unzip in into a `data` folder at the root of this project. The mandatory fil
 
 * interpolated_csv.zip
 * labels.json
+
+## Credits
+
+* [PyTorch](https://pytorch.org/)
+* [Blitz - Bayesian Layers in Torch Zoo](https://github.com/piEsposito/blitz-bayesian-deep-learning)

@@ -7,6 +7,7 @@ from blitz.modules import BayesianConv2d, BayesianLinear
 from blitz.utils import variational_estimator
 from torch import optim
 
+from plots.parameters import plot_bayesian_parameters
 from utils.misc import calc_out_conv_layers
 from utils.settings import settings
 
@@ -71,7 +72,7 @@ class BCNN(nn.Module):
         # Flatten [batch_size, 1] to [batch_size]
         return torch.squeeze(x)
 
-    def training_step(self, inputs: Any, labels: Any):
+    def training_step(self, inputs: Any, labels: Any) -> float:
         """
         Define the logic for one training step.
 
@@ -113,7 +114,7 @@ class BCNN(nn.Module):
         stds = outputs.std(axis=0)
         pi = torch.Tensor([math.pi])
         entropies = torch.log(2 * pi * torch.pow(stds.cpu(), 2)) / 2 + 1 / 2
-        confidences = list(zip(*[means.cpu(), stds.cpu(), entropies.cpu()]))
+        confidences = stds.cpu()
 
         # Round the samples mean value to 0 or 1
         predictions = torch.round(means).bool()
@@ -137,3 +138,16 @@ class BCNN(nn.Module):
         Define the data pre-processing to apply on the datasets before to use this neural network.
         """
         return [lambda x: x.view(1, x.shape[0], -1)]  # Add the channel dimension
+
+    def plot_parameters_sample(self, title: str, file_name: str, n: int = 9) -> None:
+
+        means = stds = None
+        # Get weight parameters from the last layer of the network
+        # TODO do not assume the layers architecture
+        for name, params in self.fc_layers.named_parameters():
+            if name == '2.weight_mu':
+                means = params.squeeze().cpu().detach().numpy()
+            elif name == '2.weight_rho':
+                stds = params.squeeze().cpu().detach().numpy()
+
+        plot_bayesian_parameters(means[:n], stds[:n], title, file_name)
