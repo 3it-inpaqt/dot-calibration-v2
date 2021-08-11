@@ -160,12 +160,12 @@ def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Datas
         # Run the baselines with the same data
         run_baselines(train_dataset, test_dataset, device)
 
-    network.plot_parameters_sample('Sample of 9 weights from the last layer\nNot Trained network', 'pre_trained')
+    network.plot_parameters_sample('Sample of 9 weights from the last layer\nNot Trained network', 'pre_train')
 
     # Start the training
     train(network, train_dataset, validation_dataset, device)
 
-    network.plot_parameters_sample('Sample of 9 weights from the last layer\nTrained network', 'post_trained')
+    network.plot_parameters_sample('Sample of 9 weights from the last layer\nTrained network', 'post_train')
 
     # Start normal test
     test(network, test_dataset, device, final=True)
