@@ -4,11 +4,11 @@ import random
 import numpy as np
 import torch
 from codetiming import Timer
-from torch.nn import Module
 from torch.utils.data import Dataset
 
 from baselines.gap_baseline import GapBaseline
 from baselines.std_baseline import StdBaseline
+from classes.classifier_nn import ClassifierNN
 from test import test
 from train import train
 from utils.logger import logger
@@ -120,7 +120,7 @@ def train_data_augmentation(train_dataset: Dataset, test_dataset: Dataset, valid
 
 
 @SectionTimer('run')
-def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: Module) -> None:
+def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: ClassifierNN) -> None:
     """
     Run the training and the testing of the network.
 
@@ -160,8 +160,12 @@ def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Datas
         # Run the baselines with the same data
         run_baselines(train_dataset, test_dataset, device)
 
+    network.plot_parameters_sample('Sample of 9 weights from the last layer\nNot Trained network', 'pre_trained')
+
     # Start the training
     train(network, train_dataset, validation_dataset, device)
+
+    network.plot_parameters_sample('Sample of 9 weights from the last layer\nTrained network', 'post_trained')
 
     # Start normal test
     test(network, test_dataset, device, final=True)

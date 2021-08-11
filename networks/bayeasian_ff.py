@@ -7,21 +7,23 @@ from blitz.modules import BayesianLinear
 from blitz.utils import variational_estimator
 from torch import optim
 
+from classes.classifier_nn import ClassifierNN
 from utils.settings import settings
 
 
 @variational_estimator
-class BFF(nn.Module):
+class BFF(ClassifierNN):
     """
     Bayesian fully connected feed forward classifier neural network.
     """
 
-    def __init__(self, input_shape: Tuple[int, int]):
+    def __init__(self, input_shape: Tuple[int, int], class_ratio: float = None):
         """
         Create a bayesian new network with fully connected hidden layers.
         The number hidden layers is based on the settings.
 
         :param input_shape: The dimension of one item of the dataset used for the training
+        :param class_ratio: The class ratio for: no_line / line
         """
         super().__init__()
 
@@ -36,7 +38,14 @@ class BFF(nn.Module):
         for i in range(len(layers_size) - 1):
             self.fc_layers.append(BayesianLinear(layers_size[i], layers_size[i + 1]))
 
-        self._criterion = nn.BCEWithLogitsLoss()  # Binary Cross Entropy including sigmoid layer
+        # Balance or not the loss function
+        if settings.balance_with_weights:
+            pos_weight = torch.Tensor([class_ratio])
+        else:
+            pos_weight = None
+
+        # Binary Cross Entropy including sigmoid layer
+        self._criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
     def forward(self, x: Any) -> Any:
@@ -104,18 +113,6 @@ class BFF(nn.Module):
         # Round the samples mean value to 0 or 1
         predictions = torch.round(means).bool()
         return predictions, confidences
-
-    def get_loss_name(self) -> str:
-        """
-        :return: The name of the loss function (criterion).
-        """
-        return type(self._criterion).__name__
-
-    def get_optimizer_name(self) -> str:
-        """
-        :return: The name of the optimiser function.
-        """
-        return type(self._optimizer).__name__
 
     @staticmethod
     def get_transforms():

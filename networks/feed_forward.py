@@ -5,10 +5,11 @@ import torch
 import torch.nn as nn
 from torch import optim
 
+from classes.classifier_nn import ClassifierNN
 from utils.settings import settings
 
 
-class FeedForward(nn.Module):
+class FeedForward(ClassifierNN):
     """
     Simple fully connected feed forward classifier neural network.
     """
@@ -100,18 +101,6 @@ class FeedForward(nn.Module):
         confidences = torch.abs(0.5 - outputs) * 2
         predictions = torch.round(outputs).bool()  # Round to 0 or 1
         return predictions, confidences.cpu()
-
-    def get_loss_name(self) -> str:
-        """
-        :return: The name of the loss function (criterion).
-        """
-        return type(self._criterion).__name__
-
-    def get_optimizer_name(self) -> str:
-        """
-        :return: The name of the optimiser function.
-        """
-        return type(self._optimizer).__name__
 
     @staticmethod
     def get_transforms():

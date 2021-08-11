@@ -1,8 +1,8 @@
 import numpy as np
 import torch
-from torch.nn import Module
 from torch.utils.data import DataLoader, Dataset
 
+from classes.classifier_nn import ClassifierNN
 from plots.results import plot_classification_sample, plot_confidence, plot_confusion_matrix
 from utils.logger import logger
 from utils.misc import get_nb_loader_workers
@@ -12,7 +12,7 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def test(network: Module, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
+def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
          limit: int = 0) -> float:
     """
     Start testing the network on a dataset.

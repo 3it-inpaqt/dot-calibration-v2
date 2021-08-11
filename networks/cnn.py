@@ -5,11 +5,12 @@ import torch
 import torch.nn as nn
 from torch import optim
 
+from classes.classifier_nn import ClassifierNN
 from utils.misc import calc_out_conv_layers
 from utils.settings import settings
 
 
-class CNN(nn.Module):
+class CNN(ClassifierNN):
     """
     Convolutional classifier neural network.
     """
@@ -116,18 +117,6 @@ class CNN(nn.Module):
         confidences = torch.abs(0.5 - outputs) * 2
         predictions = torch.round(outputs).bool()  # Round to 0 or 1
         return predictions, confidences.cpu()
-
-    def get_loss_name(self) -> str:
-        """
-        :return: The name of the loss function (criterion).
-        """
-        return type(self._criterion).__name__
-
-    def get_optimizer_name(self) -> str:
-        """
-        :return: The name of the optimiser function.
-        """
-        return type(self._optimizer).__name__
 
     @staticmethod
     def get_transforms():

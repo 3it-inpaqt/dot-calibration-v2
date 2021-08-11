@@ -2,9 +2,9 @@ from typing import List
 
 import numpy as np
 import torch
-from torch.nn import Module
 from torch.utils.data import DataLoader, Dataset
 
+from classes.classifier_nn import ClassifierNN
 from plots.results import plot_train_progress
 from test import test
 from utils.logger import logger
@@ -15,7 +15,7 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def train(network: Module, train_dataset: Dataset, validation_dataset: Dataset, device: torch.device) -> None:
+def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dataset, device: torch.device) -> None:
     """
     Train the network using the dataset.
 
@@ -96,7 +96,7 @@ def train(network: Module, train_dataset: Dataset, validation_dataset: Dataset, 
     plot_train_progress(loss_evolution, accuracy_evolution, nb_batch, best_checkpoint)
 
 
-def _checkpoint(network: Module, batch_num: int, train_dataset: Dataset, validation_dataset: Dataset,
+def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Dataset,
                 best_checkpoint: dict, device: torch.device) -> dict:
     """
     Pause the training to do some jobs, like intermediate testing and network backup.
@@ -171,7 +171,7 @@ def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> 
                  f"| std: {stats['losses_std']:.5f}")
 
 
-def _apply_early_stopping(network: Module, best_checkpoint: dict, nb_batch: int) -> None:
+def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch: int) -> None:
     """
     Apply early stopping by loading the best network according to the validation classification accuracy ran during
     checkpoints.
