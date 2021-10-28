@@ -2,16 +2,38 @@ import gzip
 import json
 import zipfile
 from dataclasses import dataclass
+from enum import Enum, unique
 from pathlib import Path
 from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LineString, Point, Polygon
 
 from plots.data import plot_diagram
 from utils.logger import logger
 from utils.misc import clip
 from utils.settings import settings
+
+
+@unique
+class ChargeRegime(Enum):
+    """ Charge regime enumeration """
+    UNKNOWN = 'unknown'
+    ELECTRON_0 = '0_electron'
+    ELECTRON_1 = '1_electron'
+    ELECTRON_2 = '2_electrons'
+    ELECTRON_3 = '3_electrons'
+    ELECTRON_4_PLUS = '4+_electrons'
+
+    def __str__(self) -> str:
+        """
+        Convert a charge regime to short string representation.
+
+        :return: Short string name.
+        """
+        short_map = {ChargeRegime.UNKNOWN: 'Unknown', ChargeRegime.ELECTRON_0: '0', ChargeRegime.ELECTRON_1: '1',
+                     ChargeRegime.ELECTRON_2: '2', ChargeRegime.ELECTRON_3: '3', ChargeRegime.ELECTRON_4_PLUS: '4+'}
+        return short_map[self]
 
 
 @dataclass
@@ -34,7 +56,7 @@ class Diagram:
     transition_lines: Optional[List[LineString]]
 
     # The charge area lines annotations
-    charge_area: Optional[List[Tuple[str, Polygon]]]
+    charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]
 
     def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),
                     label_offset: Tuple[int, int] = (0, 0)) -> Generator:
@@ -89,6 +111,26 @@ class Diagram:
                 # self.plot((start_x_v, end_x_v, start_y_v, end_y_v), f' - patch {i:n} - line {label}')
                 yield patch, label
 
+    def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
+        """
+        Get the charge regime of a specific location in the diagram.
+
+        :param coord_x: The x coordinate to check (not the voltage)
+        :param coord_y: The y coordinate to check (not the voltage)
+        :return: The charge regime
+        """
+        volt_x = self.x[coord_x]
+        volt_y = self.y[coord_y]
+        point = Point(volt_x, volt_y)
+
+        # Check coordinates in each labeled area
+        for regime, area in self.charge_areas:
+            if area.contains(point):
+                return regime
+
+        # Coordinates not found in labeled areas. The charge area in this location is thus unknown.
+        return ChargeRegime.UNKNOWN
+
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         """
         Plot the diagram with matplotlib (save and/or show it depending on the settings).
@@ -98,7 +140,7 @@ class Diagram:
         :param label_extra: Optional extra information for the plot label.
         """
         plot_diagram(self.x, self.y, self.values, self.file_basename + label_extra, 'nearest', self.x[1] - self.x[0],
-                     transition_lines=self.transition_lines, charge_regions=self.charge_area, focus_area=focus_area,
+                     transition_lines=self.transition_lines, charge_regions=self.charge_areas, focus_area=focus_area,
                      show_offset=False)
 
     @staticmethod
@@ -230,7 +272,7 @@ class Diagram:
         return processed_lines
 
     @staticmethod
-    def _load_charge_annotations(charge_areas: Iterable, x, y, snap: int = 1) -> List[Tuple[str, Polygon]]:
+    def _load_charge_annotations(charge_areas: Iterable, x, y, snap: int = 1) -> List[Tuple[ChargeRegime, Polygon]]:
         """
         Load regions annotation for an image.
 
@@ -254,7 +296,7 @@ class Diagram:
             area_y = Diagram._coord_to_volt((p['y'] for p in area['polygon']), min_y, max_y, y[0], step, snap, True)
 
             area_obj = Polygon(zip(area_x, area_y))
-            processed_areas.append((area['value'], area_obj))
+            processed_areas.append((ChargeRegime(area['value']), area_obj))
 
         return processed_areas
 
