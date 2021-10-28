@@ -7,6 +7,7 @@ from autotuning.autotuning_procedure import AutotuningProcedure
 from autotuning.random_baseline import RandomBaseline
 from classes.diagram import ChargeRegime, Diagram
 from datasets.qdsd import DATA_DIR
+from plots.autotuning import plot_autotuning_results
 from utils.logger import logger
 from utils.settings import settings
 from utils.timer import SectionTimer
@@ -53,7 +54,8 @@ def show_results(results: dict) -> None:
     :param results: The result dictionary.
     """
     overall = Counter()
-    results_table = []
+    headers = ['Diagram'] + list(map(str, ChargeRegime)) + ['Good', 'Bad', 'Success Rate']
+    results_table = [headers]
 
     # Process counter of each diagram
     for diagram_name, diagram_counter in results.items():
@@ -62,9 +64,11 @@ def show_results(results: dict) -> None:
         nb_bad_regime = nb_total - nb_good_regime
 
         results_row = [diagram_counter[regime] for regime in ChargeRegime]
-        results_row = [diagram_name] + results_row + [nb_good_regime, nb_bad_regime, f'{nb_good_regime / nb_total:.2%}']
+        results_row = [diagram_name] + results_row + [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
         results_table.append(results_row)
         overall += diagram_counter
+
+    plot_autotuning_results(results_table)
 
     # Overall row
     if len(results_table) > 1:
@@ -73,13 +77,13 @@ def show_results(results: dict) -> None:
         nb_bad_regime = nb_total - nb_good_regime
 
         results_row = [overall[regime] for regime in ChargeRegime]
-        results_row = ['Sum'] + results_row + [nb_good_regime, nb_bad_regime, f'{nb_good_regime / nb_total:.2%}']
+        results_row = ['Sum'] + results_row + [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
         results_table.append(results_row)
         overall += overall
 
     # Print
-    headers = ['Diagram'] + list(map(str, ChargeRegime)) + ['Good', 'Bad', 'Success Rate']
-    logger.info('Autotuning results:\n' + tabulate(results_table, headers=headers, tablefmt='fancy_grid'))
+    logger.info('Autotuning results:\n' +
+                tabulate(results_table, headers="firstrow", tablefmt='fancy_grid', floatfmt='.2%'))
 
 
 if __name__ == '__main__':
