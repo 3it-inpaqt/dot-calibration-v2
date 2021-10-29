@@ -12,7 +12,7 @@ def plot_autotuning_results(results) -> None:
     # One row per regime and diagram
     df = df.melt(id_vars=["Diagram"], var_name="Number of electrons", value_name="Quantity")
     # Plot
-    sns.barplot(x='Number of electrons', y='Quantity', data=df,
+    sns.barplot(x='Number of electrons', y='Quantity', data=df, saturation=.7,
                 palette=['grey', 'tab:red', 'tab:green', 'tab:red', 'tab:red', 'tab:red'])
 
     save_plot(f'autotuning_results')

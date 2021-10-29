@@ -33,7 +33,7 @@ def run_autotuning() -> None:
 
     procedure: AutotuningProcedure = RandomBaseline(None, (settings.patch_size_x, settings.patch_size_y))
 
-    logger.info(f'{len(diagrams)} diagram(s) will be run for {NB_ITERATIONS} iteration(s) '
+    logger.info(f'{len(diagrams)} diagram(s) will be process {NB_ITERATIONS} times '
                 f'with the "{procedure}" autotuning procedure')
 
     results = {d.file_basename: Counter() for d in diagrams}
