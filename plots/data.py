@@ -10,19 +10,12 @@ from torch.utils.data import DataLoader, Dataset
 from utils.output import save_plot
 from utils.settings import settings
 
-REGION_SHORT = {
-    '0_electron': '0',
-    '1_electron': '1',
-    '2_electrons': '2',
-    '3_electrons': '3',
-    '4+_electrons': '4+'
-}
-
 
 # TODO factorise plotting code
 
 def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, pixel_size: float,
-                 charge_regions: Iterable[Tuple[str, Polygon]] = None, transition_lines: Iterable[LineString] = None,
+                 charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
+                 transition_lines: Iterable[LineString] = None,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True) -> None:
     """
     Plot the interpolated image.
@@ -43,11 +36,11 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
                extent=[np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)])
 
     if charge_regions is not None:
-        for label, polygon in charge_regions:
+        for regime, polygon in charge_regions:
             polygon_x, polygon_y = polygon.exterior.coords.xy
             plt.fill(polygon_x, polygon_y, 'b', alpha=.3, edgecolor='b', snap=True)
             label_x, label_y = list(polygon.centroid.coords)[0]
-            plt.text(label_x, label_y, REGION_SHORT[label], ha="center", va="center", color='b')
+            plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b')
 
     if transition_lines is not None:
         for line in transition_lines:

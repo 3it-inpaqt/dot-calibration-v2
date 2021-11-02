@@ -19,6 +19,10 @@ and unzip in into a `data` folder at the root of this project. The mandatory fil
 * interpolated_csv.zip
 * labels.json
 
+## Settings
+
+Create a file `settings.yaml` to override settings documented in `utils/settings.py`
+
 ## Credits
 
 * [PyTorch](https://pytorch.org/)
