@@ -58,6 +58,19 @@ class Diagram:
     # The charge area lines annotations
     charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]
 
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> Sequence[float]:
+        """
+        Extract one patch in the diagram (data only, no label).
+
+        :param coordinate: The coordinate in the diagram (not the voltage)
+        :param patch_size: The size of the patch to extract (in number of pixel)
+        :return: The patch
+        """
+        coord_x, coord_y = coordinate
+        size_x, size_y = patch_size
+        # Invert Y axis because the diagram origin (0,0) is top left
+        return self.values[coord_y:coord_y + size_y, coord_x:coord_x + size_x]
+
     def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),
                     label_offset: Tuple[int, int] = (0, 0)) -> Generator:
         """
@@ -130,6 +143,10 @@ class Diagram:
 
         # Coordinates not found in labeled areas. The charge area in this location is thus unknown.
         return ChargeRegime.UNKNOWN
+
+    def is_line_in_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> bool:
+        # TODO
+        pass
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         """

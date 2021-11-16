@@ -1,5 +1,5 @@
 from datasets.qdsd import QDSDLines
-from networks.cnn import CNN
+from networks.bayeasian_cnn import BCNN
 from plots.data import plot_patch_sample
 from run import clean_up, preparation, run
 from utils.logger import logger
@@ -28,7 +28,7 @@ def main():
             plot_patch_sample(test_set, 8)
 
         # Build the network
-        net = CNN(input_shape=(settings.patch_size_x, settings.patch_size_y), class_ratio=train_set.get_class_ratio())
+        net = BCNN(input_shape=(settings.patch_size_x, settings.patch_size_y))
 
         # Run the training and the test
         run(train_set, test_set, valid_set, net)
