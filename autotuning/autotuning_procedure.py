@@ -27,18 +27,21 @@ class AutotuningProcedure:
     def __str__(self) -> str:
         return type(self).__name__
 
-    def is_transition_line(self, diagram: Diagram, coordinate: Tuple[int, int]) -> (bool, float):
+    def is_transition_line(self, diagram: Diagram, coordinate: Tuple[int, int], offsets: Tuple[int, int] = (0, 0)) \
+            -> (bool, float):
         """
         Try to detect a line in a sub-area of the diagram using the current model or the oracle.
 
         :param diagram: The diagram to consider
         :param coordinate: The coordinate of the top left of the sub-area. The size is fixed at the procedure creation.
+        :param offsets: The patch offset for line detection. Only used for oracle since the model already takes its own
+        offset into account.
         :return: The line classification (True = line detected)
         and the confidence score (0: low confidence to 1: very high confidence)
         """
         if self.is_oracle_enable:
             # Check the diagram label and return the classification with full confidence
-            return diagram.is_line_in_patch(coordinate, self.patch_size), 1
+            return diagram.is_line_in_patch(coordinate, self.patch_size, offsets), 1
         else:
             # Cut the patch area and send it to the model for inference
             patch = diagram.get_patch(coordinate, self.patch_size)

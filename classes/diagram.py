@@ -144,9 +144,36 @@ class Diagram:
         # Coordinates not found in labeled areas. The charge area in this location is thus unknown.
         return ChargeRegime.UNKNOWN
 
-    def is_line_in_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> bool:
-        # TODO
-        pass
+    def is_line_in_patch(self, coordinate: Tuple[int, int],
+                         patch_size: Tuple[int, int],
+                         offsets: Tuple[int, int] = (0, 0)) -> bool:
+        """
+        Check if a line label intersect a specific sub-area (patch) of the diagram.
+
+        :param coordinate: The patch top left coordinates
+        :param patch_size: The patch size
+        :param offsets: The patch offset (area to ignore lines)
+        :return: True if a line intersect the patch (offset excluded)
+        """
+
+        coord_x, coord_y = coordinate
+        size_x, size_y = patch_size
+        offset_x, offset_y = offsets
+
+        # Subtract the offset and convert to voltage
+        start_x_v = self.x[coord_x + offset_x]
+        start_y_v = self.y[coord_y + offset_y]
+        end_x_v = self.x[coord_x + size_x - offset_x]
+        end_y_v = self.y[coord_y + size_y - offset_y]
+
+        # Create patch shape to find line intersection
+        patch_shape = Polygon([(start_x_v, start_y_v),
+                               (end_x_v, start_y_v),
+                               (end_x_v, end_y_v),
+                               (start_x_v, end_y_v)])
+
+        # Label is True if any line intersect the patch shape
+        return any([line.intersects(patch_shape) for line in self.transition_lines])
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         """
