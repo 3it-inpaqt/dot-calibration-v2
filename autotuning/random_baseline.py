@@ -18,4 +18,4 @@ class RandomBaseline(AutotuningProcedure):
         super().__init__(None, patch_size, label_offsets, True)
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
-        return random.randint(0, len(diagram.x) - 1), random.randint(0, len(diagram.y) - 1)
+        return random.randint(0, len(diagram.x_axes) - 1), random.randint(0, len(diagram.y_axes) - 1)

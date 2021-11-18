@@ -7,32 +7,38 @@ from classes.diagram import Diagram
 class Czischek2021(AutotuningProcedure):
     """ Autotuning procedure from https://arxiv.org/abs/2101.03181 """
 
-    _search_first_line_step_limit: int = 20
+    _search_line_step_limit: int = 20
     _search_zero_electron_limit: int = 40
     _search_one_electron_limit: int = 50
 
     _nb_validation_line_forward: int = 10  # Number of steps
     _nb_validation_line_backward: int = 4  # Number of steps
+    _nb_validation_empty: int = 40  # Number of steps
 
     _shift_size_follow_line: int = 1  # Number of pixels
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         self.x, self.y = start_coord
 
-        self.search_line(diagram)
-        self.search_zero_electron(diagram)
-        self.search_one_electron(diagram)
+        self._search_line(diagram)
+        self._search_zero_electron(diagram)
+        self._search_one_electron(diagram)
 
+        # Enforce the boundary policy to make sure the final guess is in the diagram area
+        self._enforce_boundary_policy(diagram, force=True)
         return self.get_patch_center()
 
-    def search_line(self, diagram: Diagram) -> bool:
+    def _search_line(self, diagram: Diagram) -> bool:
         """
         Search any line from the tuning starting point.
 
         :param diagram: The diagram to explore.
         :return: True if we found the a line, False if we reach the step limit without detecting a line.
         """
-        for _ in range(self._search_first_line_step_limit):
+        step_count = 0
+        # Search until step limit reach or we arrive at the top left corder of the diagram (for hard policy only)
+        while step_count < self._search_line_step_limit and not (self.is_max_left() and self.is_max_up()):
+            step_count += 1
             line_detected, _ = self.is_transition_line(diagram)
 
             if line_detected:
@@ -56,15 +62,20 @@ class Czischek2021(AutotuningProcedure):
 
         return False  # At this point we reached the step limit, we assume we passed the first line
 
-    def search_zero_electron(self, diagram: Diagram) -> None:
+    def _search_zero_electron(self, diagram: Diagram) -> bool:
         """
         Search the 0 electron regime.
 
         :param diagram: The diagram to explore.
         """
-        # FIXME with no boundaries this one could run forever
         no_line_in_a_row = 0
-        while no_line_in_a_row < self._search_zero_electron_limit:
+        nb_steps = 0
+        # Search until the empty regime is found (K no line in a row) or step limit is reach or we arrive at the top
+        # left corder of the diagram (for hard policy only)
+        while no_line_in_a_row < self._nb_validation_empty and \
+                nb_steps < self._search_zero_electron_limit and \
+                not (self.is_max_left() and self.is_max_up()):
+            nb_steps += 1
             line_detected, _ = self.is_transition_line(diagram)
 
             if line_detected:
@@ -75,14 +86,21 @@ class Czischek2021(AutotuningProcedure):
                 no_line_in_a_row += 1
                 self.move_left()
 
-    def search_one_electron(self, diagram: Diagram) -> bool:
+        # This step is a success if the no line in a row condition is reached
+        return no_line_in_a_row < self._nb_validation_empty
+
+    def _search_one_electron(self, diagram: Diagram) -> bool:
         """
         Search the first line starting from the 0 electron regime.
 
         :param diagram: The diagram to explore.
         :return: True if we found the first line, False if we reach the step limit without detecting a line.
         """
-        for _ in range(self._search_one_electron_limit):
+        nb_steps = 0
+        # Search until step limit reach or we arrive at the bottom right corder of the diagram (for hard policy only)
+        while nb_steps < self._search_one_electron_limit and \
+                not (self.is_max_right(diagram) and self.is_max_down(diagram)):
+            nb_steps += 1
             line_detected, _ = self.is_transition_line(diagram)
 
             if line_detected:

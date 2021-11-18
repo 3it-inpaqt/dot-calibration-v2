@@ -1,7 +1,16 @@
+from enum import Enum
+from random import randrange
 from typing import List, Optional, Tuple
 
 from classes.classifier_nn import ClassifierNN
 from classes.diagram import Diagram
+
+
+class BoundaryPolicy(Enum):
+    """ Enumeration of policies to apply if a scan is requested outside the diagram borders. """
+    HARD = 0  # Don't allow to go outside the diagram
+    SOFT_RANDOM = 1  # Allow to go outside the diagram and fill unknown data with random values
+    SOFT_VOID = 2  # Allow to go outside the diagram and fill unknown data with 0
 
 
 class AutotuningProcedure:
@@ -11,7 +20,8 @@ class AutotuningProcedure:
                  patch_size: Tuple[int, int],
                  label_offsets: Tuple[int, int] = (0, 0),
                  is_oracle_enable: bool = False,
-                 default_step: Optional[Tuple[int, int]] = None):
+                 default_step: Optional[Tuple[int, int]] = None,
+                 boundary_policy: BoundaryPolicy = BoundaryPolicy.HARD):
         """
         Create a new procedure.
 
@@ -19,6 +29,7 @@ class AutotuningProcedure:
         :param patch_size: The patch size to use in this procedure (should match with model expectation)
         :param is_oracle_enable: If true the line detection use directly on the labels instead of the model inference.
         :param default_step: The default move step. If None the (patch size - offset) is use.
+        :param boundary_policy: The policy to apply if a scan is requested outside the diagram borders.
         """
         if model is None and not is_oracle_enable:
             raise ValueError('If no model is provided, the oracle should be explicitly enable')
@@ -29,6 +40,7 @@ class AutotuningProcedure:
         self.patch_size = patch_size
         self.label_offsets = label_offsets
         self.is_oracle_enable = is_oracle_enable
+        self.boundary_policy = boundary_policy
         self.x = None
         self.y = None
 
@@ -59,31 +71,30 @@ class AutotuningProcedure:
         self._scan_history.clear()
         self._area_scanned = 0
 
-    def is_transition_line(self, diagram: Diagram, coordinate: Optional[Tuple[int, int]] = None) -> (bool, float):
+    def is_transition_line(self, diagram: Diagram) -> (bool, float):
         """
         Try to detect a line in a sub-area of the diagram using the current model or the oracle.
 
         :param diagram: The diagram to consider.
-        :param coordinate: The coordinate at the top left of the sub-area. The size and the offset are fixed at the
-         procedure creation. Use the current procedure x and y if None is provided.
         :return: The line classification (True = line detected) and
          the confidence score (0: low confidence to 1: very high confidence).
         """
 
-        if coordinate is None:
-            coordinate = self.x, self.y
+        # Check coordinates according to the current policy.
+        # They could be changed to fit inside the diagram if necessary
+        self._enforce_boundary_policy(diagram)
 
         result: Tuple[bool, float]
         if self.is_oracle_enable:
             # Check the diagram label and return the classification with full confidence
-            result = diagram.is_line_in_patch(coordinate, self.patch_size, self.label_offsets), 1
+            result = diagram.is_line_in_patch((self.x, self.y), self.patch_size, self.label_offsets), 1
         else:
             # Cut the patch area and send it to the model for inference
-            patch = diagram.get_patch(coordinate, self.patch_size)
+            patch = diagram.get_patch((self.x, self.y), self.patch_size)
             result = self.model.infer(patch)
 
         # Record the diagram scanning activity.
-        self._scan_history.append((coordinate, result))
+        self._scan_history.append(((self.x, self.y), result))
         self._area_scanned += self.patch_size[0] * self.patch_size[1]
 
         return result
@@ -134,6 +145,114 @@ class AutotuningProcedure:
         """
         # (0, 0) is top left
         self.y += step_size if step_size is not None else self._default_step_y
+
+    def is_max_left(self) -> bool:
+        """
+        :return: True if the current coordinates have reach the left border of the diagram. False if not.
+        """
+
+        # No max for soft policies
+        if self.boundary_policy in [BoundaryPolicy.SOFT_VOID, BoundaryPolicy.SOFT_RANDOM]:
+            return False
+
+        if self.boundary_policy is BoundaryPolicy.HARD:
+            return self.x <= 0
+
+        raise ValueError(f'Unknown policy {self.boundary_policy}')
+
+    def is_max_right(self, diagram: Diagram) -> bool:
+        """
+        :return: True if the current coordinates have reach the right border of the diagram. False if not.
+        """
+
+        # No max for soft policies
+        if self.boundary_policy in [BoundaryPolicy.SOFT_VOID, BoundaryPolicy.SOFT_RANDOM]:
+            return False
+
+        if self.boundary_policy is BoundaryPolicy.HARD:
+            return self.x >= len(diagram.x_axes) - self.patch_size[0] - 1
+
+        raise ValueError(f'Unknown policy {self.boundary_policy}')
+
+    def is_max_up(self) -> bool:
+        """
+        :return: True if the current coordinates have reach the top border of the diagram. False if not.
+        """
+
+        # No max for soft policies
+        if self.boundary_policy in [BoundaryPolicy.SOFT_VOID, BoundaryPolicy.SOFT_RANDOM]:
+            return False
+
+        if self.boundary_policy is BoundaryPolicy.HARD:
+            return self.y <= 0
+
+        raise ValueError(f'Unknown policy {self.boundary_policy}')
+
+    def is_max_down(self, diagram: Diagram) -> bool:
+        """
+        :return: True if the current coordinates have reach the bottom border of the diagram. False if not.
+        """
+
+        # No max for soft policies
+        if self.boundary_policy in [BoundaryPolicy.SOFT_VOID, BoundaryPolicy.SOFT_RANDOM]:
+            return False
+
+        if self.boundary_policy is BoundaryPolicy.HARD:
+            return self.y >= len(diagram.y_axes) - self.patch_size[1] - 1
+
+        raise ValueError(f'Unknown policy {self.boundary_policy}')
+
+    def _enforce_boundary_policy(self, diagram: Diagram, force: bool = False) -> bool:
+        """
+        Check if the coordinates violate the boundary policy. If they do, move the coordinates according to the policy.
+        :param diagram: The current diagram.
+        :param force: If True the boundaries are forced, no matter the currant policy.
+        :return: True if the coordinates are acceptable in the current policy, False if not.
+        """
+
+        # Always good for soft policies
+        if not force and self.boundary_policy in [BoundaryPolicy.SOFT_VOID, BoundaryPolicy.SOFT_RANDOM]:
+            return True
+
+        if force or self.boundary_policy is BoundaryPolicy.HARD:
+            patch_size_x, patch_size_y = self.patch_size
+            max_x = len(diagram.x_axes) - patch_size_x - 1
+            max_y = len(diagram.y_axes) - patch_size_y - 1
+
+            match_policy = True
+            if self.x < 0:
+                self.x = 0
+                match_policy = False
+            elif self.x > max_x:
+                self.x = max_x
+                match_policy = False
+            if self.y < 0:
+                self.y = 0
+                match_policy = False
+            elif self.y > max_y:
+                self.y = max_y
+                match_policy = False
+
+            return match_policy
+
+        raise ValueError(f'Unknown policy {self.boundary_policy}')
+
+    def get_random_coordinates_in_diagram(self, diagram: Diagram) -> Tuple[int, int]:
+        """
+        Generate (pseudo) random coordinates for the top left corder of a patch inside the diagram.
+        :param diagram: The diagram to consider.
+        :return: The (pseudo) random coordinates.
+        """
+        patch_size_x, patch_size_y = self.patch_size
+        max_x = len(diagram.x_axes) - patch_size_x - 1
+        max_y = len(diagram.y_axes) - patch_size_y - 1
+        return randrange(max_x), randrange(max_y)
+
+    def get_nb_steps(self) -> int:
+        """
+        :return: The number of steps completed for the current procedure.
+        """
+        return len(self._scan_history)
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         """

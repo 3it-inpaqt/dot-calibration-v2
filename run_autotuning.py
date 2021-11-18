@@ -45,10 +45,16 @@ def run_autotuning() -> None:
             for diagram in diagrams:
                 procedure.reset_procedure()
                 # Start the procedure
-                tuned_x, tuned_y = procedure.tune(diagram, (0, 0))
+                start_coord = procedure.get_random_coordinates_in_diagram(diagram)
+                logger.debug(f'Start tuning diagram {diagram.file_basename} '
+                             f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
+                tuned_x, tuned_y = procedure.tune(diagram, start_coord)
                 # Save final result
                 charge_area = diagram.get_charge(tuned_x, tuned_y)
                 results[diagram.file_basename][charge_area] += 1
+                logger.debug(f'End tuning {diagram.file_basename} in {procedure.get_nb_steps()} steps. '
+                             f'Final coordinates: ({tuned_x}, {tuned_y}) => {charge_area}e '
+                             f'{"[Good]" if charge_area is ChargeRegime.ELECTRON_1 else "[Bad]"}')
 
     show_results(results)
 

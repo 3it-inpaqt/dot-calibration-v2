@@ -44,10 +44,10 @@ class Diagram:
     file_basename: str
 
     # The list of voltage for the first gate
-    x: Sequence[float]
+    x_axes: Sequence[float]
 
     # The list of voltage for the second gate
-    y: Sequence[float]
+    y_axes: Sequence[float]
 
     # The list of measured voltage according to the 2 gates
     values: Sequence[float]
@@ -93,16 +93,16 @@ class Diagram:
             start_y = patch_y
             end_y = patch_y + patch_size_y
             # Patch coordinates (voltage)
-            start_y_v = self.y[start_y + label_offset_y]
-            end_y_v = self.y[end_y - label_offset_y]
+            start_y_v = self.y_axes[start_y + label_offset_y]
+            end_y_v = self.y_axes[end_y - label_offset_y]
             for patch_x in range(0, diagram_size_x - patch_size_x, patch_size_x - overlap_size_x):
                 i += 1
                 # Patch coordinates (indexes)
                 start_x = patch_x
                 end_x = patch_x + patch_size_x
                 # Patch coordinates (voltage) for label area
-                start_x_v = self.x[start_x + label_offset_x]
-                end_x_v = self.x[end_x - label_offset_x]
+                start_x_v = self.x_axes[start_x + label_offset_x]
+                end_x_v = self.x_axes[end_x - label_offset_x]
 
                 # Create patch shape to find line intersection
                 patch_shape = Polygon([(start_x_v, start_y_v),
@@ -132,8 +132,8 @@ class Diagram:
         :param coord_y: The y coordinate to check (not the voltage)
         :return: The charge regime
         """
-        volt_x = self.x[coord_x]
-        volt_y = self.y[coord_y]
+        volt_x = self.x_axes[coord_x]
+        volt_y = self.y_axes[coord_y]
         point = Point(volt_x, volt_y)
 
         # Check coordinates in each labeled area
@@ -161,10 +161,10 @@ class Diagram:
         offset_x, offset_y = offsets
 
         # Subtract the offset and convert to voltage
-        start_x_v = self.x[coord_x + offset_x]
-        start_y_v = self.y[coord_y + offset_y]
-        end_x_v = self.x[coord_x + size_x - offset_x]
-        end_y_v = self.y[coord_y + size_y - offset_y]
+        start_x_v = self.x_axes[coord_x + offset_x]
+        start_y_v = self.y_axes[coord_y + offset_y]
+        end_x_v = self.x_axes[coord_x + size_x - offset_x]
+        end_y_v = self.y_axes[coord_y + size_y - offset_y]
 
         # Create patch shape to find line intersection
         patch_shape = Polygon([(start_x_v, start_y_v),
@@ -183,7 +183,8 @@ class Diagram:
         :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
         :param label_extra: Optional extra information for the plot label.
         """
-        plot_diagram(self.x, self.y, self.values, self.file_basename + label_extra, 'nearest', self.x[1] - self.x[0],
+        plot_diagram(self.x_axes, self.y_axes, self.values, self.file_basename + label_extra, 'nearest',
+                     self.x_axes[1] - self.x_axes[0],
                      transition_lines=self.transition_lines, charge_regions=self.charge_areas, focus_area=focus_area,
                      show_offset=False)
 
