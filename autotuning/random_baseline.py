@@ -11,11 +11,11 @@ class RandomBaseline(AutotuningProcedure):
     Return random coordinates within the current diagram.
     """
 
-    def __init__(self, patch_size: Tuple[int, int]):
+    def __init__(self, patch_size: Tuple[int, int], label_offsets: Tuple[int, int] = (0, 0)):
         """
         It is not possible to provide a model for this procedure.
         """
-        super().__init__(None, patch_size, True)
+        super().__init__(None, patch_size, label_offsets, True)
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         return random.randint(0, len(diagram.x) - 1), random.randint(0, len(diagram.y) - 1)

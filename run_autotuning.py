@@ -4,7 +4,7 @@ from pathlib import Path
 from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
-from autotuning.random_baseline import RandomBaseline
+from autotuning.czischek_2021 import Czischek2021
 from classes.diagram import ChargeRegime, Diagram
 from datasets.qdsd import DATA_DIR
 from plots.autotuning import plot_autotuning_results
@@ -13,7 +13,7 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 TRAINED_NETWORK = 'out/base-ff/best_network.pt'
-NB_ITERATIONS = 1000
+NB_ITERATIONS = 1
 
 
 def run_autotuning() -> None:
@@ -31,7 +31,10 @@ def run_autotuning() -> None:
     # if not load_network_(model, Path(TRAINED_NETWORK)):
     #     raise RuntimeError(f'Trained parameters not found in: {TRAINED_NETWORK}')
 
-    procedure: AutotuningProcedure = RandomBaseline(None, (settings.patch_size_x, settings.patch_size_y))
+    patch_size = (settings.patch_size_x, settings.patch_size_y)
+    label_offsets = (settings.label_offset_x, settings.label_offset_y)
+    # procedure: AutotuningProcedure = RandomBaseline((settings.patch_size_x, settings.patch_size_y))
+    procedure: AutotuningProcedure = Czischek2021(None, patch_size, label_offsets, True)
 
     logger.info(f'{len(diagrams)} diagram(s) will be process {NB_ITERATIONS} times '
                 f'with the "{procedure}" autotuning procedure')
@@ -40,7 +43,10 @@ def run_autotuning() -> None:
     with SectionTimer('autotuning simulation'):
         for _ in range(NB_ITERATIONS):
             for diagram in diagrams:
+                procedure.reset_procedure()
+                # Start the procedure
                 tuned_x, tuned_y = procedure.tune(diagram, (0, 0))
+                # Save final result
                 charge_area = diagram.get_charge(tuned_x, tuned_y)
                 results[diagram.file_basename][charge_area] += 1
 
