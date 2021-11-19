@@ -53,7 +53,7 @@ def run_autotuning() -> None:
                 charge_area = diagram.get_charge(tuned_x, tuned_y)
                 results[diagram.file_basename][charge_area] += 1
                 logger.debug(f'End tuning {diagram.file_basename} in {procedure.get_nb_steps()} steps. '
-                             f'Final coordinates: ({tuned_x}, {tuned_y}) => {charge_area}e '
+                             f'Final coordinates: ({tuned_x}, {tuned_y}) => {charge_area} e '
                              f'{"[Good]" if charge_area is ChargeRegime.ELECTRON_1 else "[Bad]"}')
 
     show_results(results)

@@ -53,11 +53,9 @@ class AutotuningProcedure:
         else:
             self._default_step_x, self._default_step_y = default_step
 
-        # Performance statistics
+        # Performance statistic
         # History: ((x, y), (line_detected, confidence))
         self._scan_history: List[Tuple[Tuple[int, int], Tuple[bool, float]]] = []
-        # Number of measured pixels
-        self._area_scanned = 0
 
     def __str__(self) -> str:
         return type(self).__name__
@@ -69,7 +67,6 @@ class AutotuningProcedure:
         self.x = None
         self.y = None
         self._scan_history.clear()
-        self._area_scanned = 0
 
     def is_transition_line(self, diagram: Diagram) -> (bool, float):
         """
@@ -95,7 +92,6 @@ class AutotuningProcedure:
 
         # Record the diagram scanning activity.
         self._scan_history.append(((self.x, self.y), result))
-        self._area_scanned += self.patch_size[0] * self.patch_size[1]
 
         return result
 
@@ -253,6 +249,12 @@ class AutotuningProcedure:
         :return: The number of steps completed for the current procedure.
         """
         return len(self._scan_history)
+
+    def get_area_scanned(self) -> int:
+        """
+        :return: The number of pixel scanned so far for the current procedure.
+        """
+        return self.get_nb_steps() * self.patch_size[0] * self.patch_size[1]
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         """
