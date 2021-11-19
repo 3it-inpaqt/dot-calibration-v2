@@ -66,12 +66,13 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
         plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
                     color='skyblue', marker='x', s=200, label='Start')
 
-        # Marker for last point
-        if final_coord is not None:
-            last_x, last_y = final_coord
-            plt.scatter(x=x_i[last_x + settings.patch_size_x // 2], y=y_i[last_y + settings.patch_size_y // 2],
-                        color='fuchsia', marker='x', s=200, label='End')
+        plt.legend()
 
+    # Marker for tuning final guess
+    if final_coord is not None:
+        last_x, last_y = final_coord
+        plt.scatter(x=x_i[last_x + settings.patch_size_x // 2], y=y_i[last_y + settings.patch_size_y // 2],
+                    color='fuchsia', marker='x', s=200, label='End')
         plt.legend()
 
     if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
