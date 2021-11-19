@@ -16,6 +16,7 @@ class Czischek2021(AutotuningProcedure):
     _nb_validation_empty: int = 40  # Number of steps
 
     _shift_size_follow_line: int = 1  # Number of pixels
+    _shift_size_backward_down: int = 2  # Number of pixels
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         self.x, self.y = start_coord
@@ -41,14 +42,14 @@ class Czischek2021(AutotuningProcedure):
             step_count += 1
             line_detected, _ = self.is_transition_line(diagram)
 
-            if line_detected:
+            if line_detected and not self.is_max_up(diagram):
                 # Follow line up to validate the line detection
                 line_validated = True
                 for _ in range(self._nb_validation_line_forward):
                     self.move_left(self._shift_size_follow_line)
                     self.move_up()
                     line_detected, _ = self.is_transition_line(diagram)
-                    if not line_detected:
+                    if not line_detected or self.is_max_up(diagram):
                         line_validated = False
                         break
 
@@ -79,9 +80,12 @@ class Czischek2021(AutotuningProcedure):
             line_detected, _ = self.is_transition_line(diagram)
 
             if line_detected:
-                # Follow line up
-                self.move_left(self._shift_size_follow_line)
-                self.move_up()
+                if self.is_max_up(diagram):
+                    self.move_left()
+                else:
+                    # Follow line up
+                    self.move_left(self._shift_size_follow_line)
+                    self.move_up()
             else:
                 no_line_in_a_row += 1
                 self.move_left()
@@ -123,5 +127,6 @@ class Czischek2021(AutotuningProcedure):
             else:
                 # No line detected, keep moving right
                 self.move_right()
+                self.move_down(self._shift_size_backward_down)
 
         return False  # At this point we reached the step limit, we assume we passed the first line
