@@ -16,7 +16,9 @@ from utils.settings import settings
 def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, pixel_size: float,
                  charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: Iterable[LineString] = None,
-                 focus_area: Optional[Tuple] = None, show_offset: bool = True) -> None:
+                 focus_area: Optional[Tuple] = None, show_offset: bool = True,
+                 steps_history: List[Tuple[Tuple[int, int], Tuple[bool, float]]] = None,
+                 final_coord: Tuple[int, int] = None) -> None:
     """
     Plot the interpolated image.
 
@@ -30,6 +32,8 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     :param transition_lines: The transition line annotation to draw on top of the image
     :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
     :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
+    :param steps_history: The tuning steps history: ((x, y), (line_detected, confidence))
+    :param final_coord: The final tuning coordinates
     """
 
     plt.imshow(pixels, interpolation='none', cmap='copper',
@@ -46,6 +50,29 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
         for line in transition_lines:
             line_x, line_y = line.coords.xy
             plt.plot(line_x, line_y, color='lime', alpha=.5)
+
+    if steps_history is not None and len(steps_history) > 0:
+        patch_size_x_v = settings.patch_size_x * pixel_size
+        patch_size_y_v = settings.patch_size_y * pixel_size
+
+        for (x, y), (line_detected, confidence) in steps_history:
+            patch = patches.Rectangle((x_i[x], y_i[y]), patch_size_x_v, patch_size_y_v, linewidth=1,
+                                      edgecolor='g' if line_detected else 'r',
+                                      facecolor='none')
+            plt.gca().add_patch(patch)
+
+        # Marker for first point
+        (first_x, first_y), _ = steps_history[0]
+        plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
+                    color='skyblue', marker='x', s=200, label='Start')
+
+        # Marker for last point
+        if final_coord is not None:
+            last_x, last_y = final_coord
+            plt.scatter(x=x_i[last_x + settings.patch_size_x // 2], y=y_i[last_y + settings.patch_size_y // 2],
+                        color='fuchsia', marker='x', s=200, label='End')
+
+        plt.legend()
 
     if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
         focus_x, focus_y = focus_area if focus_area else 0, 0

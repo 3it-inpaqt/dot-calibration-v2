@@ -13,7 +13,7 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 TRAINED_NETWORK = 'out/base-ff/best_network.pt'
-NB_ITERATIONS = 1
+NB_ITERATIONS = 1000
 
 
 def run_autotuning() -> None:
@@ -41,7 +41,7 @@ def run_autotuning() -> None:
 
     results = {d.file_basename: Counter() for d in diagrams}
     with SectionTimer('autotuning simulation'):
-        for _ in range(NB_ITERATIONS):
+        for i in range(NB_ITERATIONS):
             for diagram in diagrams:
                 procedure.reset_procedure()
                 # Start the procedure
@@ -55,6 +55,10 @@ def run_autotuning() -> None:
                 logger.debug(f'End tuning {diagram.file_basename} in {procedure.get_nb_steps()} steps. '
                              f'Final coordinates: ({tuned_x}, {tuned_y}) => {charge_area} e '
                              f'{"[Good]" if charge_area is ChargeRegime.ELECTRON_1 else "[Bad]"}')
+
+                # Plot tuning steps for the first round
+                if i == 0:
+                    procedure.plot_step_history(diagram, (tuned_x, tuned_y))
 
     show_results(results)
 

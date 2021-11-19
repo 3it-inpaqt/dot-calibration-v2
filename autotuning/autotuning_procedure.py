@@ -4,6 +4,7 @@ from typing import List, Optional, Tuple
 
 from classes.classifier_nn import ClassifierNN
 from classes.diagram import Diagram
+from plots.data import plot_diagram
 
 
 class BoundaryPolicy(Enum):
@@ -109,7 +110,6 @@ class AutotuningProcedure:
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        # (0, 0) is top left
         self.x -= step_size if step_size is not None else self._default_step_x
 
     def move_right(self, step_size: Optional[int] = None) -> None:
@@ -119,7 +119,6 @@ class AutotuningProcedure:
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        # (0, 0) is top left
         self.x += step_size if step_size is not None else self._default_step_x
 
     def move_up(self, step_size: Optional[int] = None) -> None:
@@ -129,8 +128,7 @@ class AutotuningProcedure:
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        # (0, 0) is top left
-        self.y -= step_size if step_size is not None else self._default_step_y
+        self.y += step_size if step_size is not None else self._default_step_y
 
     def move_down(self, step_size: Optional[int] = None) -> None:
         """
@@ -139,8 +137,7 @@ class AutotuningProcedure:
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        # (0, 0) is top left
-        self.y += step_size if step_size is not None else self._default_step_y
+        self.y -= step_size if step_size is not None else self._default_step_y
 
     def is_max_left(self) -> bool:
         """
@@ -170,7 +167,7 @@ class AutotuningProcedure:
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
-    def is_max_up(self) -> bool:
+    def is_max_up(self, diagram: Diagram) -> bool:
         """
         :return: True if the current coordinates have reach the top border of the diagram. False if not.
         """
@@ -180,11 +177,11 @@ class AutotuningProcedure:
             return False
 
         if self.boundary_policy is BoundaryPolicy.HARD:
-            return self.y <= 0
+            return self.y >= len(diagram.y_axes) - self.patch_size[1] - 1
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
-    def is_max_down(self, diagram: Diagram) -> bool:
+    def is_max_down(self) -> bool:
         """
         :return: True if the current coordinates have reach the bottom border of the diagram. False if not.
         """
@@ -194,7 +191,7 @@ class AutotuningProcedure:
             return False
 
         if self.boundary_policy is BoundaryPolicy.HARD:
-            return self.y >= len(diagram.y_axes) - self.patch_size[1] - 1
+            return self.y <= 0
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
@@ -255,6 +252,15 @@ class AutotuningProcedure:
         :return: The number of pixel scanned so far for the current procedure.
         """
         return self.get_nb_steps() * self.patch_size[0] * self.patch_size[1]
+
+    def plot_step_history(self, d: Diagram, final_coord: Tuple[int, int]) -> None:
+        """
+        Plot the diagram with the tuning steps of the current procedure.
+        :param d: The diagram to plot.
+        """
+        plot_diagram(d.x_axes, d.y_axes, d.values, d.file_basename, 'nearest', d.x_axes[1] - d.x_axes[0],
+                     transition_lines=d.transition_lines, steps_history=self._scan_history, final_coord=final_coord,
+                     show_offset=False)
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         """
