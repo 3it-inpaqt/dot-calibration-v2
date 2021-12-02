@@ -43,24 +43,7 @@ def init_out_directory() -> None:
         logger.warning(f'Using temporary directory to save this run results.')
         if run_dir.exists():
             logger.warning(f'Previous temporary files removed: {run_dir}')
-            # Remove text files
-            (run_dir / 'run.log').unlink(missing_ok=True)
-            for file_name in OUT_FILES.values():
-                (run_dir / file_name).unlink(missing_ok=True)
-
-            # Remove images
-            if img_dir.is_dir():
-                # Remove png images files
-                for png_file in img_dir.glob('*.png'):
-                    png_file.unlink()
-                img_dir.rmdir()
-
-            # Remove saved networks
-            for p_file in run_dir.glob('*.pt'):
-                p_file.unlink()
-
-            # Remove tmp directory
-            run_dir.rmdir()
+            remove_out_directory(run_dir)
 
     try:
         # Create the directories
@@ -80,6 +63,33 @@ def init_out_directory() -> None:
         yaml.dump(asdict(settings), f)
 
     logger.debug(f'Parameters saved in {parameter_file}')
+
+
+def remove_out_directory(directory: Path) -> None:
+    """
+    Definitely remove an output directory.
+
+    :param directory: The path to the directory to remove.
+    """
+    img_dir = directory / 'img'
+    # Remove text files
+    (directory / 'run.log').unlink(missing_ok=True)
+    for file_name in OUT_FILES.values():
+        (directory / file_name).unlink(missing_ok=True)
+
+    # Remove images
+    if img_dir.is_dir():
+        # Remove png images files
+        for png_file in img_dir.glob('*.png'):
+            png_file.unlink()
+        img_dir.rmdir()
+
+    # Remove saved networks
+    for p_file in directory.glob('*.pt'):
+        p_file.unlink()
+
+    # Remove tmp directory
+    directory.rmdir()
 
 
 def set_plot_style():
