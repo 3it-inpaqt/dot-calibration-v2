@@ -8,12 +8,10 @@ from autotuning.czischek_2021 import Czischek2021
 from classes.diagram import ChargeRegime, Diagram
 from datasets.qdsd import DATA_DIR
 from plots.autotuning import plot_autotuning_results
+from run import clean_up, preparation
 from utils.logger import logger
 from utils.settings import settings
 from utils.timer import SectionTimer
-
-TRAINED_NETWORK = 'out/base-ff/best_network.pt'
-NB_ITERATIONS = 1000
 
 
 def run_autotuning() -> None:
@@ -28,7 +26,7 @@ def run_autotuning() -> None:
                                      load_areas=True)
 
     # model = FeedForward(input_shape=(settings.patch_size_x, settings.patch_size_y))
-    # if not load_network_(model, Path(TRAINED_NETWORK)):
+    # if not load_network_(model, Path(settings.trained_network_cache_path)):
     #     raise RuntimeError(f'Trained parameters not found in: {TRAINED_NETWORK}')
 
     patch_size = (settings.patch_size_x, settings.patch_size_y)
@@ -36,12 +34,12 @@ def run_autotuning() -> None:
     # procedure: AutotuningProcedure = RandomBaseline((settings.patch_size_x, settings.patch_size_y))
     procedure: AutotuningProcedure = Czischek2021(None, patch_size, label_offsets, True)
 
-    logger.info(f'{len(diagrams)} diagram(s) will be process {NB_ITERATIONS} times '
+    logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
                 f'with the "{procedure}" autotuning procedure')
 
     results = {d.file_basename: Counter() for d in diagrams}
     with SectionTimer('autotuning simulation'):
-        for i in range(NB_ITERATIONS):
+        for i in range(settings.autotuning_nb_iteration):
             for diagram in diagrams:
                 procedure.reset_procedure()
                 # Start the procedure
@@ -103,4 +101,16 @@ def show_results(results: dict) -> None:
 
 
 if __name__ == '__main__':
-    run_autotuning()
+    # Prepare the environment
+    preparation()
+
+    # noinspection PyBroadException
+    try:
+        run_autotuning()
+    except KeyboardInterrupt:
+        logger.error('Run interrupted by the user.')
+        raise  # Let it go to stop the runs planner if needed
+    except Exception:
+        logger.critical('Run interrupted by an unexpected error.', exc_info=True)
+    finally:
+        clean_up()

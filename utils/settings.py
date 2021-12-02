@@ -178,6 +178,13 @@ class Settings:
     # If True and the run have a valid name, save the neural network parameters in the run directory at each checkpoint.
     checkpoint_save_network: bool = False
 
+    # ==================================================================================================================
+    # =================================================== Autotuning ===================================================
+    # ==================================================================================================================
+
+    # Number of iteration per diagram for the autotuning test
+    autotuning_nb_iteration: int = 100
+
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
         return len(self.run_name) > 0
