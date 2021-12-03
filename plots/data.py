@@ -3,6 +3,7 @@ from typing import Iterable, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 from matplotlib import patches
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
@@ -36,8 +37,9 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     :param final_coord: The final tuning coordinates
     """
 
-    plt.imshow(pixels, interpolation='none', cmap='copper',
-               extent=[np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)])
+    with sns.axes_style("ticks"):  # Temporary change the axe style (avoid white ticks)
+        plt.imshow(pixels, interpolation='none', cmap='copper',
+                   extent=[np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)])
 
     if charge_regions is not None:
         for regime, polygon in charge_regions:
@@ -91,7 +93,6 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     plt.xlabel('Gate 1 (V)')
     plt.xticks(rotation=30)
     plt.ylabel('Gate 2 (V)')
-    plt.tight_layout()
 
     if focus_area:
         plt.axis(focus_area)
