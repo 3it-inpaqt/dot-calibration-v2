@@ -31,7 +31,7 @@ class ChargeRegime(Enum):
 
         :return: Short string name.
         """
-        short_map = {ChargeRegime.UNKNOWN: 'Unknown', ChargeRegime.ELECTRON_0: '0', ChargeRegime.ELECTRON_1: '1',
+        short_map = {ChargeRegime.UNKNOWN: 'unk.', ChargeRegime.ELECTRON_0: '0', ChargeRegime.ELECTRON_1: '1',
                      ChargeRegime.ELECTRON_2: '2', ChargeRegime.ELECTRON_3: '3', ChargeRegime.ELECTRON_4_PLUS: '4+'}
         return short_map[self]
 

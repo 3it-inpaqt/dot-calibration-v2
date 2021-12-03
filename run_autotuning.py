@@ -10,6 +10,7 @@ from datasets.qdsd import DATA_DIR
 from plots.autotuning import plot_autotuning_results
 from run import clean_up, preparation
 from utils.logger import logger
+from utils.output import save_results
 from utils.settings import settings
 from utils.timer import SectionTimer
 
@@ -58,6 +59,10 @@ def run_autotuning() -> None:
                 if i == 0:
                     procedure.plot_step_history(diagram, (tuned_x, tuned_y))
 
+    # Save results in yaml file
+    save_results(final_regims={file: {str(charge): value for charge, value in counter.items()}
+                               for file, counter in results.items()})
+    # Log and plot results
     show_results(results)
 
 
