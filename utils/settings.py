@@ -117,6 +117,10 @@ class Settings:
     # ==================================================== Networks ====================================================
     # ==================================================================================================================
 
+    # The type of neural network to train.
+    # Have to be in the implemented list: FF, BFF, CNN, BCNN.
+    nn_type: str = 'FF'
+
     # The number hidden layer and their respective number of neurons.
     hidden_layers_size: Sequence = (200, 200)
 
@@ -231,6 +235,7 @@ class Settings:
                                                             ' have training data'
 
         # Networks
+        assert isinstance(self.nn_type, str) and self.nn_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN']
         assert all((a > 0 for a in self.hidden_layers_size)), 'Hidden layer size should be more than 0'
 
         # Training

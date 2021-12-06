@@ -154,6 +154,7 @@ def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Datas
     validation_dataset.to(device)
 
     # Save network stats and show if debug enable
+    logger.info(f'Neural network type: {type(network).__name__}')
     network_metrics(network, test_dataset[0][0].shape, device)
 
     if settings.evaluate_baselines:

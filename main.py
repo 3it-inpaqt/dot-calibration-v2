@@ -1,5 +1,8 @@
 from datasets.qdsd import QDSDLines
 from networks.bayeasian_cnn import BCNN
+from networks.bayeasian_ff import BFF
+from networks.cnn import CNN
+from networks.feed_forward import FeedForward
 from plots.data import plot_patch_sample
 from run import clean_up, preparation, run
 from utils.logger import logger
@@ -28,7 +31,17 @@ def main():
             plot_patch_sample(test_set, 8)
 
         # Build the network
-        net = BCNN(input_shape=(settings.patch_size_x, settings.patch_size_y))
+        nn_type = settings.nn_type.upper()
+        if nn_type == 'FF':
+            net = FeedForward(input_shape=(settings.patch_size_x, settings.patch_size_y))
+        elif nn_type == 'BFF':
+            net = BFF(input_shape=(settings.patch_size_x, settings.patch_size_y))
+        elif nn_type == 'CNN':
+            net = CNN(input_shape=(settings.patch_size_x, settings.patch_size_y))
+        elif nn_type == 'BCNN':
+            net = BCNN(input_shape=(settings.patch_size_x, settings.patch_size_y))
+        else:
+            raise ValueError(f'Unknown neural network type "{settings.nn_type}".')
 
         # Run the training and the test
         run(train_set, test_set, valid_set, net)
