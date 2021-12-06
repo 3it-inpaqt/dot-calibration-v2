@@ -59,7 +59,7 @@ class AutotuningProcedure:
         self._scan_history: List[Tuple[Tuple[int, int], Tuple[bool, float]]] = []
 
     def __str__(self) -> str:
-        return type(self).__name__
+        return f'{type(self).__name__} ({"Oracle" if self.is_oracle_enable else self.model})'
 
     def reset_procedure(self) -> None:
         """

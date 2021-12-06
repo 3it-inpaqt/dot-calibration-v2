@@ -24,7 +24,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
     :param validation_dataset: The dataset used to run intermediate test on the network during the training.
     :param device: The device used to store the network and datasets (it can influence the behaviour of the training)
     """
-    # If path set, try to load a pre trained network from cache
+    # If path set, try to load a pre-trained network from cache
     if settings.trained_network_cache_path and load_network_(network, settings.trained_network_cache_path):
         return  # Stop here if the network parameters are successfully loaded from cache file
 

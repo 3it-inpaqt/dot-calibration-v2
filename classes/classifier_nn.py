@@ -47,3 +47,6 @@ class ClassifierNN(nn.Module):
         :param n: The number of sample to include in the plot.
         """
         pass
+
+    def __str__(self):
+        return type(self).__name__

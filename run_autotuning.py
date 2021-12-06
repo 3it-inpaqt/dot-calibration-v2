@@ -1,16 +1,20 @@
 from collections import Counter
 from pathlib import Path
+from typing import Optional
 
 from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from autotuning.czischek_2021 import Czischek2021
+from autotuning.random_baseline import RandomBaseline
+from classes.classifier_nn import ClassifierNN
 from classes.diagram import ChargeRegime, Diagram
 from datasets.qdsd import DATA_DIR
 from plots.autotuning import plot_autotuning_results
-from run import clean_up, preparation
+from run import clean_up, init_neural_network, preparation
 from utils.logger import logger
-from utils.output import save_results
+from utils.output import load_network_, save_results
+from utils.progress_bar import ProgressBar
 from utils.settings import settings
 from utils.timer import SectionTimer
 
@@ -26,20 +30,15 @@ def run_autotuning() -> None:
                                      load_lines=True,
                                      load_areas=True)
 
-    # model = FeedForward(input_shape=(settings.patch_size_x, settings.patch_size_y))
-    # if not load_network_(model, Path(settings.trained_network_cache_path)):
-    #     raise RuntimeError(f'Trained parameters not found in: {TRAINED_NETWORK}')
+    # Set up the autotuning procedure according to the settings
+    procedure = setup_procedure()
 
-    patch_size = (settings.patch_size_x, settings.patch_size_y)
-    label_offsets = (settings.label_offset_x, settings.label_offset_y)
-    # procedure: AutotuningProcedure = RandomBaseline((settings.patch_size_x, settings.patch_size_y))
-    procedure: AutotuningProcedure = Czischek2021(None, patch_size, label_offsets, True)
-
+    # Start the autotuning testing
     logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
                 f'with the "{procedure}" autotuning procedure')
-
     results = {d.file_basename: Counter() for d in diagrams}
-    with SectionTimer('autotuning simulation'):
+    nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
+    with SectionTimer('autotuning simulation'), ProgressBar(nb_iterations, task_name='Autotuning') as progress:
         for i in range(settings.autotuning_nb_iteration):
             for diagram in diagrams:
                 procedure.reset_procedure()
@@ -55,6 +54,7 @@ def run_autotuning() -> None:
                              f'Final coordinates: ({tuned_x}, {tuned_y}) => {charge_area} e '
                              f'{"[Good]" if charge_area is ChargeRegime.ELECTRON_1 else "[Bad]"}')
 
+                progress.incr()
                 # Plot tuning steps for the first round
                 if i == 0:
                     procedure.plot_step_history(diagram, (tuned_x, tuned_y))
@@ -64,6 +64,32 @@ def run_autotuning() -> None:
                                for file, counter in results.items()})
     # Log and plot results
     show_results(results)
+
+
+def setup_procedure() -> AutotuningProcedure:
+    """
+    Set up the autotuning procedure based on the current settings.
+    :return: The procedure.
+    """
+    patch_size = (settings.patch_size_x, settings.patch_size_y)
+    label_offsets = (settings.label_offset_x, settings.label_offset_y)
+
+    # Load model
+    model: Optional[ClassifierNN] = None
+    if not settings.autotuning_use_oracle:
+        model = init_neural_network()
+        if not load_network_(model, Path(settings.trained_network_cache_path)):
+            # TODO allow to train network here
+            raise RuntimeError(f'Trained parameters not found in: {settings.trained_network_cache_path}')
+
+    # Load procedure
+    procedure_name = settings.autotuning_procedure.lower()
+    if procedure_name == 'random':
+        return RandomBaseline((settings.patch_size_x, settings.patch_size_y))
+    elif procedure_name == 'czischek':
+        return Czischek2021(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    else:
+        raise ValueError(f'Unknown autotuning procedure name "{settings.autotuning_procedure}".')
 
 
 def show_results(results: dict) -> None:

@@ -73,7 +73,10 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     # Marker for tuning final guess
     if final_coord is not None:
         last_x, last_y = final_coord
-        plt.scatter(x=x_i[last_x + settings.patch_size_x // 2], y=y_i[last_y + settings.patch_size_y // 2],
+        # Get marker position (and avoid going out)
+        last_x_i = min(last_x + settings.patch_size_x // 2, len(x_i) - 1)
+        last_y_i = min(last_y + settings.patch_size_y // 2, len(y_i) - 1)
+        plt.scatter(x=x_i[last_x_i], y=y_i[last_y_i],
                     color='fuchsia', marker='x', s=200, label='End')
         plt.legend()
 

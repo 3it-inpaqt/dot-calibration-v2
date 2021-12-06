@@ -9,6 +9,10 @@ from torch.utils.data import Dataset
 from baselines.gap_baseline import GapBaseline
 from baselines.std_baseline import StdBaseline
 from classes.classifier_nn import ClassifierNN
+from networks.bayeasian_cnn import BCNN
+from networks.bayeasian_ff import BFF
+from networks.cnn import CNN
+from networks.feed_forward import FeedForward
 from test import test
 from train import train
 from utils.logger import logger
@@ -117,6 +121,26 @@ def train_data_augmentation(train_dataset: Dataset, test_dataset: Dataset, valid
                     f'\n\ttest {len(test_dataset):n}'
                     f'\n\tvalidation {len(validation_dataset):n}')
         save_results(train_dataset_augmentation=0)
+
+
+def init_neural_network() -> ClassifierNN:
+    """
+    Initialise a neural network based on the current settings.
+
+    :return: The neural network.
+    """
+    # Build the network
+    nn_type = settings.nn_type.upper()
+    if nn_type == 'FF':
+        return FeedForward(input_shape=(settings.patch_size_x, settings.patch_size_y))
+    elif nn_type == 'BFF':
+        return BFF(input_shape=(settings.patch_size_x, settings.patch_size_y))
+    elif nn_type == 'CNN':
+        return CNN(input_shape=(settings.patch_size_x, settings.patch_size_y))
+    elif nn_type == 'BCNN':
+        return BCNN(input_shape=(settings.patch_size_x, settings.patch_size_y))
+    else:
+        raise ValueError(f'Unknown neural network type "{settings.nn_type}".')
 
 
 @SectionTimer('run')

@@ -186,6 +186,22 @@ class Settings:
     # =================================================== Autotuning ===================================================
     # ==================================================================================================================
 
+    # The name of the autotuning procedure to use.
+    # Have to be in the implemented list: random, czischek
+    autotuning_procedure: str = 'random'
+
+    # If True the line classification model cheat by using the diagram labels (no neural network loaded).
+    # Used for baselines.
+    autotuning_use_oracle: bool = False
+
+    # If the oracle is enabled, these numbers corrupt its accuracy.
+    # 0.0 = all predictions are based on the ground truth (labels), means 100% accuracy
+    # 0.5 = half of the predictions are random, means 75% accuracy for binary classification.
+    # 1.0 = all the predictions are random, means 50% accuracy for binary classification.
+    # TODO: implement that (and maybe create an Oracle class)
+    autotuning_oracle_line_random: float = 0
+    autotuning_oracle_no_line_random: float = 0
+
     # Number of iteration per diagram for the autotuning test
     autotuning_nb_iteration: int = 100
 
@@ -235,7 +251,8 @@ class Settings:
                                                             ' have training data'
 
         # Networks
-        assert isinstance(self.nn_type, str) and self.nn_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN']
+        assert isinstance(self.nn_type, str) and self.nn_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN'], \
+            f'Invalid network type {self.nn_type}'
         assert all((a > 0 for a in self.hidden_layers_size)), 'Hidden layer size should be more than 0'
 
         # Training
@@ -247,6 +264,12 @@ class Settings:
 
         # Checkpoints
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'
+
+        # Autotuning
+        assert isinstance(self.autotuning_procedure, str) and \
+               self.autotuning_procedure.lower() in ['random', 'czischek'], f'Invalid autotuning procedure' \
+                                                                            f' name {self.autotuning_procedure}'
+        assert self.autotuning_nb_iteration >= 1, 'At least 1 autotuning iteration required'
 
     def __init__(self):
         """
