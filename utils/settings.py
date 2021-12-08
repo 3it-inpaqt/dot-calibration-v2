@@ -45,11 +45,11 @@ class Settings:
     logger_file_level: Union[str, int] = 'DEBUG'
 
     # If True a log file is created for each run with a valid run_name.
-    # The console logger could be enable at the same time.
+    # The console logger could be enabled at the same time.
     # If False the logging will only be in console.
     logger_file_enable: bool = True
 
-    # If True use a visual progress bar in the console during training and loading.
+    # If True uses a visual progress bar in the console during training and loading.
     # Should be use with a logger_console_level as INFO or more for better output.
     visual_progress_bar: bool = True
 
@@ -103,7 +103,7 @@ class Settings:
     # The percentage of data kept for testing only
     validation_ratio: float = 0.1
 
-    # If True, data augmentation methods will be apply to increase the size of the train dataset.
+    # If True, data augmentation methods will be applied to increase the size of the train dataset.
     train_data_augmentation: bool = True
 
     # The number of data loader workers, to take advantage of multithreading. Always disable with CUDA.
@@ -114,20 +114,15 @@ class Settings:
     balance_with_weights: bool = False
 
     # ==================================================================================================================
-    # ==================================================== Networks ====================================================
+    # ===================================================== Model ======================================================
     # ==================================================================================================================
 
-    # The type of neural network to train.
+    # The type of model to use (could be a neural network).
     # Have to be in the implemented list: FF, BFF, CNN, BCNN.
-    nn_type: str = 'FF'
+    model_type: str = 'FF'
 
     # The number hidden layer and their respective number of neurons.
     hidden_layers_size: Sequence = (200, 200)
-
-    # Dropout rate for every dropout layers defined in networks.
-    # If a notwork model doesn't have a dropout layer this setting will have no effect.
-    # 0 skip dropout layers
-    dropout: int = 0.2
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -146,6 +141,11 @@ class Settings:
 
     # The momentum value used by the SGD for parameters update.
     momentum: float = 0.9
+
+    # Dropout rate for every dropout layers defined in networks.
+    # If a notwork model doesn't have a dropout layer this setting will have no effect.
+    # 0 skip dropout layers
+    dropout: int = 0.2
 
     # The size of the mini-batch for the training and testing.
     batch_size: int = 32
@@ -251,8 +251,8 @@ class Settings:
                                                             ' have training data'
 
         # Networks
-        assert isinstance(self.nn_type, str) and self.nn_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN'], \
-            f'Invalid network type {self.nn_type}'
+        assert isinstance(self.model_type, str) and self.model_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN'], \
+            f'Invalid network type {self.model_type}'
         assert all((a > 0 for a in self.hidden_layers_size)), 'Hidden layer size should be more than 0'
 
         # Training

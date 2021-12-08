@@ -2,22 +2,22 @@ from enum import Enum
 from random import randrange
 from typing import List, Optional, Tuple
 
-from classes.classifier_nn import ClassifierNN
+from classes.classifier import Classifier
 from classes.diagram import Diagram
 from plots.data import plot_diagram
 
 
 class BoundaryPolicy(Enum):
     """ Enumeration of policies to apply if a scan is requested outside the diagram borders. """
-    HARD = 0  # Don't allow to go outside the diagram
-    SOFT_RANDOM = 1  # Allow to go outside the diagram and fill unknown data with random values
-    SOFT_VOID = 2  # Allow to go outside the diagram and fill unknown data with 0
+    HARD = 0  # Don't allow going outside the diagram
+    SOFT_RANDOM = 1  # Allow going outside the diagram and fill unknown data with random values
+    SOFT_VOID = 2  # Allow going outside the diagram and fill unknown data with 0
 
 
 class AutotuningProcedure:
     """ Procedure for autotuning tuning of static stability diagrams. """
 
-    def __init__(self, model: Optional[ClassifierNN],
+    def __init__(self, model: Optional[Classifier],
                  patch_size: Tuple[int, int],
                  label_offsets: Tuple[int, int] = (0, 0),
                  is_oracle_enable: bool = False,
@@ -37,7 +37,7 @@ class AutotuningProcedure:
         if model is not None and is_oracle_enable:
             raise ValueError('If a model is provided, the oracle should not be enable')
 
-        self.model: ClassifierNN = model
+        self.model: Classifier = model
         self.patch_size = patch_size
         self.label_offsets = label_offsets
         self.is_oracle_enable = is_oracle_enable

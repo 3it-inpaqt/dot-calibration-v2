@@ -8,6 +8,7 @@ from torch.utils.data import Dataset
 
 from baselines.gap_baseline import GapBaseline
 from baselines.std_baseline import StdBaseline
+from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
 from networks.bayeasian_cnn import BCNN
 from networks.bayeasian_ff import BFF
@@ -123,14 +124,14 @@ def train_data_augmentation(train_dataset: Dataset, test_dataset: Dataset, valid
         save_results(train_dataset_augmentation=0)
 
 
-def init_neural_network() -> ClassifierNN:
+def init_model() -> Classifier:
     """
-    Initialise a neural network based on the current settings.
+    Initialise a model based on the current settings.
 
-    :return: The neural network.
+    :return: The model instance.
     """
     # Build the network
-    nn_type = settings.nn_type.upper()
+    nn_type = settings.model_type.upper()
     if nn_type == 'FF':
         return FeedForward(input_shape=(settings.patch_size_x, settings.patch_size_y))
     elif nn_type == 'BFF':
@@ -140,7 +141,7 @@ def init_neural_network() -> ClassifierNN:
     elif nn_type == 'BCNN':
         return BCNN(input_shape=(settings.patch_size_x, settings.patch_size_y))
     else:
-        raise ValueError(f'Unknown neural network type "{settings.nn_type}".')
+        raise ValueError(f'Unknown model type "{settings.model_type}".')
 
 
 @SectionTimer('run')
@@ -154,7 +155,7 @@ def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Datas
     :param network: The neural network to train
     """
 
-    # Run data augmentations methods on train if this setting is enable
+    # Run data augmentations methods on train if this setting is enabled
     train_data_augmentation(train_dataset, test_dataset, validation_dataset)
 
     # Define transformation methods based on the network (for data pre-processing)

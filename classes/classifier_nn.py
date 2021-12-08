@@ -1,9 +1,11 @@
-from typing import Any, List
+from typing import Any
 
 from torch import nn
 
+from classes.classifier import Classifier
 
-class ClassifierNN(nn.Module):
+
+class ClassifierNN(nn.Module, Classifier):
 
     def training_step(self, inputs: Any, labels: Any) -> float:
         """
@@ -12,17 +14,6 @@ class ClassifierNN(nn.Module):
         :param inputs: The input from the training dataset, could be a batch or an item
         :param labels: The label of the item or the batch
         :return: The loss value
-        """
-        raise NotImplemented
-
-    def infer(self, inputs, nb_samples: int = 100) -> (List[bool], List[float]):
-        """
-        Use network inference for classification a set of input.
-
-        :param inputs: The inputs to classify.
-        :param nb_samples: The number of inference iteration to run on for each input. The inference will be done
-         on the mean value.
-        :return: The class inferred by the network and the confidences information.
         """
         raise NotImplemented
 
@@ -47,6 +38,3 @@ class ClassifierNN(nn.Module):
         :param n: The number of sample to include in the plot.
         """
         pass
-
-    def __str__(self):
-        return type(self).__name__

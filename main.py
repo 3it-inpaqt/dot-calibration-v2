@@ -1,6 +1,7 @@
+from classes.classifier_nn import ClassifierNN
 from datasets.qdsd import QDSDLines
 from plots.data import plot_patch_sample
-from run import clean_up, init_neural_network, preparation, run
+from run import clean_up, init_model, preparation, run
 from utils.logger import logger
 from utils.settings import settings
 from utils.timer import SectionTimer
@@ -26,11 +27,14 @@ def main():
                                                                             research_group=settings.research_group)
             plot_patch_sample(test_set, 8)
 
-        # Build the network according to the settings
-        network = init_neural_network()
+        # Instantiate the model according to the settings
+        model = init_model()
 
         # Run the training and the test
-        run(train_set, test_set, valid_set, network)
+        if issubclass(type(model), ClassifierNN):
+            run(train_set, test_set, valid_set, model)
+        else:
+            raise NotImplemented(f'Not implemented run for model type "{type(model)}"')
     except KeyboardInterrupt:
         logger.error('Run interrupted by the user.')
         raise  # Let it go to stop the runs planner if needed
@@ -38,7 +42,7 @@ def main():
         logger.critical('Run interrupted by an unexpected error.', exc_info=True)
     finally:
         # Clean up the environment, ready for a new run
-        del train_set, test_set, network
+        del train_set, test_set, model
         clean_up()
 
 
