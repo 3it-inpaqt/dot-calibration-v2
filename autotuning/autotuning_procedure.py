@@ -2,6 +2,8 @@ from enum import Enum
 from random import randrange
 from typing import List, Optional, Tuple
 
+import torch
+
 from classes.classifier import Classifier
 from classes.diagram import Diagram
 from plots.data import plot_diagram
@@ -89,6 +91,10 @@ class AutotuningProcedure:
         else:
             # Cut the patch area and send it to the model for inference
             patch = diagram.get_patch((self.x, self.y), self.patch_size)
+            # Reshape as valid input for the model (batch size, chanel, patch x, patch y)
+            size_x, size_y = self.patch_size
+            patch = torch.Tensor(patch).view((1, 1, size_x, size_y))
+            # Send to the model for inference
             result = self.model.infer(patch)
 
         # Record the diagram scanning activity.
