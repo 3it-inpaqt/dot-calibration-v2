@@ -198,6 +198,9 @@ class Diagram:
         """
         Load stability diagrams and annotions from files.
 
+        :param pixel_size: The size of one pixel in volt
+        :param research_group: The research_group name for the dataset to load
+        :param single_dot: If True, only the single dot diagram will be loaded, if False only the double dot
         :param diagrams_path: The path to the zip file containing all stability diagrams data.
         :param labels_path: The path to the json file containing line and charge area labels.
         :param load_lines: If True the line labels should be loaded.
@@ -303,14 +306,10 @@ class Diagram:
         :return: The list of line annotation for the image, as shapely.geometry.LineString
         """
 
-        # Define borders for snap
-        min_x, max_x = 0, len(x) - 1
-        min_y, max_y = 0, len(y) - 1
-
         processed_lines = []
         for line in lines:
-            line_x = Diagram._coord_to_volt((p['x'] for p in line['line']), min_x, max_x, x[0], pixel_size, snap)
-            line_y = Diagram._coord_to_volt((p['y'] for p in line['line']), min_y, max_y, y[0], pixel_size, snap, True)
+            line_x = Diagram._coord_to_volt((p['x'] for p in line['line']), x[0], x[-1], pixel_size, snap)
+            line_y = Diagram._coord_to_volt((p['y'] for p in line['line']), y[0], y[-1], pixel_size, snap, True)
 
             line_obj = LineString(zip(line_x, line_y))
             processed_lines.append(line_obj)
@@ -332,15 +331,10 @@ class Diagram:
         :return: The list of regions annotation for the image, as (label, shapely.geometry.Polygon)
         """
 
-        # Define borders for snap
-        min_x, max_x = 0, len(x) - 1
-        min_y, max_y = 0, len(y) - 1
-
         processed_areas = []
         for area in charge_areas:
-            area_x = Diagram._coord_to_volt((p['x'] for p in area['polygon']), min_x, max_x, x[0], pixel_size, snap)
-            area_y = Diagram._coord_to_volt((p['y'] for p in area['polygon']), min_y, max_y, y[0], pixel_size, snap,
-                                            True)
+            area_x = Diagram._coord_to_volt((p['x'] for p in area['polygon']), x[0], x[-1], pixel_size, snap)
+            area_y = Diagram._coord_to_volt((p['y'] for p in area['polygon']), y[0], y[-1], pixel_size, snap, True)
 
             area_obj = Polygon(zip(area_x, area_y))
             processed_areas.append((ChargeRegime(area['value']), area_obj))
@@ -348,29 +342,29 @@ class Diagram:
         return processed_areas
 
     @staticmethod
-    def _coord_to_volt(coord: Iterable[float], min_coord: int, max_coord: int, value_start: float, value_step: float,
-                       snap: int = 1, is_y: bool = False) -> List[float]:
+    def _coord_to_volt(coord: Iterable[float], min_v: float, max_v: float, value_step: float, snap: int = 1,
+                       is_y: bool = False) -> List[float]:
         """
         Convert some coordinates to volt value for a specific stability diagram.
 
         :param coord: The list coordinates to convert
-        :param min_coord: The minimal valid value for the coordinate (before volt conversion)
-        :param max_coord: The maximal valid value for the coordinate (before volt conversion)
-        :param value_start: The voltage value of the 0 coordinate
+        :param min_v: The minimal valid value for the gate voltage in this diagram
+        :param max_v: The maximal valid value for the gate voltage in this diagram
         :param value_step: The voltage difference between two coordinates (pixel size)
-        :param snap: The snap margin, every points near to image border at this distance will be rounded to the image border
-        (in number of pixels)
-        :param is_y: If true this is the y axis (to apply a rotation)
+        :param snap: The snap margin, every points near to image border at this distance will be rounded to the image
+         border (in number of pixels)
+        :param is_y: If true this is the y-axis (to apply a flip)
         :return: The list of coordinates as gate voltage values
         """
-        if is_y:
-            # Flip Y axis (I don't know why it's required)
-            coord = list(map(lambda t: max_coord - t, coord))
-
-        # Snap to border to avoid errors
-        coord = list(map(lambda t: clip(t, min_coord, max_coord), coord))
-
         # Convert coordinates to actual voltage value
-        coord = list(map(lambda t: t * value_step + value_start, coord))
+        coord = list(map(lambda t: t * value_step + min_v, coord))
+
+        if is_y:
+            # Flip Y axis (the label and the diagrams don't have the same y0 placement)
+            coord = list(map(lambda t: max_v - t + min_v, coord))
+
+        # Clip to border to avoid errors
+        # TODO snap to borders
+        coord = list(map(lambda t: clip(t, min_v, max_v), coord))
 
         return coord
