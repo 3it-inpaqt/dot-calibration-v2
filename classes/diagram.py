@@ -235,20 +235,24 @@ class Diagram:
                 # Load values from CSV file
                 x, y, values = Diagram._load_interpolated_csv(gzip.open(diagram_file))
 
-                current_labels = labels[f'{file_basename}.png']['Label']['objects']
+                current_labels = labels[f'{file_basename}.png']['Label']
+                label_pixel_size = float(next(filter(lambda l: l['title'] == 'pixel_size_volt',
+                                                     current_labels['classifications']))['answer'])
                 transition_lines = None
                 charge_area = None
 
                 if load_lines:
                     # Load transition line annotations
                     transition_lines = Diagram._load_lines_annotations(
-                        filter(lambda l: l['title'] == 'line', current_labels), x, y,
+                        filter(lambda l: l['title'] == 'line', current_labels['objects']), x, y,
+                        pixel_size=label_pixel_size,
                         snap=1)
 
                 if load_areas:
                     # Load charge area annotations
                     charge_area = Diagram._load_charge_annotations(
                         filter(lambda l: l['title'] != 'line', current_labels), x, y,
+                        pixel_size=label_pixel_size,
                         snap=1)
 
                 diagram = Diagram(file_basename, x, y, values, transition_lines, charge_area)
@@ -260,7 +264,7 @@ class Diagram:
             logger.warning(f'{nb_no_label} diagrams skipped because no label found')
 
         if len(diagrams) == 0:
-            logger.error(f'No diagram loaded (from {zip_dir})')
+            logger.error(f'No diagram loaded in "{zip_dir}"')
 
         return diagrams
 
@@ -280,35 +284,33 @@ class Diagram:
         values = np.delete(compact_diagram, 0, 0)
 
         # Reconstruct the axes
-
         x = np.arange(values.shape[1]) * step + x_start
         y = np.arange(values.shape[0]) * step + y_start
 
         return x, y, values
 
     @staticmethod
-    def _load_lines_annotations(lines: Iterable, x, y, snap: int = 1) -> List[LineString]:
+    def _load_lines_annotations(lines: Iterable, x, y, pixel_size: float, snap: int = 1) -> List[LineString]:
         """
         Load transition line annotations for an image.
 
         :param lines: List of line label as json object (from Labelbox export)
         :param x: The x axis of the diagram (in volt)
         :param y: The y axis of the diagram (in volt)
-        :param snap: The snap margin, every points near to image border at this distance will be rounded to the image border
-        (in number of pixels)
+        :param pixel_size: The pixel size for these labels (as a ref ton convert axes to volt)
+        :param snap: The snap margin, every points near to image border at this distance will be rounded to the image
+         border (in number of pixels)
         :return: The list of line annotation for the image, as shapely.geometry.LineString
         """
 
         # Define borders for snap
         min_x, max_x = 0, len(x) - 1
         min_y, max_y = 0, len(y) - 1
-        # Step (should be the same for every measurement)
-        step = x[1] - x[0]
 
         processed_lines = []
         for line in lines:
-            line_x = Diagram._coord_to_volt((p['x'] for p in line['line']), min_x, max_x, x[0], step, snap)
-            line_y = Diagram._coord_to_volt((p['y'] for p in line['line']), min_y, max_y, y[0], step, snap, True)
+            line_x = Diagram._coord_to_volt((p['x'] for p in line['line']), min_x, max_x, x[0], pixel_size, snap)
+            line_y = Diagram._coord_to_volt((p['y'] for p in line['line']), min_y, max_y, y[0], pixel_size, snap, True)
 
             line_obj = LineString(zip(line_x, line_y))
             processed_lines.append(line_obj)
@@ -316,28 +318,29 @@ class Diagram:
         return processed_lines
 
     @staticmethod
-    def _load_charge_annotations(charge_areas: Iterable, x, y, snap: int = 1) -> List[Tuple[ChargeRegime, Polygon]]:
+    def _load_charge_annotations(charge_areas: Iterable, x, y, pixel_size: float, snap: int = 1) \
+            -> List[Tuple[ChargeRegime, Polygon]]:
         """
         Load regions annotation for an image.
 
         :param charge_areas: List of charge area label as json object (from Labelbox export)
-        :param x: The x axis of the diagram (in volt)
-        :param y: The y axis of the diagram (in volt)
-        :param snap: The snap margin, every points near to image border at this distance will be rounded to the image border
-        (in number of pixels)
+        :param x: The x-axis of the diagram (in volt)
+        :param y: The y-axis of the diagram (in volt)
+        :param pixel_size: The pixel size for these labels (as a ref ton convert axes to volt)
+        :param snap: The snap margin, every points near to image border at this distance will be rounded to the image
+        border (in number of pixels)
         :return: The list of regions annotation for the image, as (label, shapely.geometry.Polygon)
         """
 
         # Define borders for snap
         min_x, max_x = 0, len(x) - 1
         min_y, max_y = 0, len(y) - 1
-        # Step (should be the same for every measurement)
-        step = x[1] - x[0]
 
         processed_areas = []
         for area in charge_areas:
-            area_x = Diagram._coord_to_volt((p['x'] for p in area['polygon']), min_x, max_x, x[0], step, snap)
-            area_y = Diagram._coord_to_volt((p['y'] for p in area['polygon']), min_y, max_y, y[0], step, snap, True)
+            area_x = Diagram._coord_to_volt((p['x'] for p in area['polygon']), min_x, max_x, x[0], pixel_size, snap)
+            area_y = Diagram._coord_to_volt((p['y'] for p in area['polygon']), min_y, max_y, y[0], pixel_size, snap,
+                                            True)
 
             area_obj = Polygon(zip(area_x, area_y))
             processed_areas.append((ChargeRegime(area['value']), area_obj))
