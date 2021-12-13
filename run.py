@@ -10,6 +10,7 @@ from baselines.gap_baseline import GapBaseline
 from baselines.std_baseline import StdBaseline
 from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
+from datasets.qdsd import QDSDLines
 from networks.bayeasian_cnn import BCNN
 from networks.bayeasian_ff import BFF
 from networks.cnn import CNN
@@ -98,7 +99,7 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
                 f'\n\tgap: {gap_accuracy:.2%}')
 
 
-def train_data_augmentation(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset) -> None:
+def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, validation_dataset: QDSDLines) -> None:
     """
     Run data augmentations methods on train if this setting is enable.
 
@@ -112,9 +113,10 @@ def train_data_augmentation(train_dataset: Dataset, test_dataset: Dataset, valid
         train_size_aug = len(train_dataset)
         aug_rate = (train_size_aug / train_size) - 1
         logger.info(f'Datasets size:'
-                    f'\n\ttrain {train_size:n} --> augmented to {train_size_aug:n} ({aug_rate:+.0%})'
-                    f'\n\ttest {len(test_dataset):n}'
-                    f'\n\tvalidation {len(validation_dataset):n}')
+                    f'\n\ttrain {train_size:n} (ratio: {train_dataset.get_class_ratio():.2f}) '
+                    f'--> augmented to {train_size_aug:n} ({aug_rate:+.0%})'
+                    f'\n\ttest {len(test_dataset):n} (ratio: {test_dataset.get_class_ratio():.2f})'
+                    f'\n\tvalidation {len(validation_dataset):n} (ratio: {validation_dataset.get_class_ratio():.2f})')
         save_results(train_dataset_augmentation=train_size_aug - train_size)
     else:
         logger.info(f'Datasets size:'
