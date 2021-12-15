@@ -38,14 +38,8 @@ class BFF(ClassifierNN):
         for i in range(len(layers_size) - 1):
             self.fc_layers.append(BayesianLinear(layers_size[i], layers_size[i + 1]))
 
-        # Balance or not the loss function
-        if settings.balance_with_weights:
-            pos_weight = torch.Tensor([class_ratio])
-        else:
-            pos_weight = None
-
         # Binary Cross Entropy including sigmoid layer
-        self._criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+        self._criterion = nn.BCEWithLogitsLoss()
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
     def forward(self, x: Any) -> Any:

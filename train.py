@@ -3,6 +3,7 @@ from typing import List
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
+from torchsampler import ImbalancedDatasetSampler
 
 from classes.classifier_nn import ClassifierNN
 from plots.results import plot_train_progress
@@ -31,8 +32,16 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
     # Turn on the training mode of the network
     network.train()
 
+    sampler = None
+    if settings.balance_class_sampling:
+        sampler = ImbalancedDatasetSampler(train_dataset,
+                                           # Convert boolean to int
+                                           callback_get_label=lambda dataset: list(map(int, dataset.get_labels())))
+
     # Use the pyTorch data loader
-    train_loader = DataLoader(train_dataset, batch_size=settings.batch_size, shuffle=True,
+    train_loader = DataLoader(train_dataset, batch_size=settings.batch_size,
+                              sampler=sampler,
+                              shuffle=not settings.balance_class_sampling,
                               num_workers=get_nb_loader_workers(device))
     nb_batch = len(train_loader)
 

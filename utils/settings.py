@@ -110,8 +110,9 @@ class Settings:
     # 0 means automatic setting (using cpu count).
     nb_loader_workers: int = 0
 
-    # If True, loss will compensate imbalance number of training examples between classes with weights.
-    balance_with_weights: bool = False
+    # If True, the training dataset is balanced using weighted random sampling.
+    # see https://github.com/ufoym/imbalanced-dataset-sampler
+    balance_class_sampling: bool = False
 
     # ==================================================================================================================
     # ===================================================== Model ======================================================
