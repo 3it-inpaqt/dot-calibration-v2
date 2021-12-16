@@ -54,19 +54,25 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
             plt.plot(line_x, line_y, color='lime', alpha=.5)
 
     if steps_history is not None and len(steps_history) > 0:
+        from datasets.qdsd import QDSDLines  # Import here to avoid circular import
+        first_patch_label = set()
+
         patch_size_x_v = settings.patch_size_x * pixel_size
         patch_size_y_v = settings.patch_size_y * pixel_size
 
         for (x, y), (line_detected, confidence) in steps_history:
+            label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
+            first_patch_label.add(line_detected)
             patch = patches.Rectangle((x_i[x], y_i[y]), patch_size_x_v, patch_size_y_v, linewidth=1,
-                                      edgecolor='g' if line_detected else 'r',
+                                      edgecolor='b' if line_detected else 'r',
+                                      label=label,
                                       facecolor='none')
             plt.gca().add_patch(patch)
 
         # Marker for first point
         (first_x, first_y), _ = steps_history[0]
         plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
-                    color='skyblue', marker='x', s=200, label='Start')
+                    color='skyblue', marker='X', s=200, label='Start')
 
         plt.legend()
 

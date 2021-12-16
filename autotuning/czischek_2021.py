@@ -34,10 +34,10 @@ class Czischek2021(AutotuningProcedure):
         Search any line from the tuning starting point.
 
         :param diagram: The diagram to explore.
-        :return: True if we found the a line, False if we reach the step limit without detecting a line.
+        :return: True if we found a line, False if we reach the step limit without detecting a line.
         """
         step_count = 0
-        # Search until step limit reach or we arrive at the top left corder of the diagram (for hard policy only)
+        # Search until step limit reach, or we arrive at the top left corder of the diagram (for hard policy only)
         while step_count < self._search_line_step_limit and not (self.is_max_left() and self.is_max_up(diagram)):
             step_count += 1
             line_detected, _ = self.is_transition_line(diagram)
