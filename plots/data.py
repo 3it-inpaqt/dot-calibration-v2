@@ -57,13 +57,16 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import
         first_patch_label = set()
 
-        patch_size_x_v = settings.patch_size_x * pixel_size
-        patch_size_y_v = settings.patch_size_y * pixel_size
+        patch_size_x_v = (settings.patch_size_x - settings.label_offset_x * 2) * pixel_size
+        patch_size_y_v = (settings.patch_size_y - settings.label_offset_y * 2) * pixel_size
 
         for (x, y), (line_detected, confidence) in steps_history:
             label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
             first_patch_label.add(line_detected)
-            patch = patches.Rectangle((x_i[x], y_i[y]), patch_size_x_v, patch_size_y_v, linewidth=1,
+            patch = patches.Rectangle((x_i[x + settings.label_offset_x], y_i[y + settings.label_offset_y]),
+                                      patch_size_x_v,
+                                      patch_size_y_v,
+                                      linewidth=1,
                                       edgecolor='b' if line_detected else 'r',
                                       label=label,
                                       facecolor='none')
