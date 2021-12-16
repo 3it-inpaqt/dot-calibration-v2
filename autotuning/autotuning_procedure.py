@@ -51,8 +51,8 @@ class AutotuningProcedure:
         if default_step is None:
             offset_x, offset_y = self.label_offsets
             self._default_step_x, self._default_step_y = patch_size
-            self._default_step_x -= offset_x
-            self._default_step_y -= offset_y
+            self._default_step_x -= offset_x * 2
+            self._default_step_y -= offset_y * 2
         else:
             self._default_step_x, self._default_step_y = default_step
 
