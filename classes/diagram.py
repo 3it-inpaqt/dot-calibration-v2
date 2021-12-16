@@ -23,7 +23,7 @@ class ChargeRegime(Enum):
     ELECTRON_1 = '1_electron'
     ELECTRON_2 = '2_electrons'
     ELECTRON_3 = '3_electrons'
-    ELECTRON_4_PLUS = '4+_electrons'
+    ELECTRON_4_PLUS = '4_electrons'  # The value is no '4+_electrons' because labelbox remove the '+'
 
     def __str__(self) -> str:
         """
@@ -254,7 +254,7 @@ class Diagram:
                 if load_areas:
                     # Load charge area annotations
                     charge_area = Diagram._load_charge_annotations(
-                        filter(lambda l: l['title'] != 'line', current_labels), x, y,
+                        filter(lambda l: l['title'] != 'line', current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
 
