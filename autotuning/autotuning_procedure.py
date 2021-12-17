@@ -95,7 +95,9 @@ class AutotuningProcedure:
             size_x, size_y = self.patch_size
             patch = torch.Tensor(patch).view((1, 1, size_x, size_y))
             # Send to the model for inference
-            result = self.model.infer(patch)
+            prediction, confidence = self.model.infer(patch)
+            # Extract data from pytorch tensor
+            result = prediction.item(), confidence.item()
 
         # Record the diagram scanning activity.
         self._scan_history.append(((self.x, self.y), result))
