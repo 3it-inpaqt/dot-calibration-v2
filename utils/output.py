@@ -207,18 +207,19 @@ def save_timers() -> None:
     logger.debug(f'{len(Timer.timers.data)} timer(s) saved in {timers_file}')
 
 
-def load_network_(network: Module, file_path: Union[str, Path]) -> bool:
+def load_network_(network: Module, file_path: Union[str, Path], device: torch.device) -> bool:
     """
     Load a full description of the network parameters and states from a previous save file.
 
     :param network: The network to load into (in place)
     :param file_path: The path to the file to load
+    :param device: The pytorch device where to load the network
     :return: True if the file exist and is loaded, False if the file is not found.
     """
 
     cache_path = Path(file_path) if isinstance(file_path, str) else file_path
     if cache_path.is_file():
-        network.load_state_dict(torch.load(cache_path))
+        network.load_state_dict(torch.load(cache_path, map_location=device))
         logger.info(f'Network loaded ({cache_path})')
         return True
     logger.warning(f'Network cache not found in "{cache_path}"')

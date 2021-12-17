@@ -146,6 +146,15 @@ def init_model() -> Classifier:
         raise ValueError(f'Unknown model type "{settings.model_type}".')
 
 
+def get_cuda_device() -> torch.device:
+    """ Select the pytorch device according to the settings (cuda or cpu) """
+    # Automatically chooses if auto
+    if settings.device is None or settings.device == 'auto':
+        return torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    else:
+        return torch.device(settings.device)
+
+
 @SectionTimer('run')
 def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: ClassifierNN) -> None:
     """
@@ -165,12 +174,8 @@ def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Datas
     test_dataset.add_transform(network.get_transforms())
     validation_dataset.add_transform(network.get_transforms())
 
-    # Automatically chooses between CPU and GPU if not specified
-    if settings.device is None or settings.device == 'auto':
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    else:
-        device = torch.device(settings.device)
-
+    # Automatically chooses the device according to the settings
+    device = get_cuda_device()
     logger.debug(f'pyTorch device selected: {device}')
 
     # Send the network and the datasets to the selected device (CPU or CUDA)

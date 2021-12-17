@@ -11,7 +11,7 @@ from classes.classifier import Classifier
 from classes.diagram import ChargeRegime, Diagram
 from datasets.qdsd import DATA_DIR
 from plots.autotuning import plot_autotuning_results
-from run import clean_up, init_model, preparation
+from run import clean_up, get_cuda_device, init_model, preparation
 from utils.logger import logger
 from utils.output import load_network_, save_results
 from utils.progress_bar import ProgressBar
@@ -78,7 +78,7 @@ def setup_procedure() -> AutotuningProcedure:
     model: Optional[Classifier] = None
     if not settings.autotuning_use_oracle:
         model = init_model()
-        if not load_network_(model, Path(settings.trained_network_cache_path)):
+        if not load_network_(model, Path(settings.trained_network_cache_path), get_cuda_device()):
             # TODO allow to train network here
             raise RuntimeError(f'Trained parameters not found in: {settings.trained_network_cache_path}')
 
