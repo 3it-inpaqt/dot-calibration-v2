@@ -89,15 +89,16 @@ class AutotuningProcedure:
             # Check the diagram label and return the classification with full confidence
             result = diagram.is_line_in_patch((self.x, self.y), self.patch_size, self.label_offsets), 1
         else:
-            # Cut the patch area and send it to the model for inference
-            patch = diagram.get_patch((self.x, self.y), self.patch_size)
-            # Reshape as valid input for the model (batch size, chanel, patch x, patch y)
-            size_x, size_y = self.patch_size
-            patch = torch.Tensor(patch).view((1, 1, size_x, size_y))
-            # Send to the model for inference
-            prediction, confidence = self.model.infer(patch)
-            # Extract data from pytorch tensor
-            result = prediction.item(), confidence.item()
+            with torch.no_grad():
+                # Cut the patch area and send it to the model for inference
+                patch = diagram.get_patch((self.x, self.y), self.patch_size)
+                # Reshape as valid input for the model (batch size, chanel, patch x, patch y)
+                size_x, size_y = self.patch_size
+                patch = torch.Tensor(patch).view((1, 1, size_x, size_y))
+                # Send to the model for inference
+                prediction, confidence = self.model.infer(patch)
+                # Extract data from pytorch tensor
+                result = prediction.item(), confidence.item()
 
         # Record the diagram scanning activity.
         self._scan_history.append(((self.x, self.y), result))

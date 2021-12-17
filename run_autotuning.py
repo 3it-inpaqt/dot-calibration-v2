@@ -83,6 +83,7 @@ def setup_procedure() -> AutotuningProcedure:
         if not load_network_(model, Path(settings.trained_network_cache_path), get_cuda_device()):
             # TODO allow to train network here
             raise RuntimeError(f'Trained parameters not found in: {settings.trained_network_cache_path}')
+        model.eval()  # Turn off training features (eg. dropout)
 
     # Load procedure
     procedure_name = settings.autotuning_procedure.lower()
