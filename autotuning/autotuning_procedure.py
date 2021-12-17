@@ -147,6 +147,23 @@ class AutotuningProcedure:
         """
         self.y -= step_size if step_size is not None else self._default_step_y
 
+    def move_to_coord(self, x: int = None, y: int = None) -> None:
+        """
+        Move the current coordinate to a specific position.
+        Could change x or y or both.
+
+        :param x: The new x coordinate.
+        :param y: The new y coordinate.
+        """
+
+        if x is None and y is None:
+            raise ValueError('Move to coordinates called but no coordinates provided (need at least x or y')
+
+        if x is not None:
+            self.x = x
+        if y is not None:
+            self.y = y
+
     def is_max_left(self) -> bool:
         """
         :return: True if the current coordinates have reach the left border of the diagram. False if not.

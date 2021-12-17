@@ -6,6 +6,7 @@ from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from autotuning.czischek_2021 import Czischek2021
+from autotuning.full_scan import FullScan
 from autotuning.random_baseline import RandomBaseline
 from classes.classifier import Classifier
 from classes.diagram import ChargeRegime, Diagram
@@ -38,7 +39,8 @@ def run_autotuning() -> None:
                 f'with the "{procedure}" autotuning procedure')
     results = {d.file_basename: Counter() for d in diagrams}
     nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
-    with SectionTimer('autotuning simulation'), ProgressBar(nb_iterations, task_name='Autotuning') as progress:
+    with SectionTimer('autotuning simulation'), \
+            ProgressBar(nb_iterations, task_name='Autotuning', auto_display=settings.visual_progress_bar) as progress:
         for i in range(settings.autotuning_nb_iteration):
             for diagram in diagrams:
                 procedure.reset_procedure()
@@ -88,6 +90,8 @@ def setup_procedure() -> AutotuningProcedure:
         return RandomBaseline((settings.patch_size_x, settings.patch_size_y))
     elif procedure_name == 'czischek':
         return Czischek2021(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'full':
+        return FullScan(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     else:
         raise ValueError(f'Unknown autotuning procedure name "{settings.autotuning_procedure}".')
 

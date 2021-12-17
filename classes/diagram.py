@@ -68,8 +68,14 @@ class Diagram:
         """
         coord_x, coord_y = coordinate
         size_x, size_y = patch_size
+
+        diagram_size_y, _ = self.values.shape
+        end_y = coord_y + size_y
+        end_x = coord_x + size_x
+
         # Invert Y axis because the diagram origin (0,0) is top left
-        return self.values[coord_y:coord_y + size_y, coord_x:coord_x + size_x]
+        # self.values[diagram_size_y - end_y:diagram_size_y - start_y, start_x:end_x]
+        return self.values[diagram_size_y - end_y:diagram_size_y - coord_y, coord_x:end_x]
 
     def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),
                     label_offset: Tuple[int, int] = (0, 0)) -> Generator:
