@@ -18,7 +18,7 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
                  charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: Iterable[LineString] = None,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True,
-                 steps_history: List[Tuple[Tuple[int, int], Tuple[bool, float]]] = None,
+                 scan_history: List["HistoryEntry"] = None,
                  final_coord: Tuple[int, int] = None) -> None:
     """
     Plot the interpolated image.
@@ -33,7 +33,7 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     :param transition_lines: The transition line annotation to draw on top of the image
     :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
     :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
-    :param steps_history: The tuning steps history: ((x, y), (line_detected, confidence))
+    :param scan_history: The tuning steps history (see HistoryEntry dataclass)
     :param final_coord: The final tuning coordinates
     """
 
@@ -53,14 +53,17 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
             line_x, line_y = line.coords.xy
             plt.plot(line_x, line_y, color='lime', alpha=.5)
 
-    if steps_history is not None and len(steps_history) > 0:
+    if scan_history is not None and len(scan_history) > 0:
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import
         first_patch_label = set()
 
         patch_size_x_v = (settings.patch_size_x - settings.label_offset_x * 2) * pixel_size
         patch_size_y_v = (settings.patch_size_y - settings.label_offset_y * 2) * pixel_size
 
-        for (x, y), (line_detected, confidence) in steps_history:
+        for scan_entry in scan_history:
+            line_detected = scan_entry.model_classification
+            x, y = scan_entry.coordinates
+
             label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
             first_patch_label.add(line_detected)
             patch = patches.Rectangle((x_i[x + settings.label_offset_x], y_i[y + settings.label_offset_y]),
@@ -73,7 +76,7 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
             plt.gca().add_patch(patch)
 
         # Marker for first point
-        (first_x, first_y), _ = steps_history[0]
+        first_x, first_y = scan_history[0].coordinates
         plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
                     color='skyblue', marker='X', s=200, label='Start')
 

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import Enum
 from random import randrange
 from typing import List, Optional, Tuple
@@ -14,6 +15,14 @@ class BoundaryPolicy(Enum):
     HARD = 0  # Don't allow going outside the diagram
     SOFT_RANDOM = 1  # Allow going outside the diagram and fill unknown data with random values
     SOFT_VOID = 2  # Allow going outside the diagram and fill unknown data with 0
+
+
+@dataclass(frozen=True)
+class HistoryEntry:
+    coordinates: Tuple[int, int]
+    model_classification: bool
+    model_confidence: bool
+    ground_truth: bool
 
 
 class AutotuningProcedure:
@@ -56,9 +65,8 @@ class AutotuningProcedure:
         else:
             self._default_step_x, self._default_step_y = default_step
 
-        # Performance statistic
-        # History: ((x, y), (line_detected, confidence))
-        self._scan_history: List[Tuple[Tuple[int, int], Tuple[bool, float]]] = []
+        # Performance statistic (See HistoryEntry dataclass)
+        self._scan_history: List[HistoryEntry] = []
 
     def __str__(self) -> str:
         return f'{type(self).__name__} ({"Oracle" if self.is_oracle_enable else self.model})'
@@ -84,10 +92,14 @@ class AutotuningProcedure:
         # They could be changed to fit inside the diagram if necessary
         self._enforce_boundary_policy(diagram)
 
+        # Fetch ground truth from labels
+        ground_truth = diagram.is_line_in_patch((self.x, self.y), self.patch_size, self.label_offsets)
+
         result: Tuple[bool, float]
         if self.is_oracle_enable:
-            # Check the diagram label and return the classification with full confidence
-            result = diagram.is_line_in_patch((self.x, self.y), self.patch_size, self.label_offsets), 1
+            # Oracle use ground truth with full confidence
+            prediction = ground_truth
+            confidence = 1
         else:
             with torch.no_grad():
                 # Cut the patch area and send it to the model for inference
@@ -98,12 +110,13 @@ class AutotuningProcedure:
                 # Send to the model for inference
                 prediction, confidence = self.model.infer(patch)
                 # Extract data from pytorch tensor
-                result = prediction.item(), confidence.item()
+                prediction = prediction.item()
+                confidence = confidence.item()
 
         # Record the diagram scanning activity.
-        self._scan_history.append(((self.x, self.y), result))
+        self._scan_history.append(HistoryEntry((self.x, self.y), prediction, confidence, ground_truth))
 
-        return result
+        return prediction, confidence
 
     def get_patch_center(self) -> Tuple[int, int]:
         """
@@ -285,7 +298,7 @@ class AutotuningProcedure:
         :param d: The diagram to plot.
         """
         plot_diagram(d.x_axes, d.y_axes, d.values, d.file_basename, 'nearest', d.x_axes[1] - d.x_axes[0],
-                     transition_lines=d.transition_lines, steps_history=self._scan_history, final_coord=final_coord,
+                     transition_lines=d.transition_lines, scan_history=self._scan_history, final_coord=final_coord,
                      show_offset=False)
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:

@@ -14,10 +14,9 @@ class FullScan(AutotuningProcedure):
         self.x, self.y = (0, 0)
 
         while not self.is_max_up(diagram):
-            line_detected, _ = self.is_transition_line(diagram)
             while not self.is_max_right(diagram):
-                self.move_right()
                 line_detected, _ = self.is_transition_line(diagram)
+                self.move_right()
             self.move_to_coord(x=0)
             self.move_up()
 
