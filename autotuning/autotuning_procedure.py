@@ -292,6 +292,10 @@ class AutotuningProcedure:
         """
         return self.get_nb_steps() * self.patch_size[0] * self.patch_size[1]
 
+    def get_nb_line_detection_success(self) -> int:
+        """ Return the number of successful line detection """
+        return len([e for e in self._scan_history if e.model_classification == e.ground_truth])
+
     def plot_step_history(self, d: Diagram, final_coord: Tuple[int, int]) -> None:
         """
         Plot the diagram with the tuning steps of the current procedure.

@@ -37,22 +37,30 @@ def run_autotuning() -> None:
     # Start the autotuning testing
     logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
                 f'with the "{procedure}" autotuning procedure')
-    results = {d.file_basename: Counter() for d in diagrams}
+    autotuning_results = {d.file_basename: Counter() for d in diagrams}
+    line_detection_results = {d.file_basename: Counter() for d in diagrams}
     nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
     with SectionTimer('autotuning simulation'), \
             ProgressBar(nb_iterations, task_name='Autotuning', auto_display=settings.visual_progress_bar) as progress:
         for i in range(settings.autotuning_nb_iteration):
             for diagram in diagrams:
                 procedure.reset_procedure()
+
                 # Start the procedure
                 start_coord = procedure.get_random_coordinates_in_diagram(diagram)
                 logger.debug(f'Start tuning diagram {diagram.file_basename} '
                              f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
                 tuned_x, tuned_y = procedure.tune(diagram, start_coord)
-                # Save final result
+
+                # Save final result and log
+                nb_steps = procedure.get_nb_steps()
+                nb_classification_success = procedure.get_nb_line_detection_success()
                 charge_area = diagram.get_charge(tuned_x, tuned_y)
-                results[diagram.file_basename][charge_area] += 1
-                logger.debug(f'End tuning {diagram.file_basename} in {procedure.get_nb_steps()} steps. '
+                autotuning_results[diagram.file_basename][charge_area] += 1
+                line_detection_results[diagram.file_basename].update({'steps': nb_steps,
+                                                                      'good': nb_classification_success})
+                logger.debug(f'End tuning {diagram.file_basename} in {nb_steps} steps '
+                             f'({nb_classification_success / nb_steps:.1%} success). '
                              f'Final coordinates: ({tuned_x}, {tuned_y}) => {charge_area} e '
                              f'{"[Good]" if charge_area is ChargeRegime.ELECTRON_1 else "[Bad]"}')
 
@@ -63,9 +71,10 @@ def run_autotuning() -> None:
 
     # Save results in yaml file
     save_results(final_regims={file: {str(charge): value for charge, value in counter.items()}
-                               for file, counter in results.items()})
+                               for file, counter in autotuning_results.items()},
+                 line_detection={file: dict(counter) for file, counter in line_detection_results.items()})
     # Log and plot results
-    show_results(results)
+    show_results(autotuning_results, line_detection_results)
 
 
 def setup_procedure() -> AutotuningProcedure:
@@ -97,37 +106,50 @@ def setup_procedure() -> AutotuningProcedure:
         raise ValueError(f'Unknown autotuning procedure name "{settings.autotuning_procedure}".')
 
 
-def show_results(results: dict) -> None:
+def show_results(autotuning_results: dict, line_detection_results: dict) -> None:
     """
     Show autotuning results in text output and plots.
 
-    :param results: The result dictionary.
+    :param autotuning_results: The charge tuning result dictionary.
+    :param line_detection_results: The Line classification result dictionary
     """
     overall = Counter()
-    headers = ['Diagram'] + list(map(str, ChargeRegime)) + ['Good', 'Bad', 'Success Rate']
+    headers = ['Diagram', 'Steps', 'Model Success'] + list(map(str, ChargeRegime)) + ['Good', 'Bad', 'Tuning Success']
     results_table = [headers]
 
     # Process counter of each diagram
-    for diagram_name, diagram_counter in results.items():
+    for diagram_name, diagram_counter in autotuning_results.items():
+        line_detection_result = line_detection_results[diagram_name]
+        nb_steps = line_detection_result['steps']
+        model_success = line_detection_result['good'] / line_detection_result['steps']
+
         nb_good_regime = diagram_counter[ChargeRegime.ELECTRON_1]
         nb_total = sum(diagram_counter.values())
         nb_bad_regime = nb_total - nb_good_regime
 
-        results_row = [diagram_counter[regime] for regime in ChargeRegime]
-        results_row = [diagram_name] + results_row + [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
+        # 'Diagram', 'Steps', 'Model Success'
+        results_row = [diagram_name, nb_steps, model_success]
+        # Charge Regimes
+        results_row += [diagram_counter[regime] for regime in ChargeRegime]
+        # 'Good', 'Bad', 'Tuning Success'
+        results_row += [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
         results_table.append(results_row)
         overall += diagram_counter
+        overall += line_detection_result
 
     plot_autotuning_results(results_table)
 
     # Overall row
-    if len(results_table) > 1:
+    if len(autotuning_results) > 1:
         nb_good_regime = overall[ChargeRegime.ELECTRON_1]
-        nb_total = sum(overall.values())
+        nb_total = sum((overall.get(charge, 0) for charge in ChargeRegime))
         nb_bad_regime = nb_total - nb_good_regime
+        nb_total_steps = overall['steps']
+        nb_total_model_success = overall['good'] / overall['steps']
 
-        results_row = [overall[regime] for regime in ChargeRegime]
-        results_row = ['Sum'] + results_row + [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
+        results_row = [f'Sum ({len(autotuning_results)})', nb_total_steps, nb_total_model_success]
+        results_row += [overall[regime] for regime in ChargeRegime]
+        results_row += [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
         results_table.append(results_row)
         overall += overall
 
