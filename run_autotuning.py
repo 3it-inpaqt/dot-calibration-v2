@@ -137,7 +137,7 @@ def show_results(autotuning_results: dict, line_detection_results: dict) -> None
         overall += diagram_counter
         overall += line_detection_result
 
-    plot_autotuning_results(results_table)
+    plot_autotuning_results(results_table, overall)
 
     # Overall row
     if len(autotuning_results) > 1:
