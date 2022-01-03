@@ -20,7 +20,8 @@ OUT_FILES = {
     'settings': 'settings.yaml',
     'results': 'results.yaml',
     'network_info': 'network_info.yaml',
-    'timers': 'timers.yaml'
+    'timers': 'timers.yaml',
+    'normalization': 'normalization.yaml'
 }
 
 
@@ -207,6 +208,25 @@ def save_timers() -> None:
     logger.debug(f'{len(Timer.timers.data)} timer(s) saved in {timers_file}')
 
 
+def save_normalization(min_value: float, max_value: float) -> None:
+    """
+    Save normalisation boundaries used during the training.
+
+    :param min_value: The minimal value in the dataset.
+    :param max_value: The maximal value in the dataset.
+    """
+
+    # Skip saving if the name of the run is not set
+    if settings.is_unnamed_run():
+        return
+
+    normalization_file = Path(OUT_DIR, settings.run_name, OUT_FILES['normalization'])
+    with open(normalization_file, 'w+') as f:
+        yaml.dump({'min': min_value, 'max': max_value}, f)
+
+    logger.debug(f'Normalization values saved in {normalization_file}')
+
+
 def load_network_(network: Module, file_path: Union[str, Path], device: torch.device) -> bool:
     """
     Load a full description of the network parameters and states from a previous save file.
@@ -226,12 +246,13 @@ def load_network_(network: Module, file_path: Union[str, Path], device: torch.de
     return False
 
 
-def load_previous_network_version_(network: Module, version_name: str) -> bool:
+def load_previous_network_version_(network: Module, version_name: str, device: torch.device) -> bool:
     """
     Load a previous version of the network saved during the current run.
 
     :param network: The network to load into (in place)
     :param version_name: The name of the version to load (file name without the '.pt')
+    :param device: The pytorch device where to load the network
     :return: True if the file exist and is loaded, False if the file is not found or the run is unnamed.
     """
     if settings.is_unnamed_run():
@@ -239,7 +260,7 @@ def load_previous_network_version_(network: Module, version_name: str) -> bool:
         return False
 
     save_path = Path(OUT_DIR, settings.run_name, version_name + '.pt')
-    return load_network_(network, save_path)
+    return load_network_(network, save_path, device)
 
 
 def load_data_cache(file_path: Path) -> List[Any]:

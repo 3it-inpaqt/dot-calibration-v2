@@ -101,7 +101,7 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
 
 def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, validation_dataset: QDSDLines) -> None:
     """
-    Run data augmentations methods on train if this setting is enable.
+    Run data augmentations methods on train if this setting is enabled.
 
     :param train_dataset: The training dataset
     :param test_dataset: The testing dataset

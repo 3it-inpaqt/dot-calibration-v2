@@ -99,7 +99,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
 
         # Apply early stopping by loading best version
         if settings.early_stopping:
-            _apply_early_stopping(network, best_checkpoint, nb_batch)
+            _apply_early_stopping(network, best_checkpoint, nb_batch, device)
 
     # Post train plots
     plot_train_progress(loss_evolution, accuracy_evolution, nb_batch, best_checkpoint)
@@ -180,7 +180,7 @@ def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> 
                  f"| std: {stats['losses_std']:.5f}")
 
 
-def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch: int) -> None:
+def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch: int, device: torch.device) -> None:
     """
     Apply early stopping by loading the best network according to the validation classification accuracy ran during
     checkpoints.
@@ -188,6 +188,7 @@ def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch
     :param network: The network to load (in place)
     :param best_checkpoint: A dictionary containing at least 'batch_num' of the best one
     :param nb_batch: The number of batch per epoch during this training
+    :param device: The device used to store the network and datasets
     """
     best_batch_num = best_checkpoint['batch_num']
 
@@ -205,7 +206,7 @@ def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch
                 f'epoch {best_epoch_num}/{settings.nb_epoch}')
 
     # Load network in place
-    if not load_previous_network_version_(network, 'best_network'):
+    if not load_previous_network_version_(network, 'best_network', device):
         logger.error('Impossible to load previous version of the network to apply early stopping.')
 
 

@@ -74,7 +74,6 @@ class Diagram:
         end_x = coord_x + size_x
 
         # Invert Y axis because the diagram origin (0,0) is top left
-        # self.values[diagram_size_y - end_y:diagram_size_y - start_y, start_x:end_x]
         return self.values[diagram_size_y - end_y:diagram_size_y - coord_y, coord_x:end_x]
 
     def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),

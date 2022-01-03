@@ -1,13 +1,13 @@
 from pathlib import Path
 from random import shuffle
-from typing import Callable, List, Tuple
+from typing import Callable, Iterable, List, Tuple
 
 import torch
 from torch.utils.data import Dataset
 
 from classes.diagram import Diagram
 from utils.logger import logger
-from utils.output import load_data_cache, save_data_cache, save_results
+from utils.output import load_data_cache, save_data_cache, save_normalization, save_results
 from utils.settings import settings
 
 DATA_DIR = Path('data')
@@ -43,11 +43,6 @@ class QDSDLines(Dataset):
         self._patches_labels = torch.Tensor(self._patches_labels).bool()
 
         self.transform: List[Callable] = []
-
-        # TODO the normalisation should be done for test with the same value than train
-        # Normalise data voltage
-        self._patches -= torch.min(self._patches)
-        self._patches /= torch.max(self._patches)
 
     def __len__(self):
         return len(self._patches)
@@ -121,7 +116,7 @@ class QDSDLines(Dataset):
         # 180 degrees rotation to keep the orientation of the lines
         rotated_patches = self._patches.rot90(k=2, dims=(1, 2))
 
-        # Extends dataset with rotation (label are un changed)
+        # Extends dataset with rotation (label are unchanged)
         self._patches = torch.cat((self._patches, rotated_patches))
         self._patches_labels = torch.cat((self._patches_labels, self._patches_labels))
 
@@ -133,16 +128,21 @@ class QDSDLines(Dataset):
                              validation_ratio: float = 0,
                              patch_size: Tuple[int, int] = (10, 10),
                              overlap: Tuple[int, int] = (0, 0),
-                             label_offset: Tuple[int, int] = (0, 0)) -> Tuple["QDSDLines", ...]:
+                             label_offset: Tuple[int, int] = (0, 0),
+                             normalize: bool = True) -> Tuple["QDSDLines", ...]:
         """
         Initialize dataset of transition lines patches.
         The sizes of the test and validation dataset depend on the ratio. The train dataset get all remaining data.
 
+        :param pixel_size: The dataset pixel size to load
+        :param research_group: The dataset research group to load
+        :param single_dot: The dataset number of quantum dot to load
         :param test_ratio: The ratio of patches reserved for test data
         :param validation_ratio: The ratio of patches reserved for validation data (ignored if 0)
         :param patch_size: The size in pixel (x, y) of the patch to process (sub-area of the stability diagram)
         :param overlap: The overlapping size, in pixel (x, y) of the patch
         :param label_offset: The width of the border to ignore during the patch labeling, in number of pixel (x, y)
+        :param normalize: If True the datasets values are normalized according to the train set values
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
 
@@ -203,4 +203,26 @@ class QDSDLines(Dataset):
         logger.debug('Dataset:' + ''.join([f'\n\t{key}: {value}' for key, value in stats.items()]))
         save_results(**stats)
 
+        if normalize:
+            # Normalize datasets using train as a reference for min and max
+            QDSDLines.normalize(datasets, train_set)
+
         return datasets
+
+    @staticmethod
+    def normalize(datasets: Iterable["QDSDLines"], ref_dataset: "QDSDLines") -> None:
+        """
+        Normalize some datasets according to a reference dataset (typically the train set).
+
+        :param datasets: The datasets to normalize.
+        :param ref_dataset: The reference dataset.
+        """
+        ref_min = torch.min(ref_dataset._patches)
+        ref_max = torch.max(ref_dataset._patches)
+
+        # Save values to file, for consistant normalization later
+        save_normalization(ref_min.item(), ref_max.item())
+
+        for dataset in datasets:
+            dataset._patches -= ref_min
+            dataset._patches /= (ref_max - ref_min)
