@@ -12,6 +12,7 @@ from shapely.geometry import LineString, Point, Polygon
 from plots.data import plot_diagram
 from utils.logger import logger
 from utils.misc import clip
+from utils.output import load_normalization
 from utils.settings import settings
 
 
@@ -373,3 +374,16 @@ class Diagram:
         coord = list(map(lambda t: clip(t, min_v, max_v), coord))
 
         return coord
+
+    @staticmethod
+    def normalize(diagrams: Iterable["Diagram"]) -> None:
+        """
+        Normalize the diagram with the same min/max value used during the training.
+        The values are fetch via the normalization_values_path setting.
+        :param diagrams: The diagrams to normalize.
+        """
+        min_value, max_value = load_normalization()
+
+        for diagram in diagrams:
+            diagram.values -= min_value
+            diagram.values /= max_value - min_value

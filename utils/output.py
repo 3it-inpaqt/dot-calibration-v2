@@ -2,7 +2,7 @@ import pickle
 import re
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, List, Union
+from typing import Any, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -225,6 +225,24 @@ def save_normalization(min_value: float, max_value: float) -> None:
         yaml.dump({'min': min_value, 'max': max_value}, f)
 
     logger.debug(f'Normalization values saved in {normalization_file}')
+
+
+def load_normalization() -> Tuple[float, float]:
+    """
+    Load normalization values from a file, according the normalization_values_path setting.
+    :return: The min value and the max value use for the normalization.
+    """
+
+    if settings.normalization_values_path:
+        normalization_file = Path(settings.normalization_values_path)
+        if normalization_file.is_file():
+            with open(normalization_file) as f:
+                result = yaml.load(f, Loader=yaml.FullLoader)
+                if 'max' in result and 'min' in result:
+                    return result['min'], result['max']
+
+    raise ValueError(f'Invalid or missing mandatory "normalization_values_path" setting: '
+                     f'"{settings.normalization_values_path}"')
 
 
 def load_network_(network: Module, file_path: Union[str, Path], device: torch.device) -> bool:

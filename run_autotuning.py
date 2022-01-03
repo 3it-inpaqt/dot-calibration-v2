@@ -31,6 +31,10 @@ def run_autotuning() -> None:
                                      load_lines=True,
                                      load_areas=True)
 
+    # Normalize the diagram with the same min/max value used during the training.
+    # The values are fetch via the normalization_values_path setting.
+    Diagram.normalize(diagrams)
+
     # Set up the autotuning procedure according to the settings
     procedure = setup_procedure()
 

@@ -114,6 +114,10 @@ class Settings:
     # see https://github.com/ufoym/imbalanced-dataset-sampler
     balance_class_sampling: bool = False
 
+    # The path to yaml file containing the normalization values (min and max).
+    # Use to consistant normalization of the data after the training.
+    normalization_values_path: str = ''
+
     # ==================================================================================================================
     # ===================================================== Model ======================================================
     # ==================================================================================================================
