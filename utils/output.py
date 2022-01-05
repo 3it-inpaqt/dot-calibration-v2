@@ -154,7 +154,7 @@ def save_plot(file_name: str) -> None:
 
     if settings.is_named_run() and settings.save_images:
         save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name}.png')
-        plt.savefig(save_path)
+        plt.savefig(save_path, dpi=200)
         logger.debug(f'Plot saved in {save_path}')
 
     # Plot image or close it
