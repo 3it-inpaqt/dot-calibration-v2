@@ -46,14 +46,16 @@ def plot_diagram(x_i, y_i,
     :param final_coord: The final tuning coordinates
     """
 
+    legend = False
+
     with sns.axes_style("ticks"):  # Temporary change the axe style (avoid white ticks)
+        boundaries = [np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)]
         if pixels is None:
             # If no pixels provided, plot a blank image to allow other information on the same format
             plt.imshow(np.zeros((len(x_i), len(y_i))), cmap=LinearSegmentedColormap.from_list('', ['white', 'white']),
-                       extent=[np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)])
+                       extent=boundaries)
         else:
-            plt.imshow(pixels, interpolation='none', cmap='copper',
-                       extent=[np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)])
+            plt.imshow(pixels, interpolation='none', cmap='copper', extent=boundaries)
 
     if charge_regions is not None:
         for regime, polygon in charge_regions:
@@ -63,9 +65,10 @@ def plot_diagram(x_i, y_i,
             plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b')
 
     if transition_lines is not None:
-        for line in transition_lines:
+        for i, line in enumerate(transition_lines):
             line_x, line_y = line.coords.xy
-            plt.plot(line_x, line_y, color='lime')
+            plt.plot(line_x, line_y, color='lime', label='Line label' if i == 0 else None)
+            legend = True
 
     if scan_history is not None and len(scan_history) > 0:
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import
@@ -107,8 +110,7 @@ def plot_diagram(x_i, y_i,
         first_x, first_y = scan_history[0].coordinates
         plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
                     color='skyblue', marker='X', s=200, label='Start')
-
-        plt.legend()
+        legend = True
 
         if history_uncertainty:
             # setup the colorbar
@@ -127,7 +129,7 @@ def plot_diagram(x_i, y_i,
         last_y_i = min(last_y + settings.patch_size_y // 2, len(y_i) - 1)
         plt.scatter(x=x_i[last_x_i], y=y_i[last_y_i],
                     color='fuchsia', marker='x', s=200, label='End')
-        plt.legend()
+        legend = True
 
     if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
         focus_x, focus_y = focus_area if focus_area else 0, 0
@@ -145,6 +147,9 @@ def plot_diagram(x_i, y_i,
     plt.xlabel('Gate 1 (V)')
     plt.xticks(rotation=30)
     plt.ylabel('Gate 2 (V)')
+
+    if legend:
+        plt.legend(ncol=5, loc='lower center', bbox_to_anchor=(0.5, -0.35))
 
     if focus_area:
         plt.axis(focus_area)
