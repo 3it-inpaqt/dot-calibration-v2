@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from matplotlib import patches
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
@@ -14,11 +16,16 @@ from utils.settings import settings
 
 # TODO factorise plotting code
 
-def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, pixel_size: float,
+def plot_diagram(x_i, y_i,
+                 pixels: Optional,
+                 image_name: str,
+                 interpolation_method: str,
+                 pixel_size: float,
                  charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: Iterable[LineString] = None,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True,
                  scan_history: List["HistoryEntry"] = None,
+                 history_uncertainty: bool = False,
                  final_coord: Tuple[int, int] = None) -> None:
     """
     Plot the interpolated image.
@@ -31,15 +38,22 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     :param pixel_size: The size of pixels, in voltage, used for plot title
     :param charge_regions: The charge region annotations to draw on top of the image
     :param transition_lines: The transition line annotation to draw on top of the image
-    :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
+    :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max)
     :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
     :param scan_history: The tuning steps history (see HistoryEntry dataclass)
+    :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
+     the uncertainty
     :param final_coord: The final tuning coordinates
     """
 
     with sns.axes_style("ticks"):  # Temporary change the axe style (avoid white ticks)
-        plt.imshow(pixels, interpolation='none', cmap='copper',
-                   extent=[np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)])
+        if pixels is None:
+            # If no pixels provided, plot a blank image to allow other information on the same format
+            plt.imshow(np.zeros((len(x_i), len(y_i))), cmap=LinearSegmentedColormap.from_list('', ['white', 'white']),
+                       extent=[np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)])
+        else:
+            plt.imshow(pixels, interpolation='none', cmap='copper',
+                       extent=[np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)])
 
     if charge_regions is not None:
         for regime, polygon in charge_regions:
@@ -51,7 +65,7 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
     if transition_lines is not None:
         for line in transition_lines:
             line_x, line_y = line.coords.xy
-            plt.plot(line_x, line_y, color='lime', alpha=.5)
+            plt.plot(line_x, line_y, color='lime')
 
     if scan_history is not None and len(scan_history) > 0:
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import
@@ -64,15 +78,29 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
             line_detected = scan_entry.model_classification
             x, y = scan_entry.coordinates
 
-            label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
-            first_patch_label.add(line_detected)
+            # If history uncertainty, plot full square with transparency based on the confidence
+            if history_uncertainty:
+                edge_color = 'none'
+                face_color = 'b' if line_detected else 'r'
+                alpha = scan_entry.model_confidence
+                label = None
+            # If no history uncertainty, plot empty square with color based on "line"/"no line"
+            else:
+                label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
+                first_patch_label.add(line_detected)
+
+                edge_color = 'b' if line_detected else 'r'
+                face_color = 'none'
+                alpha = 1
+
             patch = patches.Rectangle((x_i[x + settings.label_offset_x], y_i[y + settings.label_offset_y]),
                                       patch_size_x_v,
                                       patch_size_y_v,
                                       linewidth=1,
-                                      edgecolor='b' if line_detected else 'r',
+                                      edgecolor=edge_color,
                                       label=label,
-                                      facecolor='none')
+                                      facecolor=face_color,
+                                      alpha=alpha)
             plt.gca().add_patch(patch)
 
         # Marker for first point
@@ -81,6 +109,15 @@ def plot_diagram(x_i, y_i, pixels, image_name: str, interpolation_method: str, p
                     color='skyblue', marker='X', s=200, label='Start')
 
         plt.legend()
+
+        if history_uncertainty:
+            # setup the colorbar
+            cmap = LinearSegmentedColormap.from_list('', ['blue', 'white', 'red'])
+            norm = Normalize(vmin=-1, vmax=1)
+            cbar = plt.colorbar(ScalarMappable(cmap=cmap, norm=norm), shrink=0.8, aspect=15)
+            cbar.outline.set_edgecolor('0.15')
+            cbar.set_ticks([-1, 0, 1])
+            cbar.set_ticklabels(['Line\nLow uncertainty', 'High uncertainty', 'No Line\nLow uncertainty'])
 
     # Marker for tuning final guess
     if final_coord is not None:

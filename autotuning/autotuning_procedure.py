@@ -299,11 +299,20 @@ class AutotuningProcedure:
     def plot_step_history(self, d: Diagram, final_coord: Tuple[int, int]) -> None:
         """
         Plot the diagram with the tuning steps of the current procedure.
+
         :param d: The diagram to plot.
+        :param final_coord: The final coordinate of the tuning procedure
         """
-        plot_diagram(d.x_axes, d.y_axes, d.values, d.file_basename, 'nearest', d.x_axes[1] - d.x_axes[0],
+        # diagram
+        plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}', 'nearest', d.x_axes[1] - d.x_axes[0])
+        # diagram + label + step with classification color
+        plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename} steps', 'nearest', d.x_axes[1] - d.x_axes[0],
                      transition_lines=d.transition_lines, scan_history=self._scan_history, final_coord=final_coord,
-                     show_offset=False)
+                     show_offset=False, history_uncertainty=False)
+        # label + step with classification color and uncertainty
+        plot_diagram(d.x_axes, d.y_axes, None, f'{d.file_basename} steps uncertainty', 'nearest',
+                     d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=self._scan_history,
+                     final_coord=final_coord, show_offset=False, history_uncertainty=True)
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         """
