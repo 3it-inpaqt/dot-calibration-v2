@@ -165,7 +165,17 @@ class Settings:
     early_stopping: bool = False
 
     # The number of sample used to compute the loss of bayesian networks.
-    bayesian_nb_sample: int = 3
+    bayesian_nb_sample_train: int = 3
+
+    # The number of sample used to compute model inference during the validation.
+    bayesian_nb_sample_valid: int = 10
+
+    # The number of sample used to compute model inference during the testing.
+    bayesian_nb_sample_test: int = 100
+
+    # The metric to use to compute the model inference confidence.
+    # Should be in: 'std', 'norm_std', 'entropy', 'norm_entropy'
+    bayesian_confidence_metric: str = 'norm_std'
 
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
@@ -265,7 +275,11 @@ class Settings:
         assert self.device in ('auto', 'cpu', 'cuda'), f'Not valid torch device name: {self.device}'
         assert self.batch_size > 0, 'Batch size should be a positive integer'
         assert self.nb_epoch > 0, 'Number of epoch should be at least 1'
-        assert self.bayesian_nb_sample > 0, 'The number of bayesian sample should be at least 1'
+        assert self.bayesian_nb_sample_train > 0, 'The number of bayesian sample should be at least 1'
+        assert self.bayesian_nb_sample_valid > 0, 'The number of bayesian sample should be at least 1'
+        assert self.bayesian_nb_sample_test > 0, 'The number of bayesian sample should be at least 1'
+        assert self.bayesian_confidence_metric in ['std', 'norm_std', 'entropy', 'norm_entropy'], \
+            f'Invalid bayesian confidence metric value "{self.bayesian_confidence_metric}"'
 
         # Checkpoints
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'

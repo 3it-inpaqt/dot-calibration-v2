@@ -8,6 +8,7 @@ import torch
 from classes.classifier import Classifier
 from classes.diagram import Diagram
 from plots.data import plot_diagram
+from utils.settings import settings
 
 
 class BoundaryPolicy(Enum):
@@ -108,7 +109,7 @@ class AutotuningProcedure:
                 size_x, size_y = self.patch_size
                 patch = torch.Tensor(patch).view((1, 1, size_x, size_y))
                 # Send to the model for inference
-                prediction, confidence = self.model.infer(patch)
+                prediction, confidence = self.model.infer(patch, settings.bayesian_nb_sample_test)
                 # Extract data from pytorch tensor
                 prediction = prediction.item()
                 confidence = confidence.item()

@@ -61,8 +61,10 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             if limit and i * settings.batch_size >= limit:
                 break
 
+            # Number of inference (will have no effect if the model is not Bayesian)
+            nb_sample = settings.bayesian_nb_sample_test if final else settings.bayesian_nb_sample_valid
             # Forward
-            predicted, confidences = network.infer(inputs)
+            predicted, confidences = network.infer(inputs, nb_sample)
 
             # Count the result
             nb_total += len(labels)

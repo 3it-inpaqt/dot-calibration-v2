@@ -122,9 +122,9 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
         save_network(network, f'{batch_num:n}_checkpoint_network')
 
     validation_accuracy = train_accuracy = None
-    # Test on a the validation dataset
+    # Test on the validation dataset
     if settings.checkpoint_validation:
-        validation_accuracy = test(network, validation_dataset, device, test_name='checkpoint validation', )
+        validation_accuracy = test(network, validation_dataset, device, test_name='checkpoint validation')
         # Check if this is the new best score
         if validation_accuracy > best_checkpoint['validation_accuracy']:
             logger.debug(f'New best validation accuracy: {validation_accuracy:5.2%}')

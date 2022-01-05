@@ -1,5 +1,5 @@
 import math
-from typing import Any, List, Tuple
+from typing import Any, Tuple
 
 import torch
 import torch.nn as nn
@@ -7,14 +7,14 @@ from blitz.modules import BayesianConv2d, BayesianLinear
 from blitz.utils import variational_estimator
 from torch import optim
 
-from classes.classifier_nn import ClassifierNN
+from classes.classifier_bayes_nn import ClassifierBayesNN
 from plots.parameters import plot_bayesian_parameters
 from utils.misc import calc_out_conv_layers
 from utils.settings import settings
 
 
 @variational_estimator
-class BCNN(ClassifierNN):
+class BCNN(ClassifierBayesNN):
     """
     Bayesian convolutional classifier neural network.
     """
@@ -91,37 +91,12 @@ class BCNN(ClassifierNN):
         loss = self.sample_elbo(inputs=inputs,
                                 labels=labels.float(),
                                 criterion=self._criterion,
-                                sample_nbr=settings.bayesian_nb_sample,
+                                sample_nbr=settings.bayesian_nb_sample_train,
                                 complexity_cost_weight=settings.bayesian_complexity_cost_weight)
         loss.backward()
         self._optimizer.step()
 
         return loss.item()
-
-    def infer(self, inputs, nb_samples: int = 100) -> (List[bool], List[float]):
-        """
-        Use network inference for classification a set of input.
-
-        :param inputs: The inputs to classify.
-        :param nb_samples: The number of inference iteration to run on for each input. The inference will be done
-         on the mean value.
-        :return: The class inferred by the network and the confidences information.
-        """
-        # Prediction samples
-        # Use sigmoid to convert the output into probability (during the training it's done inside BCEWithLogitsLoss)
-        outputs = [torch.sigmoid(self(inputs)) for _ in range(nb_samples)]
-        outputs = torch.stack(outputs)
-
-        # Compute the mean, std and entropy
-        means = outputs.mean(axis=0)
-        stds = outputs.std(axis=0)
-        pi = torch.Tensor([math.pi])
-        entropies = torch.log(2 * pi * torch.pow(stds.cpu(), 2)) / 2 + 1 / 2
-        confidences = stds.cpu()
-
-        # Round the samples mean value to 0 or 1
-        predictions = torch.round(means).bool()
-        return predictions, confidences
 
     @staticmethod
     def get_transforms():
