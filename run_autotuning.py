@@ -58,8 +58,8 @@ def run_autotuning() -> None:
 
                 # Save final result and log
                 nb_steps = procedure.get_nb_steps()
-                success_rate = nb_classification_success / nb_steps if nb_steps > 0 else 0
                 nb_classification_success = procedure.get_nb_line_detection_success()
+                success_rate = nb_classification_success / nb_steps if nb_steps > 0 else 0
                 charge_area = diagram.get_charge(tuned_x, tuned_y)
                 autotuning_results[diagram.file_basename][charge_area] += 1
                 line_detection_results[diagram.file_basename].update({'steps': nb_steps,
