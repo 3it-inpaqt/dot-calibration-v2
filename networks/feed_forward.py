@@ -81,11 +81,12 @@ class FeedForward(ClassifierNN):
 
         return loss.item()
 
-    def infer(self, inputs) -> (List[bool], List[float]):
+    def infer(self, inputs, nb_sample=0) -> (List[bool], List[float]):
         """
         Use network inference for classification a set of input.
 
         :param inputs: The inputs to classify.
+        :param nb_sample: Not used here, just added for simple compatibility with Bayesian models.
         :return: The class inferred by this method and the confidence it this result (between 0 and 1).
         """
         # Use sigmoid to convert the output into probability (during the training it's done inside BCEWithLogitsLoss)
