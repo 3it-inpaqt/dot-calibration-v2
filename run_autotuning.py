@@ -58,13 +58,14 @@ def run_autotuning() -> None:
 
                 # Save final result and log
                 nb_steps = procedure.get_nb_steps()
+                success_rate = nb_classification_success / nb_steps if nb_steps > 0 else 0
                 nb_classification_success = procedure.get_nb_line_detection_success()
                 charge_area = diagram.get_charge(tuned_x, tuned_y)
                 autotuning_results[diagram.file_basename][charge_area] += 1
                 line_detection_results[diagram.file_basename].update({'steps': nb_steps,
                                                                       'good': nb_classification_success})
                 logger.debug(f'End tuning {diagram.file_basename} in {nb_steps} steps '
-                             f'({nb_classification_success / nb_steps:.1%} success). '
+                             f'({success_rate:.1%} success). '
                              f'Final coordinates: ({tuned_x}, {tuned_y}) => {charge_area} e '
                              f'{"[Good]" if charge_area is ChargeRegime.ELECTRON_1 else "[Bad]"}')
 
@@ -125,7 +126,10 @@ def show_results(autotuning_results: dict, line_detection_results: dict) -> None
     for diagram_name, diagram_counter in autotuning_results.items():
         line_detection_result = line_detection_results[diagram_name]
         nb_steps = line_detection_result['steps']
-        model_success = line_detection_result['good'] / line_detection_result['steps']
+        if line_detection_result['steps'] > 0:
+            model_success = line_detection_result['good'] / line_detection_result['steps']
+        else:
+            model_success = 0
 
         nb_good_regime = diagram_counter[ChargeRegime.ELECTRON_1]
         nb_total = sum(diagram_counter.values())
@@ -149,7 +153,7 @@ def show_results(autotuning_results: dict, line_detection_results: dict) -> None
         nb_total = sum((overall.get(charge, 0) for charge in ChargeRegime))
         nb_bad_regime = nb_total - nb_good_regime
         nb_total_steps = overall['steps']
-        nb_total_model_success = overall['good'] / overall['steps']
+        nb_total_model_success = overall['good'] / overall['steps'] if overall['steps'] > 0 else 0
 
         results_row = [f'Sum ({len(autotuning_results)})', nb_total_steps, nb_total_model_success]
         results_row += [overall[regime] for regime in ChargeRegime]

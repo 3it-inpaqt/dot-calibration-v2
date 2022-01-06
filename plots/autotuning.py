@@ -10,7 +10,7 @@ def plot_autotuning_results(results, overall) -> None:
     df = DataFrame(results[1:], columns=results[0])
     # Compute steps stats
     avg_steps = df['Steps'].mean()
-    model_success_rate = overall['good'] / overall['steps']
+    model_success_rate = overall['good'] / overall['steps'] if overall['steps'] > 0 else 0
     # Remove useless columns
     df = df.loc[:, ['Diagram'] + [str(r) for r in ChargeRegime]]
     # One row per regime and diagram
