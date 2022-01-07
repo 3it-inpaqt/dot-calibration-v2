@@ -6,6 +6,7 @@ from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from autotuning.czischek_2021 import Czischek2021
+from autotuning.czischek_bayes import CzischekBayes
 from autotuning.full_scan import FullScan
 from autotuning.random_baseline import RandomBaseline
 from classes.classifier import Classifier
@@ -105,6 +106,8 @@ def setup_procedure() -> AutotuningProcedure:
         return RandomBaseline((settings.patch_size_x, settings.patch_size_y))
     elif procedure_name == 'czischek':
         return Czischek2021(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'bczischek':
+        return CzischekBayes(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'full':
         return FullScan(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     else:
