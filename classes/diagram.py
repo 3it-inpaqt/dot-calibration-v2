@@ -222,8 +222,9 @@ class Diagram:
         labels = {obj['External ID']: obj for obj in labels_json}
 
         # Open the zip file and iterate over all csv files
-        in_zip_path = Path(f'{pixel_size * 1000}mV', 'single' if single_dot else 'double', research_group)
-        zip_dir = zipfile.Path(diagrams_path, str(in_zip_path) + '/')
+        # in_zip_path should use "/" separator, no matter the current OS
+        in_zip_path = f'{pixel_size * 1000}mV/' + ('single' if single_dot else 'double') + f'/{research_group}/'
+        zip_dir = zipfile.Path(diagrams_path, at=in_zip_path)
 
         if not zip_dir.is_dir():
             raise ValueError(f'Folder "{in_zip_path}" not found in the zip file "{diagrams_path}".'
