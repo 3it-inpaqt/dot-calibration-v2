@@ -16,7 +16,9 @@ class CzischekBayes(AutotuningProcedure):
 
     _nb_validation_empty: int = 40  # Number of steps
 
-    _confidence_valid: float = 0.5
+    # Number estimated by grid search with Michel diagrams and BCNN
+    # 0.50 => 71% | 0.75 => 82% | 0.80 => 81% | 0.85 => 87% | 0.90 => 87% | 0.95 => 87%
+    _confidence_valid: float = 0.90
 
     _shift_size_follow_line: int = 1  # Number of pixels
     _shift_size_backward_down: int = 2  # Number of pixels
