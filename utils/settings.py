@@ -202,7 +202,7 @@ class Settings:
     # ==================================================================================================================
 
     # The name of the autotuning procedure to use.
-    # Have to be in the implemented list: random, czischek, bczischek, full
+    # Have to be in the implemented list: random, czischek, bczischek, full, jump
     autotuning_procedure: str = 'random'
 
     # If True the line classification model cheat by using the diagram labels (no neural network loaded).
@@ -285,7 +285,7 @@ class Settings:
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'
 
         # Autotuning
-        procedures_allow = ['random', 'czischek', 'bczischek', 'full']
+        procedures_allow = ['random', 'czischek', 'bczischek', 'full', 'jump']
         assert isinstance(self.autotuning_procedure, str) and self.autotuning_procedure.lower() in procedures_allow, \
             f'Invalid autotuning procedure name {self.autotuning_procedure}'
         assert self.autotuning_nb_iteration >= 1, 'At least 1 autotuning iteration required'

@@ -8,6 +8,7 @@ from autotuning.autotuning_procedure import AutotuningProcedure
 from autotuning.czischek_2021 import Czischek2021
 from autotuning.czischek_bayes import CzischekBayes
 from autotuning.full_scan import FullScan
+from autotuning.jump_shifting import JumpShifting
 from autotuning.random_baseline import RandomBaseline
 from classes.classifier import Classifier
 from classes.diagram import ChargeRegime, Diagram
@@ -108,6 +109,8 @@ def setup_procedure() -> AutotuningProcedure:
         return Czischek2021(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'bczischek':
         return CzischekBayes(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'jump':
+        return JumpShifting(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'full':
         return FullScan(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     else:

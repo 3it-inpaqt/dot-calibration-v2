@@ -162,6 +162,46 @@ class AutotuningProcedure:
         """
         self.y -= step_size if step_size is not None else self._default_step_y
 
+    def move_up_left(self, step_size: Optional[int] = None) -> None:
+        """
+        Shift the current coordinates to the top left.
+
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+        self.move_up(step_size)
+        self.move_left(step_size)
+
+    def move_up_right(self, step_size: Optional[int] = None) -> None:
+        """
+        Shift the current coordinates to the top right.
+
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+        self.move_up(step_size)
+        self.move_right(step_size)
+
+    def move_down_left(self, step_size: Optional[int] = None) -> None:
+        """
+        Shift the current coordinates to the bottom left.
+
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+        self.move_down(step_size)
+        self.move_left(step_size)
+
+    def move_down_right(self, step_size: Optional[int] = None) -> None:
+        """
+        Shift the current coordinates to the bottom right.
+
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+        self.move_down(step_size)
+        self.move_right(step_size)
+
     def move_to_coord(self, x: int = None, y: int = None) -> None:
         """
         Move the current coordinate to a specific position.
@@ -234,6 +274,30 @@ class AutotuningProcedure:
             return self.y <= 0
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
+
+    def is_max_up_left(self, diagram: Diagram):
+        """
+        :return: True if the current coordinates have reach the top left corner of the diagram. False if not.
+        """
+        return self.is_max_up(diagram) and self.is_max_left()
+
+    def is_max_up_right(self, diagram: Diagram):
+        """
+        :return: True if the current coordinates have reach the top right corner of the diagram. False if not.
+        """
+        return self.is_max_up(diagram) and self.is_max_right(diagram)
+
+    def is_max_down_left(self, _):
+        """
+        :return: True if the current coordinates have reach the bottom left corner of the diagram. False if not.
+        """
+        return self.is_max_down() and self.is_max_left()
+
+    def is_max_down_right(self, diagram: Diagram):
+        """
+        :return: True if the current coordinates have reach the bottom right corner of the diagram. False if not.
+        """
+        return self.is_max_down() and self.is_max_right(diagram)
 
     def _enforce_boundary_policy(self, diagram: Diagram, force: bool = False) -> bool:
         """
