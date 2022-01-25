@@ -77,8 +77,8 @@ def run_autotuning() -> None:
                     procedure.plot_step_history(diagram, (tuned_x, tuned_y))
 
     # Save results in yaml file
-    save_results(final_regims={file: {str(charge): value for charge, value in counter.items()}
-                               for file, counter in autotuning_results.items()},
+    save_results(final_regimes={file: {str(charge): value for charge, value in counter.items()}
+                                for file, counter in autotuning_results.items()},
                  line_detection={file: dict(counter) for file, counter in line_detection_results.items()})
     # Log and plot results
     show_results(autotuning_results, line_detection_results)

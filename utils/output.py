@@ -304,29 +304,38 @@ def load_run_files(dir_path: Path) -> dict:
 
     # For each output file of the run
     for key, file in OUT_FILES.items():
-        with open(dir_path / file) as f:
-            content = yaml.load(f, Loader=yaml.FullLoader)
-            # For each value of each file
-            for label, value in content.items():
-                data[key + '.' + label] = value
+        if (dir_path / file).is_file():
+            with open(dir_path / file) as f:
+                content = yaml.load(f, Loader=yaml.FullLoader)
+                # For each value of each file
+                for label, value in content.items():
+                    data[key + '.' + label] = value
+
+    if len(data) == 0:
+        logger.warning(f'No data loaded from run directory: "{dir_path}"')
 
     return data
 
 
-def load_runs(pattern: str) -> pd.DataFrame:
+def load_runs(patterns: Union[str, List[str]]) -> pd.DataFrame:
     """
-    Load all informations form files in the out directory matching with a pattern.
+    Load all information form files in the out directory matching with patterns.
 
-    :param pattern: The pattern to filter runs
-    :return: A dataframe containing all information, with the columns as "file.key"
+    :param patterns: The pattern, or a list of pattern, to filter runs.
+    :return: A dataframe containing all information, with the columns as "file.key".
     """
     data = []
-
     runs_dir = Path(OUT_DIR)
-    for run_dir in runs_dir.glob(pattern):
-        data.append(load_run_files(run_dir))
 
-    logger.info(f'{len(data)} run(s) loaded with the pattern "{runs_dir}/{pattern}"')
+    if isinstance(patterns, str):
+        # If simple string, turn it into list to be compatible with the following code
+        patterns = [patterns]
+
+    for pattern in patterns:
+        for run_dir in runs_dir.glob(pattern):
+            data.append(load_run_files(run_dir))
+
+    logger.info(f'{len(data)} run(s) loaded with the pattern "{runs_dir}/{patterns}"')
 
     return pd.DataFrame(data)
 

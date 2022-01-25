@@ -8,7 +8,6 @@ from torch.utils.data import Dataset
 
 from baselines.gap_baseline import GapBaseline
 from baselines.std_baseline import StdBaseline
-from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
 from datasets.qdsd import QDSDLines
 from networks.bayeasian_cnn import BCNN
@@ -126,7 +125,7 @@ def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, v
         save_results(train_dataset_augmentation=0)
 
 
-def init_model() -> Classifier:
+def init_model() -> ClassifierNN:
     """
     Initialise a model based on the current settings.
 

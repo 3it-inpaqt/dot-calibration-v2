@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 from classes.classifier_nn import ClassifierNN
-from plots.results import plot_classification_sample, plot_confidence, plot_confusion_matrix
+from plots.train_results import plot_classification_sample, plot_confidence, plot_confusion_matrix
 from utils.logger import logger
 from utils.misc import get_nb_loader_workers
 from utils.output import save_results

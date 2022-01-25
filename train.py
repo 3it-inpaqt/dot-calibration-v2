@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchsampler import ImbalancedDatasetSampler
 
 from classes.classifier_nn import ClassifierNN
-from plots.results import plot_train_progress
+from plots.train_results import plot_train_progress
 from test import test
 from utils.logger import logger
 from utils.misc import get_nb_loader_workers
