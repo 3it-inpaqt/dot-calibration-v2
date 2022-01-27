@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Callable, Tuple
+from math import cos, pi, sin
+from typing import Callable, Iterable, List, Optional, Tuple
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.diagram import Diagram
@@ -7,27 +8,41 @@ from classes.diagram import Diagram
 
 @dataclass
 class Direction:
-    """ Data class to factorise code in exploration phase. """
+    """ Data class to factorise code. """
     is_stuck: bool = False
     last_x: int = 0
     last_y: int = 0
     move: Callable = None
     check_stuck: Callable = None
 
+    @staticmethod
+    def all_stuck(directions: Iterable["Direction"]):
+        return all(d.is_stuck for d in directions)
+
 
 class JumpShifting(AutotuningProcedure):
-    _max_exploration_steps: int = 400  # Number of exploration steps before to give up (sum all directions)
+    # Number of exploration steps before to give up each phase
+    _max_steps_exploration: int = 400
+    _max_steps_search_empty: int = 60
+
+    # Line angle degree (0 = horizontal - 90 = vertical)
+    _line_direction: int = 90
+    # List of distance between lines in pixel
+    _line_distances: List[int] = None
+    # Coordinate of the leftmost line found so far
+    _leftmost_line_coord: Optional[Tuple[int, int]] = None
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         self.x, self.y = start_coord
 
         self._search_first_line(diagram)
-        self.search_line_direction(diagram)
-        self._search_zero_electron(diagram)
+        self._line_direction = self._search_line_direction(diagram)
+        self._search_empty(diagram)
+        self._guess_one_electron(diagram)
 
-        return 0, 0
+        return self.get_patch_center()
 
-    def _search_first_line(self, diagram):
+    def _search_first_line(self, diagram: Diagram) -> bool:
         """
         Search any line from the tuning starting point by exploring 4 directions.
 
@@ -35,12 +50,8 @@ class JumpShifting(AutotuningProcedure):
         :return: True if we found a line, False if we reach the step limit without detecting a line.
         """
 
-        nb_exploration_steps = 0
-
         # First scan at the start position
-        line_detected, confidence = self.is_transition_line(diagram)
-
-        if line_detected:
+        if self._is_valid_line(diagram):
             return True
 
         directions = [
@@ -51,23 +62,141 @@ class JumpShifting(AutotuningProcedure):
         ]
 
         # Stop if max exploration steps reach or all directions are stuck (reach corners)
-        while nb_exploration_steps < self._max_exploration_steps and not (all(d.is_stuck for d in directions)):
+        nb_exploration_steps = 0
+        while nb_exploration_steps < self._max_steps_exploration and not Direction.all_stuck(directions):
 
             # Move and search line in every not stuck directions
             for direction in (d for d in directions if not d.is_stuck):
                 nb_exploration_steps += 1
 
-                self.move_to_coord(direction.last_x, direction.last_y)
-                direction.move()
-                direction.last_x, direction.last_y = self.x, self.y
-                direction.is_stuck = direction.check_stuck(diagram)
+                self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
+                direction.move()  # Move according to the current direction
+                direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
+                direction.is_stuck = direction.check_stuck(diagram)  # Check if reach a corner
 
-                line_detected, confidence = self.is_transition_line(diagram)
-                if line_detected:
+                line_validated = self._is_valid_line(diagram)
+                if line_validated:
                     return True
 
-    def search_line_direction(self, diagram):
-        pass
+        return False
 
-    def _search_zero_electron(self, diagram):
-        pass
+    def _search_line_direction(self, diagram: Diagram) -> int:
+        """
+        Estimate the direction of the current line.
+
+        :param diagram: The diagram to explore.
+        :return: The estimated direction in degree.
+        """
+        return 75  # Hardcoded for now
+
+    def _search_empty(self, diagram: Diagram) -> None:
+        """
+        Explore the diagram by scanning patch perpendicular to the estimated lines direction.
+        :param diagram: The diagram to explore.
+        """
+
+        # At the beginning of this function we should be on a line.
+        # Since this is the first we met, this is the leftmost by default.
+        self._leftmost_line_coord = self.x, self.y
+
+        nb_search_steps = 0
+
+        left = Direction(last_x=self.x, last_y=self.y, move=self._move_left_perpendicular_to_line,
+                         check_stuck=self.is_max_left)
+        right = Direction(last_x=self.x, last_y=self.y, move=self._move_right_perpendicular_to_line,
+                          check_stuck=self.is_max_right)
+        directions = (left, right)
+
+        while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions):
+            for direction in (d for d in directions if not d.is_stuck):
+                nb_search_steps += 1
+
+                self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
+                direction.move()  # Move according to the current direction
+                direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
+                direction.is_stuck = direction.check_stuck(diagram)  # Check if reach a corner
+
+                line_detected = self._is_valid_line(diagram)
+
+    def _guess_one_electron(self, diagram: Diagram) -> None:
+        """
+        According to the leftmost line validated, guess a good location for the 1 electron regime.
+        Then move to this location.
+
+        :param diagram: The diagram to explore.
+        """
+
+        # If no line found, desperately guess random position as last resort
+        if self._leftmost_line_coord is None:
+            self.x, self.y = self.get_random_coordinates_in_diagram(diagram)
+            return
+
+        x, y = self._leftmost_line_coord
+        self.move_to_coord(x, y)
+        self._move_right_perpendicular_to_line()
+
+        # Enforce the boundary policy to make sure the final guess is in the diagram area
+        self._enforce_boundary_policy(diagram, force=True)
+
+    def _is_valid_line(self, diagram: Diagram) -> bool:
+        """
+        Check if the current position should be considered as a line area, according to the current model and the
+        validation logic.
+        If a line is validated update the leftmost line.
+
+        :param diagram: The diagram to explore.
+        :return: True if a line is detected and considered as valid.
+        """
+        # Infer with the model at the current position
+        line_detected, confidence = self.is_transition_line(diagram)
+
+        # If this is the leftmost line detected so far, save it
+        if line_detected and (self._leftmost_line_coord is None or self.y < self._leftmost_line_coord[1]):
+            self._leftmost_line_coord = self.x, self.y
+
+        return line_detected
+
+    def _move_perpendicular_to_line(self, go_left: bool = True, step_size: Optional[int] = None) -> None:
+        """
+        Shift the current coordinates in a direction perpendicular to the estimated lines directions.
+
+        :param go_left: If True move to the left of the line. If False, to the right instead.
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+
+        # Compute distance
+        distance_x = step_size if step_size is not None else self._default_step_x
+        distance_y = step_size if step_size is not None else self._default_step_y
+
+        # Adapt direction for left / right
+        angle = 270 - self._line_direction if go_left else 90 - self._line_direction
+        # Convert angle from degree to radian
+        angle = angle * (pi / 180)
+
+        self.x = round(self.x + (distance_x * cos(angle)))
+        self.y = round(self.y + (distance_y * sin(angle)))
+
+    def _move_left_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
+        """
+        Alias of _move_perpendicular_to_line(True)
+
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+        self._move_perpendicular_to_line(True, step_size)
+
+    def _move_right_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
+        """
+        Alias of _move_perpendicular_to_line(False)
+
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+        self._move_perpendicular_to_line(False, step_size)
+
+    def reset_procedure(self):
+        super().reset_procedure()
+        self._line_direction = 90
+        self._line_distances = []
+        self._leftmost_line_coord = None
