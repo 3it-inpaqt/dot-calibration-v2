@@ -7,7 +7,7 @@ import torch
 
 from classes.classifier import Classifier
 from classes.diagram import Diagram
-from plots.data import plot_diagram
+from plots.data import plot_diagram, plot_diagram_step_animation
 from utils.settings import settings
 
 
@@ -378,6 +378,17 @@ class AutotuningProcedure:
         plot_diagram(d.x_axes, d.y_axes, None, f'{d.file_basename} steps uncertainty', 'nearest',
                      d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=self._scan_history,
                      final_coord=final_coord, show_offset=False, history_uncertainty=True)
+
+    def plot_step_history_animation(self, diagram: Diagram, final_coord: Tuple[int, int]) -> None:
+        """
+        Plot the animated diagram with the tuning steps of the current procedure.
+
+        :param diagram: The diagram to plot.
+        :param final_coord: The final coordinate of the tuning procedure
+        """
+
+        # Generate a gif image
+        plot_diagram_step_animation(diagram, f'{diagram.file_basename} steps', self._scan_history, final_coord)
 
     def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
         """

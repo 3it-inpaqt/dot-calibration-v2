@@ -75,6 +75,7 @@ def run_autotuning() -> None:
                 # Plot tuning steps for the first round
                 if i == 0:
                     procedure.plot_step_history(diagram, (tuned_x, tuned_y))
+                    procedure.plot_step_history_animation(diagram, (tuned_x, tuned_y))
 
     # Save results in yaml file
     save_results(final_regimes={file: {str(charge): value for charge, value in counter.items()}

@@ -59,6 +59,9 @@ class Settings:
     # If True and the run have a valid name, save matplotlib images in the run directory
     save_images: bool = True
 
+    # If True and the run have a valid name, save animated GIF in the run directory
+    save_gif: bool = False
+
     # If True and the run have a valid name, save the neural network parameters in the run directory at the end of the
     # training. Saved before applying early stopping if enable.
     # The file will be at the root of run directory, under then name: "final_network.pt"

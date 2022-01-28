@@ -1,14 +1,16 @@
 import pickle
 import re
 from dataclasses import asdict
+from itertools import chain
 from pathlib import Path
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import torch
 import yaml
+from PIL import Image
 from codetiming import Timer
 from torch.nn import Module
 
@@ -80,9 +82,9 @@ def remove_out_directory(directory: Path) -> None:
 
     # Remove images
     if img_dir.is_dir():
-        # Remove png images files
-        for png_file in img_dir.glob('*.png'):
-            png_file.unlink()
+        # Remove png and gif images files
+        for image_file in chain(img_dir.glob('*.png'), img_dir.glob('*.gif')):
+            image_file.unlink()
         img_dir.rmdir()
 
     # Remove saved networks
@@ -144,14 +146,17 @@ def save_results(**results: Any) -> None:
     logger.debug(f'{len(results)} result(s) saved in {results_path}')
 
 
-def save_plot(file_name: str) -> None:
+def save_plot(file_name: str) -> Optional[Path]:
     """
     Save a plot image in the directory
+
+    :return: The path where the plot is saved, or None if not saved.
     """
 
     # Adjust the padding between and around subplots
     plt.tight_layout()
 
+    save_path = None
     if settings.is_named_run() and settings.save_images:
         save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name}.png')
         plt.savefig(save_path, dpi=200)
@@ -159,6 +164,23 @@ def save_plot(file_name: str) -> None:
 
     # Plot image or close it
     plt.show(block=False) if settings.show_images else plt.close()
+
+    return save_path
+
+
+def save_gif(images_paths: List[Path], file_name: str, remove_images: bool = True, duration: int = 200,
+             loop: int = 0) -> Optional[Path]:
+    save_path = None
+    if settings.is_named_run() and settings.save_gif:
+        save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name}.gif')
+        img, *imgs = (Image.open(f) for f in images_paths)
+        img.save(fp=save_path, format='GIF', append_images=imgs, save_all=True, duration=duration, loop=loop)
+
+    if remove_images:
+        for png_file in images_paths:
+            png_file.unlink()
+
+    return save_path
 
 
 def save_network(network: Module, file_name: str = 'network') -> None:

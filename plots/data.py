@@ -1,4 +1,5 @@
 from math import ceil, sqrt
+from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
@@ -10,7 +11,7 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
-from utils.output import save_plot
+from utils.output import save_gif, save_plot
 from utils.settings import settings
 
 
@@ -26,15 +27,15 @@ def plot_diagram(x_i, y_i,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True,
                  scan_history: List["HistoryEntry"] = None,
                  history_uncertainty: bool = False,
-                 final_coord: Tuple[int, int] = None) -> None:
+                 final_coord: Tuple[int, int] = None) -> Optional[Path]:
     """
     Plot the interpolated image.
 
     :param x_i: The x coordinates of the pixels (post interpolation)
     :param y_i: The y coordinates of the pixels (post interpolation)
     :param pixels: The list of pixels to plot
-    :param image_name: The name of the image, used for plot title
-    :param interpolation_method: The pixels interpolation method, used for plot title
+    :param image_name: The name of the image, used for plot title and file name
+    :param interpolation_method: The pixels' interpolation method, used for plot title
     :param pixel_size: The size of pixels, in voltage, used for plot title
     :param charge_regions: The charge region annotations to draw on top of the image
     :param transition_lines: The transition line annotation to draw on top of the image
@@ -44,6 +45,7 @@ def plot_diagram(x_i, y_i,
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
      the uncertainty
     :param final_coord: The final tuning coordinates
+    :return: The path where the plot is saved, or None if not saved.
     """
 
     legend = False
@@ -154,7 +156,30 @@ def plot_diagram(x_i, y_i,
     if focus_area:
         plt.axis(focus_area)
 
-    save_plot(f'diagram_{image_name}')
+    return save_plot(f'diagram_{image_name}')
+
+
+def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: List["HistoryEntry"],
+                                final_coord: Tuple[int, int]) -> None:
+    """
+    Plot an animation of the tuning procedure.
+
+    :param d: The diagram to plot.
+    :param image_name: The name of the image, used for plot title and file name
+    :param scan_history: The tuning steps history (see HistoryEntry dataclass)
+    :param final_coord: The final tuning coordinates
+    """
+
+    if settings.is_named_run() and settings.save_gif:
+        images_paths = []
+        for scan_i in range(len(scan_history)):
+            path = plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_{scan_i}', 'nearest',
+                                d.x_axes[1] - d.x_axes[0],
+                                transition_lines=None, scan_history=scan_history[0:scan_i], final_coord=final_coord,
+                                show_offset=False, history_uncertainty=False)
+            images_paths.append(path)
+
+        save_gif(images_paths, image_name)
 
 
 def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool = True) -> None:
