@@ -171,15 +171,32 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
     """
 
     if settings.is_named_run() and settings.save_gif:
-        images_paths = []
-        for scan_i in range(len(scan_history)):
+        images_paths = []  # List of image paths for the gif
+        durations = []  # List of duration for each image (ms)
+        for scan_i in range(0, len(scan_history), 4):
             path = plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_{scan_i}', 'nearest',
-                                d.x_axes[1] - d.x_axes[0],
-                                transition_lines=None, scan_history=scan_history[0:scan_i], final_coord=final_coord,
-                                show_offset=False, history_uncertainty=False)
+                                d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
+                                show_offset=False)
             images_paths.append(path)
+            durations.append(500)
 
-        save_gif(images_paths, image_name)
+        images_paths.extend([
+            # Show full diagram with tuning final coordinate
+            plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_end_1', 'nearest',
+                         d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
+                         show_offset=False),
+            # Show full diagram with tuning final coordinate + line labels
+            plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_end_2', 'nearest',
+                         d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=scan_history,
+                         final_coord=final_coord, show_offset=False),
+            # Show full diagram with tuning final coordinate + line & regime labels
+            plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_end_3', 'nearest',
+                         d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, charge_regions=d.charge_areas,
+                         scan_history=scan_history, final_coord=final_coord, show_offset=False)
+        ])
+        durations.extend([1000, 2000, 6000])
+
+        save_gif(images_paths, image_name, duration=durations)
 
 
 def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool = True) -> None:

@@ -168,17 +168,27 @@ def save_plot(file_name: str) -> Optional[Path]:
     return save_path
 
 
-def save_gif(images_paths: List[Path], file_name: str, remove_images: bool = True, duration: int = 200,
-             loop: int = 0) -> Optional[Path]:
+def save_gif(images_paths: List[Path], file_name: str, remove_images: bool = True,
+             duration: Union[List[int], int] = 200, loop: int = 0) -> Optional[Path]:
+    """
+    Transform a list of image into an animated gif and save it.
+
+    :param images_paths: The list of sorted image paths that should be used as gif frames.
+    :param file_name: The output gif file name (no extension).
+    :param remove_images: If True all files in images_paths will be removed after being used in the gif.
+    :param duration: The time to display the current frame of the GIF, in milliseconds.
+    :param loop: The number of times the GIF should loop. 0 means that it will loop forever.
+    :return:The path where the gif is saved, or None if not saved.
+    """
     save_path = None
     if settings.is_named_run() and settings.save_gif:
         save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name}.gif')
         img, *imgs = (Image.open(f) for f in images_paths)
         img.save(fp=save_path, format='GIF', append_images=imgs, save_all=True, duration=duration, loop=loop)
 
-    if remove_images:
-        for png_file in images_paths:
-            png_file.unlink()
+        if remove_images:
+            for png_file in images_paths:
+                png_file.unlink()
 
     return save_path
 
