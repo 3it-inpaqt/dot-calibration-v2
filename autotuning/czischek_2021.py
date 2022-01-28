@@ -38,7 +38,7 @@ class Czischek2021(AutotuningProcedure):
         """
         step_count = 0
         # Search until step limit reach, or we arrive at the top left corder of the diagram (for hard policy only)
-        while step_count < self._search_line_step_limit and not (self.is_max_left() and self.is_max_up(diagram)):
+        while step_count < self._search_line_step_limit and not (self.is_max_left(diagram) and self.is_max_up(diagram)):
             step_count += 1
             line_detected, _ = self.is_transition_line(diagram)
 
@@ -75,7 +75,7 @@ class Czischek2021(AutotuningProcedure):
         # left corder of the diagram (for hard policy only)
         while no_line_in_a_row < self._nb_validation_empty and \
                 nb_steps < self._search_zero_electron_limit and \
-                not (self.is_max_left() and self.is_max_up(diagram)):
+                not (self.is_max_left(diagram) and self.is_max_up(diagram)):
             nb_steps += 1
             line_detected, _ = self.is_transition_line(diagram)
 
@@ -103,7 +103,7 @@ class Czischek2021(AutotuningProcedure):
         nb_steps = 0
         # Search until step limit reach or we arrive at the bottom right corder of the diagram (for hard policy only)
         while nb_steps < self._search_one_electron_limit and \
-                not (self.is_max_right(diagram) and self.is_max_down()):
+                not (self.is_max_right(diagram) and self.is_max_down(diagram)):
             nb_steps += 1
             line_detected, _ = self.is_transition_line(diagram)
 
