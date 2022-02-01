@@ -46,6 +46,7 @@ def run_autotuning() -> None:
     autotuning_results = {d.file_basename: Counter() for d in diagrams}
     line_detection_results = {d.file_basename: Counter() for d in diagrams}
     nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
+
     with SectionTimer('autotuning simulation'), \
             ProgressBar(nb_iterations, task_name='Autotuning', auto_display=settings.visual_progress_bar) as progress:
         for i in range(settings.autotuning_nb_iteration):
@@ -58,7 +59,7 @@ def run_autotuning() -> None:
                              f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
                 tuned_x, tuned_y = procedure.tune(diagram, start_coord)
 
-                # Save final result and log
+                # Save result and log
                 nb_steps = procedure.get_nb_steps()
                 nb_classification_success = procedure.get_nb_line_detection_success()
                 success_rate = nb_classification_success / nb_steps if nb_steps > 0 else 0
