@@ -14,8 +14,8 @@ from networks.bayeasian_cnn import BCNN
 from networks.bayeasian_ff import BFF
 from networks.cnn import CNN
 from networks.feed_forward import FeedForward
-from test import test
-from train import train
+from runs.test import test
+from runs.train import train
 from utils.logger import logger
 from utils.metrics import network_metrics
 from utils.output import init_out_directory, save_results, save_timers, set_plot_style

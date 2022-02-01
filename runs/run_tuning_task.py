@@ -5,16 +5,16 @@ from typing import Optional
 from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
-from autotuning.czischek_2021 import Czischek2021
-from autotuning.czischek_bayes import CzischekBayes
 from autotuning.full_scan import FullScan
 from autotuning.jump_shifting import JumpShifting
 from autotuning.random_baseline import RandomBaseline
+from autotuning.shifting import Shifting
+from autotuning.shifting_bayes import ShiftingBayes
 from classes.classifier import Classifier
 from classes.diagram import ChargeRegime, Diagram
 from datasets.qdsd import DATA_DIR
 from plots.autotuning import plot_autotuning_results
-from run import clean_up, get_cuda_device, init_model, preparation
+from runs.run_line_task import get_cuda_device, init_model
 from utils.logger import logger
 from utils.output import load_network_, save_results
 from utils.progress_bar import ProgressBar
@@ -106,10 +106,10 @@ def setup_procedure() -> AutotuningProcedure:
     procedure_name = settings.autotuning_procedure.lower()
     if procedure_name == 'random':
         return RandomBaseline((settings.patch_size_x, settings.patch_size_y))
-    elif procedure_name == 'czischek':
-        return Czischek2021(model, patch_size, label_offsets, settings.autotuning_use_oracle)
-    elif procedure_name == 'bczischek':
-        return CzischekBayes(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'shifting':
+        return Shifting(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'shifting_b':
+        return ShiftingBayes(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'jump':
         return JumpShifting(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'full':
@@ -172,18 +172,3 @@ def show_results(autotuning_results: dict, line_detection_results: dict) -> None
     logger.info('Autotuning results:\n' +
                 tabulate(results_table, headers="firstrow", tablefmt='fancy_grid', floatfmt='.2%'))
 
-
-if __name__ == '__main__':
-    # Prepare the environment
-    preparation()
-
-    # noinspection PyBroadException
-    try:
-        run_autotuning()
-    except KeyboardInterrupt:
-        logger.error('Run interrupted by the user.')
-        raise  # Let it go to stop the runs planner if needed
-    except Exception:
-        logger.critical('Run interrupted by an unexpected error.', exc_info=True)
-    finally:
-        clean_up()

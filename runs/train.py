@@ -7,7 +7,7 @@ from torchsampler import ImbalancedDatasetSampler
 
 from classes.classifier_nn import ClassifierNN
 from plots.train_results import plot_train_progress
-from test import test
+from runs.test import test
 from utils.logger import logger
 from utils.misc import get_nb_loader_workers
 from utils.output import load_network_, load_previous_network_version_, save_network, save_results

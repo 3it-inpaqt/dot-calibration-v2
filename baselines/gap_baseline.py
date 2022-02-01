@@ -66,11 +66,12 @@ class GapBaseline:
         """ Method created to fake a torch.Module behaviour """
         pass
 
-    def infer(self, inputs) -> (List[bool], List[float]):
+    def infer(self, inputs, _) -> (List[bool], List[float]):
         """
         Simulate network inference for classification a set of input.
 
         :param inputs: The inputs to classify.
+        :param _: Compatibility with bayesian infer.
         :return: The classes inferred by this method and the confidences these this results (between 0 and 1).
         """
         scores = self(inputs)

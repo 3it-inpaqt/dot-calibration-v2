@@ -4,21 +4,16 @@ from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.diagram import Diagram
 
 
-class CzischekBayes(AutotuningProcedure):
-    """
-    Autotuning procedure adapted from https://arxiv.org/abs/2101.03181
-    But using confidence to validate a line instead of following it
-    """
+class Shifting(AutotuningProcedure):
+    """ Autotuning procedure from https://doi.org/10.1088/2632-2153/ac34db """
 
     _search_line_step_limit: int = 20
     _search_zero_electron_limit: int = 40
     _search_one_electron_limit: int = 50
 
+    _nb_validation_line_forward: int = 10  # Number of steps
+    _nb_validation_line_backward: int = 4  # Number of steps
     _nb_validation_empty: int = 40  # Number of steps
-
-    # Number estimated by grid search with Michel diagrams and BCNN
-    # 0.50 => 71% | 0.75 => 82% | 0.80 => 81% | 0.85 => 87% | 0.90 => 87% | 0.95 => 87%
-    _confidence_valid: float = 0.90
 
     _shift_size_follow_line: int = 1  # Number of pixels
     _shift_size_backward_down: int = 2  # Number of pixels
@@ -45,11 +40,22 @@ class CzischekBayes(AutotuningProcedure):
         # Search until step limit reach, or we arrive at the top left corder of the diagram (for hard policy only)
         while step_count < self._search_line_step_limit and not (self.is_max_left(diagram) and self.is_max_up(diagram)):
             step_count += 1
-            line_detected, confidence = self.is_transition_line(diagram)
+            line_detected, _ = self.is_transition_line(diagram)
 
-            if line_detected and confidence > self._confidence_valid:
-                # Line detected and validated
-                return True
+            if line_detected and not self.is_max_up(diagram):
+                # Follow line up to validate the line detection
+                line_validated = True
+                for _ in range(self._nb_validation_line_forward):
+                    self.move_left(self._shift_size_follow_line)
+                    self.move_up()
+                    line_detected, _ = self.is_transition_line(diagram)
+                    if not line_detected or self.is_max_up(diagram):
+                        line_validated = False
+                        break
+
+                if line_validated:
+                    return True  # First line found and validated
+
             else:
                 # No line detected, move top left
                 self.move_left()
@@ -71,17 +77,18 @@ class CzischekBayes(AutotuningProcedure):
                 nb_steps < self._search_zero_electron_limit and \
                 not (self.is_max_left(diagram) and self.is_max_up(diagram)):
             nb_steps += 1
-            line_detected, confidence = self.is_transition_line(diagram)
+            line_detected, _ = self.is_transition_line(diagram)
 
-            # If the model is confident about the prediction, update the number of no line in a row
-            # If not, ignore this step and continue
-            if confidence > self._confidence_valid:
-                if line_detected:
-                    no_line_in_a_row = 0
+            if line_detected:
+                if self.is_max_up(diagram):
+                    self.move_left()
                 else:
-                    no_line_in_a_row += 1
-
-            self.move_left()
+                    # Follow line up
+                    self.move_left(self._shift_size_follow_line)
+                    self.move_up()
+            else:
+                no_line_in_a_row += 1
+                self.move_left()
 
         # This step is a success if the no line in a row condition is reached
         return no_line_in_a_row < self._nb_validation_empty
@@ -98,14 +105,24 @@ class CzischekBayes(AutotuningProcedure):
         while nb_steps < self._search_one_electron_limit and \
                 not (self.is_max_right(diagram) and self.is_max_down(diagram)):
             nb_steps += 1
-            line_detected, confidence = self.is_transition_line(diagram)
+            line_detected, _ = self.is_transition_line(diagram)
 
-            if line_detected and confidence > self._confidence_valid:
-                # Line detected and validated
-                # Just move a bit to don't be in the line
-                self.move_right()
-                self.move_down()
-                return True
+            if line_detected:
+                # Follow line up to validate the line detection
+                line_validated = True
+                for _ in range(self._nb_validation_line_backward):
+                    self.move_right(self._shift_size_follow_line)
+                    self.move_down()
+                    line_detected, _ = self.is_transition_line(diagram)
+                    if not line_detected:
+                        line_validated = False
+                        break
+
+                if line_validated:
+                    # We assume we are on the first transition line
+                    self.move_right()
+                    self.move_down()
+                    return True  # First line found and validated
 
             else:
                 # No line detected, keep moving right

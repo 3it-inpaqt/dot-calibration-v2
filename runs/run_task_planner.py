@@ -1,11 +1,11 @@
-from main import main
+from start_lines import main
 from utils.logger import logger
 from utils.output import ExistingRunName
 from utils.planner import BasePlanner, CombinatorPlanner, ParallelPlanner, Planner, SequencePlanner
 from utils.settings import settings
 
 
-def start_planner(runs_planner: BasePlanner, skip_validation: bool = False, skip_existing_runs: bool = False):
+def run_tasks_planner(runs_planner: BasePlanner, skip_validation: bool = False, skip_existing_runs: bool = False):
     # Typical settings override for planner runs
     settings.run_name = None  # The name should be override during the runs
     settings.visual_progress_bar = True
@@ -83,4 +83,4 @@ if __name__ == '__main__':
         Planner('seed', range(2, 4))
     ], runs_basename='layers_size-seed_2')
 
-    start_planner(repeat, skip_existing_runs=True)
+    run_tasks_planner(repeat, skip_existing_runs=True)
