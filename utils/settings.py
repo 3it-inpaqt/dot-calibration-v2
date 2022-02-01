@@ -31,7 +31,7 @@ class Settings:
     # The seed to use for all random number generator during this run.
     seed: int = 42
 
-    # If true every baselines are run before the real training. If false this step is skipped.
+    # If true every baseline are run before the real training. If false this step is skipped.
     evaluate_baselines: bool = True
 
     # ==================================================================================================================
@@ -63,7 +63,7 @@ class Settings:
     save_gif: bool = False
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at the end of the
-    # training. Saved before applying early stopping if enable.
+    # training. Saved before applying early stopping if enabled.
     # The file will be at the root of run directory, under then name: "final_network.pt"
     save_network: bool = True
 
