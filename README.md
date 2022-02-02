@@ -56,10 +56,9 @@ python3 start_tuning.py
 **Code**:
 
 * `autotuning/` : The different autotuning algorithm implementations
-* `baselines/` : Line detection baselines (not machine learning models)
 * `classes/` : Custom classes definition
 * `datasets/` : Dataset in pyTorch format (only [QDSD](https://github.com/3it-nano/qdsd-dataset) so far)
-* `networks/` : Neural networks definition in pyTorch format
+* `models/` : Neural network definitions in pyTorch format and baseline models
 * `plots/` : Code to generate figures
 * `runs/` : Code logic for the execution of the different tasks
 * `utils/` : Utility code for text output

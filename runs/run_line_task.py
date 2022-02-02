@@ -6,14 +6,14 @@ import torch
 from codetiming import Timer
 from torch.utils.data import Dataset
 
-from baselines.gap_baseline import GapBaseline
-from baselines.std_baseline import StdBaseline
 from classes.classifier_nn import ClassifierNN
 from datasets.qdsd import QDSDLines
-from networks.bayeasian_cnn import BCNN
-from networks.bayeasian_ff import BFF
-from networks.cnn import CNN
-from networks.feed_forward import FeedForward
+from models.bayeasian_cnn import BCNN
+from models.bayeasian_ff import BFF
+from models.cnn import CNN
+from models.feed_forward import FeedForward
+from models.gap_baseline import GapBaseline
+from models.std_baseline import StdBaseline
 from runs.test import test
 from runs.train import train
 from utils.logger import logger
