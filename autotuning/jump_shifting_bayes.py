@@ -1,5 +1,4 @@
 from autotuning.jump_shifting import Direction, JumpShifting
-from classes.diagram import Diagram
 
 
 class JumpShiftingBayes(JumpShifting):
@@ -9,22 +8,21 @@ class JumpShiftingBayes(JumpShifting):
     # Threshold to consider the model inference good enough
     _confidence_valid: float = 0.90
 
-    def _is_confirmed_line(self, diagram: Diagram) -> bool:
+    def _is_confirmed_line(self) -> bool:
         """
         Check if the current position should be considered as a line, according to the current model and the
         validation logic.
         If a line is validated update the leftmost line.
 
-        :param diagram: The diagram to explore.
         :return: True if a line is detected and considered as valid.
         """
         # Infer with the model at the current position
-        line_detected, confidence = self.is_transition_line(diagram)
+        line_detected, confidence = self.is_transition_line()
 
         if confidence < self._confidence_valid:
             # Confidence too low, need checking
             x, y = self.x, self.y
-            line_detected = self._checking_line(diagram, line_detected, confidence)
+            line_detected = self._checking_line(line_detected, confidence)
             self.move_to_coord(x, y)  # Back to the position we were before checking
 
         # If this is the leftmost line detected so far, save it
@@ -33,11 +31,10 @@ class JumpShiftingBayes(JumpShifting):
 
         return line_detected
 
-    def _checking_line(self, diagram: Diagram, current_line: bool, current_confidence: float) -> bool:
+    def _checking_line(self, current_line: bool, current_confidence: float) -> bool:
         """
         Follow the supposed direction of a line until a high confidence inference is reached.
 
-        :param diagram: The diagram to explore.
         :param current_line: The line classification inference for the current position.
         :param current_confidence: The line classification confidence for the inference of the current position.
         :return: True if it was possible to follow the line the required number of time in a row.
@@ -58,9 +55,9 @@ class JumpShiftingBayes(JumpShifting):
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
                 direction.move()  # Move according to the current direction
                 direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
-                direction.is_stuck = direction.check_stuck(diagram)  # Check if reach a corner
+                direction.is_stuck = direction.check_stuck()  # Check if reach a corner
 
-                line_detected, confidence = self.is_transition_line(diagram)
+                line_detected, confidence = self.is_transition_line()
 
                 if confidence > self._confidence_valid:
                     # Enough confidence to confirm or not

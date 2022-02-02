@@ -1,23 +1,7 @@
-from dataclasses import dataclass
 from math import cos, pi, sin
-from typing import Callable, Iterable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
-from autotuning.autotuning_procedure import AutotuningProcedure
-from classes.diagram import Diagram
-
-
-@dataclass
-class Direction:
-    """ Data class to factorise code. """
-    is_stuck: bool = False
-    last_x: int = 0
-    last_y: int = 0
-    move: Callable = None
-    check_stuck: Callable = None
-
-    @staticmethod
-    def all_stuck(directions: Iterable["Direction"]):
-        return all(d.is_stuck for d in directions)
+from autotuning.autotuning_procedure import AutotuningProcedure, Direction
 
 
 class JumpShifting(AutotuningProcedure):
@@ -32,26 +16,25 @@ class JumpShifting(AutotuningProcedure):
     # Coordinate of the leftmost line found so far
     _leftmost_line_coord: Optional[Tuple[int, int]] = None
 
-    def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
-        self.x, self.y = start_coord
+    def tune(self) -> Tuple[int, int]:
+        self._search_first_line()
+        self._line_direction = self._search_line_direction()
+        self._search_empty()
+        self._guess_one_electron()
 
-        self._search_first_line(diagram)
-        self._line_direction = self._search_line_direction(diagram)
-        self._search_empty(diagram)
-        self._guess_one_electron(diagram)
-
+        # Enforce the boundary policy to make sure the final guess is in the diagram area
+        self._enforce_boundary_policy(force=True)
         return self.get_patch_center()
 
-    def _search_first_line(self, diagram: Diagram) -> bool:
+    def _search_first_line(self) -> bool:
         """
         Search any line from the tuning starting point by exploring 4 directions.
 
-        :param diagram: The diagram to explore.
         :return: True if we found a line, False if we reach the step limit without detecting a line.
         """
 
         # First scan at the start position
-        if self._is_confirmed_line(diagram):
+        if self._is_confirmed_line():
             return True
 
         directions = [
@@ -72,26 +55,24 @@ class JumpShifting(AutotuningProcedure):
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
                 direction.move()  # Move according to the current direction
                 direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
-                direction.is_stuck = direction.check_stuck(diagram)  # Check if reach a corner
+                direction.is_stuck = direction.check_stuck()  # Check if reach a corner
 
-                if self._is_confirmed_line(diagram):
+                if self._is_confirmed_line():
                     return True
 
         return False
 
-    def _search_line_direction(self, diagram: Diagram) -> int:
+    def _search_line_direction(self) -> int:
         """
         Estimate the direction of the current line.
 
-        :param diagram: The diagram to explore.
         :return: The estimated direction in degree.
         """
         return 75  # Hardcoded for now
 
-    def _search_empty(self, diagram: Diagram) -> None:
+    def _search_empty(self) -> None:
         """
         Explore the diagram by scanning patch perpendicular to the estimated lines direction.
-        :param diagram: The diagram to explore.
         """
 
         # At the beginning of this function we should be on a line.
@@ -113,21 +94,19 @@ class JumpShifting(AutotuningProcedure):
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
                 direction.move()  # Move according to the current direction
                 direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
-                direction.is_stuck = direction.check_stuck(diagram)  # Check if reach a corner
+                direction.is_stuck = direction.check_stuck()  # Check if reach a corner
 
-                self._is_confirmed_line(diagram)  # Check line and save position if leftmost one
+                self._is_confirmed_line()  # Check line and save position if leftmost one
 
-    def _guess_one_electron(self, diagram: Diagram) -> None:
+    def _guess_one_electron(self) -> None:
         """
         According to the leftmost line validated, guess a good location for the 1 electron regime.
         Then move to this location.
-
-        :param diagram: The diagram to explore.
         """
 
         # If no line found, desperately guess random position as last resort
         if self._leftmost_line_coord is None:
-            self.x, self.y = self.get_random_coordinates_in_diagram(diagram)
+            self.x, self.y = self.get_random_coordinates_in_diagram()
             return
 
         x, y = self._leftmost_line_coord
@@ -135,19 +114,18 @@ class JumpShifting(AutotuningProcedure):
         self._move_right_perpendicular_to_line()
 
         # Enforce the boundary policy to make sure the final guess is in the diagram area
-        self._enforce_boundary_policy(diagram, force=True)
+        self._enforce_boundary_policy(force=True)
 
-    def _is_confirmed_line(self, diagram: Diagram) -> bool:
+    def _is_confirmed_line(self) -> bool:
         """
         Check if the current position should be considered as a line, according to the current model and the
         validation logic.
         If a line is validated update the leftmost line.
 
-        :param diagram: The diagram to explore.
         :return: True if a line is detected and considered as valid.
         """
         # Infer with the model at the current position
-        line_detected, _ = self.is_transition_line(diagram)
+        line_detected, _ = self.is_transition_line()
 
         # If this is the leftmost line detected so far, save it
         if line_detected and (self._leftmost_line_coord is None or self.y < self._leftmost_line_coord[1]):

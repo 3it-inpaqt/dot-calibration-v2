@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from random import randrange
-from typing import List, Optional, Tuple
+from typing import Callable, Iterable, List, Optional, Tuple
 
 import torch
 
@@ -24,6 +24,20 @@ class HistoryEntry:
     model_classification: bool
     model_confidence: bool
     ground_truth: bool
+
+
+@dataclass
+class Direction:
+    """ Data class to factorise code. """
+    is_stuck: bool = False
+    last_x: int = 0
+    last_y: int = 0
+    move: Callable = None
+    check_stuck: Callable = None
+
+    @staticmethod
+    def all_stuck(directions: Iterable["Direction"]):
+        return all(d.is_stuck for d in directions)
 
 
 class AutotuningProcedure:
@@ -50,12 +64,13 @@ class AutotuningProcedure:
             raise ValueError('If a model is provided, the oracle should not be enable')
 
         self.model: Classifier = model
-        self.patch_size = patch_size
-        self.label_offsets = label_offsets
-        self.is_oracle_enable = is_oracle_enable
-        self.boundary_policy = boundary_policy
-        self.x = None
-        self.y = None
+        self.patch_size: Tuple[int, int] = patch_size
+        self.label_offsets: Tuple[int, int] = label_offsets
+        self.is_oracle_enable: bool = is_oracle_enable
+        self.boundary_policy: BoundaryPolicy = boundary_policy
+        self.diagram: Optional[Diagram] = None
+        self.x: Optional[int] = None
+        self.y: Optional[int] = None
 
         # The default move step. If None the (patch size - offset) is use.
         if default_step is None:
@@ -76,25 +91,25 @@ class AutotuningProcedure:
         """
         Reset procedure statistics. Make it ready to start a new one.
         """
+        self.diagram = None
         self.x = None
         self.y = None
         self._scan_history.clear()
 
-    def is_transition_line(self, diagram: Diagram) -> (bool, float):
+    def is_transition_line(self) -> (bool, float):
         """
         Try to detect a line in a sub-area of the diagram using the current model or the oracle.
 
-        :param diagram: The diagram to consider.
         :return: The line classification (True = line detected) and
          the confidence score (0: low confidence to 1: very high confidence).
         """
 
         # Check coordinates according to the current policy.
         # They could be changed to fit inside the diagram if necessary
-        self._enforce_boundary_policy(diagram)
+        self._enforce_boundary_policy()
 
         # Fetch ground truth from labels
-        ground_truth = diagram.is_line_in_patch((self.x, self.y), self.patch_size, self.label_offsets)
+        ground_truth = self.diagram.is_line_in_patch((self.x, self.y), self.patch_size, self.label_offsets)
 
         result: Tuple[bool, float]
         if self.is_oracle_enable:
@@ -104,7 +119,7 @@ class AutotuningProcedure:
         else:
             with torch.no_grad():
                 # Cut the patch area and send it to the model for inference
-                patch = diagram.get_patch((self.x, self.y), self.patch_size)
+                patch = self.diagram.get_patch((self.x, self.y), self.patch_size)
                 # Reshape as valid input for the model (batch size, chanel, patch x, patch y)
                 size_x, size_y = self.patch_size
                 patch = torch.Tensor(patch).view((1, 1, size_x, size_y))
@@ -219,7 +234,7 @@ class AutotuningProcedure:
         if y is not None:
             self.y = y
 
-    def is_max_left(self, _) -> bool:
+    def is_max_left(self) -> bool:
         """
         :return: True if the current coordinates have reach the left border of the diagram. False if not.
         """
@@ -233,7 +248,7 @@ class AutotuningProcedure:
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
-    def is_max_right(self, diagram: Diagram) -> bool:
+    def is_max_right(self) -> bool:
         """
         :return: True if the current coordinates have reach the right border of the diagram. False if not.
         """
@@ -243,11 +258,11 @@ class AutotuningProcedure:
             return False
 
         if self.boundary_policy is BoundaryPolicy.HARD:
-            return self.x >= len(diagram.x_axes) - self.patch_size[0] - 1
+            return self.x >= len(self.diagram.x_axes) - self.patch_size[0] - 1
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
-    def is_max_up(self, diagram: Diagram) -> bool:
+    def is_max_up(self) -> bool:
         """
         :return: True if the current coordinates have reach the top border of the diagram. False if not.
         """
@@ -257,11 +272,11 @@ class AutotuningProcedure:
             return False
 
         if self.boundary_policy is BoundaryPolicy.HARD:
-            return self.y >= len(diagram.y_axes) - self.patch_size[1] - 1
+            return self.y >= len(self.diagram.y_axes) - self.patch_size[1] - 1
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
-    def is_max_down(self, _) -> bool:
+    def is_max_down(self) -> bool:
         """
         :return: True if the current coordinates have reach the bottom border of the diagram. False if not.
         """
@@ -275,34 +290,33 @@ class AutotuningProcedure:
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
-    def is_max_up_left(self, diagram: Diagram):
+    def is_max_up_left(self):
         """
         :return: True if the current coordinates have reach the top left corner of the diagram. False if not.
         """
-        return self.is_max_up(diagram) and self.is_max_left(diagram)
+        return self.is_max_up() and self.is_max_left()
 
-    def is_max_up_right(self, diagram: Diagram):
+    def is_max_up_right(self):
         """
         :return: True if the current coordinates have reach the top right corner of the diagram. False if not.
         """
-        return self.is_max_up(diagram) and self.is_max_right(diagram)
+        return self.is_max_up() and self.is_max_right()
 
-    def is_max_down_left(self, diagram: Diagram):
+    def is_max_down_left(self):
         """
         :return: True if the current coordinates have reach the bottom left corner of the diagram. False if not.
         """
-        return self.is_max_down(diagram) and self.is_max_left(diagram)
+        return self.is_max_down() and self.is_max_left()
 
-    def is_max_down_right(self, diagram: Diagram):
+    def is_max_down_right(self):
         """
         :return: True if the current coordinates have reach the bottom right corner of the diagram. False if not.
         """
-        return self.is_max_down(diagram) and self.is_max_right(diagram)
+        return self.is_max_down() and self.is_max_right()
 
-    def _enforce_boundary_policy(self, diagram: Diagram, force: bool = False) -> bool:
+    def _enforce_boundary_policy(self, force: bool = False) -> bool:
         """
         Check if the coordinates violate the boundary policy. If they do, move the coordinates according to the policy.
-        :param diagram: The current diagram.
         :param force: If True the boundaries are forced, no matter the currant policy.
         :return: True if the coordinates are acceptable in the current policy, False if not.
         """
@@ -313,8 +327,8 @@ class AutotuningProcedure:
 
         if force or self.boundary_policy is BoundaryPolicy.HARD:
             patch_size_x, patch_size_y = self.patch_size
-            max_x = len(diagram.x_axes) - patch_size_x - 1
-            max_y = len(diagram.y_axes) - patch_size_y - 1
+            max_x = len(self.diagram.x_axes) - patch_size_x - 1
+            max_y = len(self.diagram.y_axes) - patch_size_y - 1
 
             match_policy = True
             if self.x < 0:
@@ -334,15 +348,14 @@ class AutotuningProcedure:
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
-    def get_random_coordinates_in_diagram(self, diagram: Diagram) -> Tuple[int, int]:
+    def get_random_coordinates_in_diagram(self) -> Tuple[int, int]:
         """
         Generate (pseudo) random coordinates for the top left corder of a patch inside the diagram.
-        :param diagram: The diagram to consider.
         :return: The (pseudo) random coordinates.
         """
         patch_size_x, patch_size_y = self.patch_size
-        max_x = len(diagram.x_axes) - patch_size_x - 1
-        max_y = len(diagram.y_axes) - patch_size_y - 1
+        max_x = len(self.diagram.x_axes) - patch_size_x - 1
+        max_y = len(self.diagram.y_axes) - patch_size_y - 1
         return randrange(max_x), randrange(max_y)
 
     def get_nb_steps(self) -> int:
@@ -361,13 +374,13 @@ class AutotuningProcedure:
         """ Return the number of successful line detection """
         return len([e for e in self._scan_history if e.model_classification == e.ground_truth])
 
-    def plot_step_history(self, d: Diagram, final_coord: Tuple[int, int]) -> None:
+    def plot_step_history(self, final_coord: Tuple[int, int]) -> None:
         """
         Plot the diagram with the tuning steps of the current procedure.
 
-        :param d: The diagram to plot.
         :param final_coord: The final coordinate of the tuning procedure
         """
+        d = self.diagram
         # diagram
         plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}', 'nearest', d.x_axes[1] - d.x_axes[0])
         # diagram + label + step with classification color
@@ -379,23 +392,33 @@ class AutotuningProcedure:
                      d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=self._scan_history,
                      final_coord=final_coord, show_offset=False, history_uncertainty=True)
 
-    def plot_step_history_animation(self, diagram: Diagram, final_coord: Tuple[int, int]) -> None:
+    def plot_step_history_animation(self, final_coord: Tuple[int, int]) -> None:
         """
         Plot the animated diagram with the tuning steps of the current procedure.
 
-        :param diagram: The diagram to plot.
         :param final_coord: The final coordinate of the tuning procedure
         """
 
         # Generate a gif image
-        plot_diagram_step_animation(diagram, f'{diagram.file_basename} steps', self._scan_history, final_coord)
+        plot_diagram_step_animation(self.diagram, f'{self.diagram.file_basename} steps', self._scan_history,
+                                    final_coord)
 
-    def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
+    def setup_next_tuning(self, diagram: Diagram, start_coord: Optional[Tuple[int, int]] = None) -> None:
+        """
+        Set up the starting point and the diagram of the next tuning run.
+        This action is revert by reset_procedure.
+
+        :param diagram: The stability diagram to explore.
+        :param start_coord: The starting coordinates (top right of the patch square). If None, random coordinates are
+        set inside the diagram.
+        """
+        self.diagram = diagram
+        self.x, self.y = self.get_random_coordinates_in_diagram() if start_coord is None else start_coord
+
+    def tune(self) -> Tuple[int, int]:
         """
         Start the tuning procedure on a diagram.
 
-        :param diagram: The diagram to use for the training
-        :param start_coord: The starting coordinates (top right of the patch square)
         :return: The coordinates (not the gate voltage) in the diagram that is 1 electron regime,
          according to this tuning procedure.
         """

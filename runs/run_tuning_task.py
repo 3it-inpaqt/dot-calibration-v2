@@ -55,10 +55,10 @@ def run_autotuning() -> None:
                 procedure.reset_procedure()
 
                 # Start the procedure
-                start_coord = procedure.get_random_coordinates_in_diagram(diagram)
+                procedure.setup_next_tuning(diagram)  # Give diagram and set starting coordinates randomly
                 logger.debug(f'Start tuning diagram {diagram.file_basename} '
                              f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
-                tuned_x, tuned_y = procedure.tune(diagram, start_coord)
+                tuned_x, tuned_y = procedure.tune()
 
                 # Save result and log
                 nb_steps = procedure.get_nb_steps()
@@ -76,8 +76,8 @@ def run_autotuning() -> None:
                 progress.incr()
                 # Plot tuning steps for the first round
                 if i == 0:
-                    procedure.plot_step_history(diagram, (tuned_x, tuned_y))
-                    procedure.plot_step_history_animation(diagram, (tuned_x, tuned_y))
+                    procedure.plot_step_history((tuned_x, tuned_y))
+                    procedure.plot_step_history_animation((tuned_x, tuned_y))
 
     # Save results in yaml file
     save_results(final_regimes={file: {str(charge): value for charge, value in counter.items()}

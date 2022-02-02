@@ -1,5 +1,4 @@
 from autotuning.shifting import Shifting
-from classes.diagram import Diagram
 
 
 class ShiftingBayes(Shifting):
@@ -12,11 +11,9 @@ class ShiftingBayes(Shifting):
     # 0.50 => 71% | 0.75 => 82% | 0.80 => 81% | 0.85 => 87% | 0.90 => 87% | 0.95 => 87%
     _confidence_valid: float = 0.90
 
-    def _search_zero_electron(self, diagram: Diagram) -> bool:
+    def _search_zero_electron(self) -> bool:
         """
         Search the 0 electron regime.
-
-        :param diagram: The diagram to explore.
         """
         no_line_in_a_row = 0
         nb_steps = 0
@@ -24,9 +21,9 @@ class ShiftingBayes(Shifting):
         # left corder of the diagram (for hard policy only)
         while no_line_in_a_row < self._nb_validation_empty and \
                 nb_steps < self._search_zero_electron_limit and \
-                not (self.is_max_left(diagram) and self.is_max_up(diagram)):
+                not (self.is_max_left() and self.is_max_up()):
             nb_steps += 1
-            line_detected, confidence = self.is_transition_line(diagram)
+            line_detected, confidence = self.is_transition_line()
 
             # If the model is confident about the prediction, update the number of no line in a row
             # If not, ignore this step and continue
@@ -41,11 +38,10 @@ class ShiftingBayes(Shifting):
         # This step is a success if the no line in a row condition is reached
         return no_line_in_a_row < self._nb_validation_empty
 
-    def _is_confirmed_line(self, diagram: Diagram, up: bool, current_line: bool, current_confidence: float) -> bool:
+    def _is_confirmed_line(self, up: bool, current_line: bool, current_confidence: float) -> bool:
         """
         Follow the approximate direction of the line to valid, or not, the line.
 
-        :param diagram: The diagram to explore.
         :param up: If True, follow the line in top direction, if False follow in bottom direction?
         :param current_line: The line classification inference for the current position.
         :param current_confidence: The line classification confidence for the inference of the current position.
@@ -56,7 +52,7 @@ class ShiftingBayes(Shifting):
         best_guess, best_confidence = current_line, current_confidence
         line_detected, confidence = current_line, current_confidence
 
-        while max_to_confirm > 0 and not self.is_max_up(diagram):
+        while max_to_confirm > 0 and not self.is_max_up():
             max_to_confirm -= 1
 
             if confidence > self._confidence_valid:
@@ -74,7 +70,7 @@ class ShiftingBayes(Shifting):
                 self.move_right(self._shift_size_follow_line)
                 self.move_down()
 
-            line_detected, confidence = self.is_transition_line(diagram)
+            line_detected, confidence = self.is_transition_line()
 
         # Max limit or border reach, return best guess
         return best_guess

@@ -2,7 +2,6 @@ import random
 from typing import Tuple
 
 from autotuning.autotuning_procedure import AutotuningProcedure
-from classes.diagram import Diagram
 
 
 class RandomBaseline(AutotuningProcedure):
@@ -17,8 +16,8 @@ class RandomBaseline(AutotuningProcedure):
         """
         super().__init__(None, patch_size, label_offsets, True)
 
-    def tune(self, diagram: Diagram, start_coord: Tuple[int, int]) -> Tuple[int, int]:
-        return random.randint(0, len(diagram.x_axes) - 1), random.randint(0, len(diagram.y_axes) - 1)
+    def tune(self) -> Tuple[int, int]:
+        return random.randint(0, len(self.diagram.x_axes) - 1), random.randint(0, len(self.diagram.y_axes) - 1)
 
     def __str__(self):
         return 'Random Baseline'
