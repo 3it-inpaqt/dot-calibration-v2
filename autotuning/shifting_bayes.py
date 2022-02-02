@@ -41,7 +41,7 @@ class ShiftingBayes(Shifting):
         # This step is a success if the no line in a row condition is reached
         return no_line_in_a_row < self._nb_validation_empty
 
-    def confirm_line(self, diagram: Diagram, up: bool, current_line: bool, current_confidence: float) -> bool:
+    def _is_confirmed_line(self, diagram: Diagram, up: bool, current_line: bool, current_confidence: float) -> bool:
         """
         Follow the approximate direction of the line to valid, or not, the line.
 

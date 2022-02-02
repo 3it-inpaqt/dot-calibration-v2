@@ -7,6 +7,7 @@ from tabulate import tabulate
 from autotuning.autotuning_procedure import AutotuningProcedure
 from autotuning.full_scan import FullScan
 from autotuning.jump_shifting import JumpShifting
+from autotuning.jump_shifting_bayes import JumpShiftingBayes
 from autotuning.random_baseline import RandomBaseline
 from autotuning.shifting import Shifting
 from autotuning.shifting_bayes import ShiftingBayes
@@ -113,6 +114,8 @@ def setup_procedure() -> AutotuningProcedure:
         return ShiftingBayes(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'jump':
         return JumpShifting(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'jump_b':
+        return JumpShiftingBayes(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'full':
         return FullScan(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     else:
@@ -172,4 +175,3 @@ def show_results(autotuning_results: dict, line_detection_results: dict) -> None
     # Print
     logger.info('Autotuning results:\n' +
                 tabulate(results_table, headers="firstrow", tablefmt='fancy_grid', floatfmt='.2%'))
-

@@ -212,7 +212,7 @@ class AutotuningProcedure:
         """
 
         if x is None and y is None:
-            raise ValueError('Move to coordinates called but no coordinates provided (need at least x or y')
+            raise ValueError('Move to coordinates called but no coordinates provided (need at least x or y)')
 
         if x is not None:
             self.x = x

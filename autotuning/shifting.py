@@ -44,7 +44,7 @@ class Shifting(AutotuningProcedure):
 
             if line_detected and not self.is_max_up(diagram):
                 # Follow line up to validate the line detection
-                if self.confirm_line(diagram, True, line_detected, confidence):
+                if self._is_confirmed_line(diagram, True, line_detected, confidence):
                     return True  # First line found and validated
 
             else:
@@ -101,7 +101,7 @@ class Shifting(AutotuningProcedure):
 
             if line_detected:
                 # Follow line up to validate the line detection
-                if self.confirm_line(diagram, False, line_detected, confidence):
+                if self._is_confirmed_line(diagram, False, line_detected, confidence):
                     # We assume we are on the first transition line
                     self.move_right()
                     self.move_down()
@@ -114,7 +114,7 @@ class Shifting(AutotuningProcedure):
 
         return False  # At this point we reached the step limit, we assume we passed the first line
 
-    def confirm_line(self, diagram: Diagram, up: bool, current_line: bool, current_confidence: float) -> bool:
+    def _is_confirmed_line(self, diagram: Diagram, up: bool, current_line: bool, current_confidence: float) -> bool:
         """
         Follow the approximate direction of the line to valid, or not, the line.
 

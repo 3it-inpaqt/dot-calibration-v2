@@ -51,7 +51,7 @@ class JumpShifting(AutotuningProcedure):
         """
 
         # First scan at the start position
-        if self._is_valid_line(diagram):
+        if self._is_confirmed_line(diagram):
             return True
 
         directions = [
@@ -74,8 +74,7 @@ class JumpShifting(AutotuningProcedure):
                 direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                 direction.is_stuck = direction.check_stuck(diagram)  # Check if reach a corner
 
-                line_validated = self._is_valid_line(diagram)
-                if line_validated:
+                if self._is_confirmed_line(diagram):
                     return True
 
         return False
@@ -105,7 +104,7 @@ class JumpShifting(AutotuningProcedure):
                          check_stuck=self.is_max_left)
         right = Direction(last_x=self.x, last_y=self.y, move=self._move_right_perpendicular_to_line,
                           check_stuck=self.is_max_right)
-        directions = (left, right)
+        directions = [left, right]
 
         while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions):
             for direction in (d for d in directions if not d.is_stuck):
@@ -116,7 +115,7 @@ class JumpShifting(AutotuningProcedure):
                 direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                 direction.is_stuck = direction.check_stuck(diagram)  # Check if reach a corner
 
-                line_detected = self._is_valid_line(diagram)
+                self._is_confirmed_line(diagram)  # Check line and save position if leftmost one
 
     def _guess_one_electron(self, diagram: Diagram) -> None:
         """
@@ -138,9 +137,9 @@ class JumpShifting(AutotuningProcedure):
         # Enforce the boundary policy to make sure the final guess is in the diagram area
         self._enforce_boundary_policy(diagram, force=True)
 
-    def _is_valid_line(self, diagram: Diagram) -> bool:
+    def _is_confirmed_line(self, diagram: Diagram) -> bool:
         """
-        Check if the current position should be considered as a line area, according to the current model and the
+        Check if the current position should be considered as a line, according to the current model and the
         validation logic.
         If a line is validated update the leftmost line.
 
@@ -148,7 +147,7 @@ class JumpShifting(AutotuningProcedure):
         :return: True if a line is detected and considered as valid.
         """
         # Infer with the model at the current position
-        line_detected, confidence = self.is_transition_line(diagram)
+        line_detected, _ = self.is_transition_line(diagram)
 
         # If this is the leftmost line detected so far, save it
         if line_detected and (self._leftmost_line_coord is None or self.y < self._leftmost_line_coord[1]):
@@ -156,11 +155,11 @@ class JumpShifting(AutotuningProcedure):
 
         return line_detected
 
-    def _move_perpendicular_to_line(self, go_left: bool = True, step_size: Optional[int] = None) -> None:
+    def _move_relative_to_line(self, angle: int, step_size: Optional[int] = None) -> None:
         """
-        Shift the current coordinates in a direction perpendicular to the estimated lines directions.
+        Shift the current coordinates in a direction relative to the estimated lines directions.
 
-        :param go_left: If True move to the left of the line. If False, to the right instead.
+        :param angle:
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
@@ -169,8 +168,6 @@ class JumpShifting(AutotuningProcedure):
         distance_x = step_size if step_size is not None else self._default_step_x
         distance_y = step_size if step_size is not None else self._default_step_y
 
-        # Adapt direction for left / right
-        angle = 270 - self._line_direction if go_left else 90 - self._line_direction
         # Convert angle from degree to radian
         angle = angle * (pi / 180)
 
@@ -179,12 +176,12 @@ class JumpShifting(AutotuningProcedure):
 
     def _move_left_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
         """
-        Alias of _move_perpendicular_to_line(True)
+        Alias of _move_relative_to_line
 
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        self._move_perpendicular_to_line(True, step_size)
+        self._move_relative_to_line(270 - self._line_direction, step_size)
 
     def _move_right_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
         """
@@ -193,7 +190,13 @@ class JumpShifting(AutotuningProcedure):
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        self._move_perpendicular_to_line(False, step_size)
+        self._move_relative_to_line(90 - self._line_direction, step_size)
+
+    def _move_up_follow_line(self, step_size: Optional[int] = None) -> None:
+        self._move_relative_to_line(180 - self._line_direction, step_size)
+
+    def _move_down_follow_line(self, step_size: Optional[int] = None) -> None:
+        self._move_relative_to_line(-self._line_direction, step_size)
 
     def reset_procedure(self):
         super().reset_procedure()
