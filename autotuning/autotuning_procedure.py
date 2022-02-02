@@ -374,33 +374,41 @@ class AutotuningProcedure:
         """ Return the number of successful line detection """
         return len([e for e in self._scan_history if e.model_classification == e.ground_truth])
 
-    def plot_step_history(self, final_coord: Tuple[int, int]) -> None:
+    def plot_step_history(self, final_coord: Tuple[int, int], success_tuning: bool, plot_vanilla: bool = True) -> None:
         """
         Plot the diagram with the tuning steps of the current procedure.
 
         :param final_coord: The final coordinate of the tuning procedure
+        :param success_tuning: Result of the tuning (True = Success)
+        :param plot_vanilla: If True, also plot the diagram with no label and steps
         """
         d = self.diagram
-        # diagram
-        plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}', 'nearest', d.x_axes[1] - d.x_axes[0])
+        name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}'
+
+        if plot_vanilla:
+            # diagram
+            plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}', 'nearest', d.x_axes[1] - d.x_axes[0])
+
         # diagram + label + step with classification color
-        plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename} steps', 'nearest', d.x_axes[1] - d.x_axes[0],
+        plot_diagram(d.x_axes, d.y_axes, d.values, name, 'nearest', d.x_axes[1] - d.x_axes[0],
                      transition_lines=d.transition_lines, scan_history=self._scan_history, final_coord=final_coord,
                      show_offset=False, history_uncertainty=False)
         # label + step with classification color and uncertainty
-        plot_diagram(d.x_axes, d.y_axes, None, f'{d.file_basename} steps uncertainty', 'nearest',
+        plot_diagram(d.x_axes, d.y_axes, None, name + ' uncertainty', 'nearest',
                      d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=self._scan_history,
                      final_coord=final_coord, show_offset=False, history_uncertainty=True)
 
-    def plot_step_history_animation(self, final_coord: Tuple[int, int]) -> None:
+    def plot_step_history_animation(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
         """
         Plot the animated diagram with the tuning steps of the current procedure.
 
         :param final_coord: The final coordinate of the tuning procedure
+        :param success_tuning: Result of the tuning (True = Success)
         """
 
+        name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}'
         # Generate a gif image
-        plot_diagram_step_animation(self.diagram, f'{self.diagram.file_basename} steps', self._scan_history,
+        plot_diagram_step_animation(self.diagram, name, self._scan_history,
                                     final_coord)
 
     def setup_next_tuning(self, diagram: Diagram, start_coord: Optional[Tuple[int, int]] = None) -> None:

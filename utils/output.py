@@ -146,9 +146,13 @@ def save_results(**results: Any) -> None:
     logger.debug(f'{len(results)} result(s) saved in {results_path}')
 
 
-def save_plot(file_name: str) -> Optional[Path]:
+def save_plot(file_name: str, allow_overwrite: bool = False) -> Optional[Path]:
     """
     Save a plot image in the directory
+
+    :param file_name: the output png file name (no extension).
+    :param allow_overwrite: If True, overwrite existing file if existing with same name. If False, add a number to the
+    file name to avoid overwriting.
 
     :return: The path where the plot is saved, or None if not saved.
     """
@@ -159,6 +163,18 @@ def save_plot(file_name: str) -> Optional[Path]:
     save_path = None
     if settings.is_named_run() and settings.save_images:
         save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name}.png')
+
+        # Check if file exist and rename if we want to avoid overwriting
+        if save_path.is_file() and not allow_overwrite:
+            for i in range(2, 100, 1):
+                save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name} ({i:02d}).png')
+                if not save_path.is_file():
+                    break  # We found a valid name
+
+            if save_path.is_file():
+                # No valid name found
+                raise FileExistsError(f'Image name already exist and maximum index reached (100): {save_path}')
+
         plt.savefig(save_path, dpi=200)
         logger.debug(f'Plot saved in {save_path}')
 
@@ -169,7 +185,7 @@ def save_plot(file_name: str) -> Optional[Path]:
 
 
 def save_gif(images_paths: List[Path], file_name: str, remove_images: bool = True,
-             duration: Union[List[int], int] = 200, loop: int = 0) -> Optional[Path]:
+             duration: Union[List[int], int] = 200, loop: int = 0, allow_overwrite: bool = False) -> Optional[Path]:
     """
     Transform a list of image into an animated gif and save it.
 
@@ -178,11 +194,25 @@ def save_gif(images_paths: List[Path], file_name: str, remove_images: bool = Tru
     :param remove_images: If True all files in images_paths will be removed after being used in the gif.
     :param duration: The time to display the current frame of the GIF, in milliseconds.
     :param loop: The number of times the GIF should loop. 0 means that it will loop forever.
+    :param allow_overwrite: If True, overwrite existing file if existing with same name. If False, add a number to the
+    file name to avoid overwriting.
     :return:The path where the gif is saved, or None if not saved.
     """
     save_path = None
     if settings.is_named_run() and settings.save_gif:
         save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name}.gif')
+
+        # Check if file exist and rename if we want to avoid overwriting
+        if save_path.is_file() and not allow_overwrite:
+            for i in range(2, 100, 1):
+                save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name} ({i:02d}).gif')
+                if not save_path.is_file():
+                    break  # We found a valid name
+
+            if save_path.is_file():
+                # No valid name found
+                raise FileExistsError(f'Image name already exist and maximum index reached (100): {save_path}')
+
         img, *imgs = (Image.open(f) for f in images_paths)
         img.save(fp=save_path, format='GIF', append_images=imgs, save_all=True, duration=duration, loop=loop)
 

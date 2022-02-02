@@ -47,6 +47,7 @@ def run_autotuning() -> None:
     autotuning_results = {d.file_basename: Counter() for d in diagrams}
     line_detection_results = {d.file_basename: Counter() for d in diagrams}
     nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
+    nb_error_to_plot = 10
 
     with SectionTimer('autotuning simulation'), \
             ProgressBar(nb_iterations, task_name='Autotuning', auto_display=settings.visual_progress_bar) as progress:
@@ -65,6 +66,7 @@ def run_autotuning() -> None:
                 nb_classification_success = procedure.get_nb_line_detection_success()
                 success_rate = nb_classification_success / nb_steps if nb_steps > 0 else 0
                 charge_area = diagram.get_charge(tuned_x, tuned_y)
+                success_tuning = charge_area is ChargeRegime.ELECTRON_1
                 autotuning_results[diagram.file_basename][charge_area] += 1
                 line_detection_results[diagram.file_basename].update({'steps': nb_steps,
                                                                       'good': nb_classification_success})
@@ -74,10 +76,14 @@ def run_autotuning() -> None:
                              f'{"[Good]" if charge_area is ChargeRegime.ELECTRON_1 else "[Bad]"}')
 
                 progress.incr()
-                # Plot tuning steps for the first round
+                # Plot tuning steps for the first round and some error samples
                 if i == 0:
-                    procedure.plot_step_history((tuned_x, tuned_y))
-                    procedure.plot_step_history_animation((tuned_x, tuned_y))
+                    procedure.plot_step_history((tuned_x, tuned_y), success_tuning)
+                    procedure.plot_step_history_animation((tuned_x, tuned_y), success_tuning)
+                elif nb_error_to_plot > 0 and not success_tuning:
+                    procedure.plot_step_history((tuned_x, tuned_y), success_tuning, plot_vanilla=False)
+                    procedure.plot_step_history_animation((tuned_x, tuned_y), success_tuning)
+                    nb_error_to_plot -= 1
 
     # Save results in yaml file
     save_results(final_regimes={file: {str(charge): value for charge, value in counter.items()}
