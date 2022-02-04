@@ -115,7 +115,7 @@ def plot_diagram(x_i, y_i,
         legend = True
 
         if history_uncertainty:
-            # setup the colorbar
+            # Setup the colorbar
             cmap = LinearSegmentedColormap.from_list('', ['blue', 'white', 'red'])
             norm = Normalize(vmin=-1, vmax=1)
             cbar = plt.colorbar(ScalarMappable(cmap=cmap, norm=norm), shrink=0.8, aspect=15)
@@ -127,8 +127,8 @@ def plot_diagram(x_i, y_i,
     if final_coord is not None:
         last_x, last_y = final_coord
         # Get marker position (and avoid going out)
-        last_x_i = min(last_x + settings.patch_size_x // 2, len(x_i) - 1)
-        last_y_i = min(last_y + settings.patch_size_y // 2, len(y_i) - 1)
+        last_x_i = min(last_x, len(x_i) - 1)
+        last_y_i = min(last_y, len(y_i) - 1)
         plt.scatter(x=x_i[last_x_i], y=y_i[last_y_i],
                     color='fuchsia', marker='x', s=200, label='End')
         legend = True
