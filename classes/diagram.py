@@ -258,12 +258,22 @@ class Diagram:
                         pixel_size=label_pixel_size,
                         snap=1)
 
+                    if len(transition_lines) == 0:
+                        logger.debug(f'No line label found for {file_basename}')
+                        nb_no_label += 1
+                        continue
+
                 if load_areas:
                     # Load charge area annotations
                     charge_area = Diagram._load_charge_annotations(
                         filter(lambda l: l['title'] != 'line', current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
+
+                    if len(charge_area) == 0:
+                        logger.debug(f'No charge label found for {file_basename}')
+                        nb_no_label += 1
+                        continue
 
                 diagram = Diagram(file_basename, x, y, values, transition_lines, charge_area)
                 diagrams.append(diagram)
