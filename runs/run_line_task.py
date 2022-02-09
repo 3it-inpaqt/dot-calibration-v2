@@ -155,7 +155,8 @@ def get_cuda_device() -> torch.device:
 
 
 @SectionTimer('run')
-def run(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: ClassifierNN) -> None:
+def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: ClassifierNN) \
+        -> None:
     """
     Run the training and the testing of the network.
 

@@ -296,15 +296,21 @@ def load_normalization() -> Tuple[float, float]:
     """
 
     if settings.normalization_values_path:
+        # File from settings
         normalization_file = Path(settings.normalization_values_path)
-        if normalization_file.is_file():
-            with open(normalization_file) as f:
-                result = yaml.load(f, Loader=yaml.FullLoader)
-                if 'max' in result and 'min' in result:
-                    return result['min'], result['max']
+    else:
+        # File from current directory (only possible if line task started before)
+        normalization_file = Path(OUT_DIR, settings.run_name, OUT_FILES['normalization'])
 
-    raise ValueError(f'Invalid or missing mandatory "normalization_values_path" setting: '
-                     f'"{settings.normalization_values_path}"')
+    if normalization_file.is_file():
+        with open(normalization_file) as f:
+            result = yaml.load(f, Loader=yaml.FullLoader)
+            if 'max' in result and 'min' in result:
+                logger.debug(f'Normalization values loaded from file: {normalization_file}')
+                return result['min'], result['max']
+
+    raise ValueError(f'Invalid or missing normalisation file: "{normalization_file}". '
+                     f'Should be define in "normalization_values_path" setting or present in current un directory.')
 
 
 def load_network_(network: Module, file_path: Union[str, Path], device: torch.device) -> bool:
@@ -320,7 +326,7 @@ def load_network_(network: Module, file_path: Union[str, Path], device: torch.de
     cache_path = Path(file_path) if isinstance(file_path, str) else file_path
     if cache_path.is_file():
         network.load_state_dict(torch.load(cache_path, map_location=device))
-        logger.info(f'Network loaded ({cache_path})')
+        logger.info(f'Network parameters loaded from file ({cache_path})')
         return True
     logger.warning(f'Network cache not found in "{cache_path}"')
     return False

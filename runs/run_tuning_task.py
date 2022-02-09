@@ -1,6 +1,5 @@
 from collections import Counter
-from pathlib import Path
-from typing import Optional
+from typing import List
 
 from tabulate import tabulate
 
@@ -12,34 +11,26 @@ from autotuning.random_baseline import RandomBaseline
 from autotuning.shifting import Shifting
 from autotuning.shifting_bayes import ShiftingBayes
 from classes.classifier import Classifier
+from classes.classifier_nn import ClassifierNN
 from classes.diagram import ChargeRegime, Diagram
-from datasets.qdsd import DATA_DIR
 from plots.autotuning import plot_autotuning_results
-from runs.run_line_task import get_cuda_device, init_model
 from utils.logger import logger
-from utils.output import load_network_, save_results
+from utils.output import save_results
 from utils.progress_bar import ProgressBar
 from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def run_autotuning() -> None:
-    """ Run the autotuning simulation. """
-    # Load diagrams from files (line and area)
-    diagrams = Diagram.load_diagrams(pixel_size=settings.pixel_size,
-                                     research_group=settings.research_group,
-                                     diagrams_path=Path(DATA_DIR, 'interpolated_csv.zip'),
-                                     labels_path=Path(DATA_DIR, 'labels.json'),
-                                     single_dot=True,
-                                     load_lines=True,
-                                     load_areas=True)
+def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
+    """
+    Run the autotuning simulation.
 
-    # Normalize the diagram with the same min/max value used during the training.
-    # The values are fetch via the normalization_values_path setting.
-    Diagram.normalize(diagrams)
+    :param model: The classifier model used by the tuning procedure.
+    :param diagrams: The list of diagrams to run on the tuning procedure.
+    """
 
     # Set up the autotuning procedure according to the settings
-    procedure = setup_procedure()
+    procedure = init_procedure(model)
 
     # Start the autotuning testing
     logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
@@ -93,7 +84,7 @@ def run_autotuning() -> None:
     show_results(autotuning_results, line_detection_results)
 
 
-def setup_procedure() -> AutotuningProcedure:
+def init_procedure(model: Classifier) -> AutotuningProcedure:
     """
     Set up the autotuning procedure based on the current settings.
     :return: The procedure.
@@ -102,12 +93,7 @@ def setup_procedure() -> AutotuningProcedure:
     label_offsets = (settings.label_offset_x, settings.label_offset_y)
 
     # Load model
-    model: Optional[Classifier] = None
-    if not settings.autotuning_use_oracle:
-        model = init_model()
-        if not load_network_(model, Path(settings.trained_network_cache_path), get_cuda_device()):
-            # TODO allow to train network here
-            raise RuntimeError(f'Trained parameters not found in: {settings.trained_network_cache_path}')
+    if issubclass(type(model), ClassifierNN):
         model.eval()  # Turn off training features (eg. dropout)
 
     # Load procedure

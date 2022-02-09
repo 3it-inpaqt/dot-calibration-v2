@@ -1,4 +1,4 @@
-from start_lines import main
+from start_lines import start_line_task
 from utils.logger import logger
 from utils.output import ExistingRunName
 from utils.planner import BasePlanner, CombinatorPlanner, ParallelPlanner, Planner, SequencePlanner
@@ -38,7 +38,7 @@ def run_tasks_planner(runs_planner: BasePlanner, skip_validation: bool = False, 
         settings.run_name = run_name
         try:
             # Start the run
-            main()
+            start_line_task()
         except ExistingRunName:
             if skip_existing_runs:
                 logger.info(f'Skip existing run {run_name}')
