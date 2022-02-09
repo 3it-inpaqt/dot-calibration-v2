@@ -14,6 +14,7 @@ from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
 from datasets.diagram import ChargeRegime, Diagram
 from plots.autotuning import plot_autotuning_results
+from runs.run_line_task import get_cuda_device
 from utils.logger import logger
 from utils.output import save_results
 from utils.progress_bar import ProgressBar
@@ -21,6 +22,7 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
+@SectionTimer('tuning task')
 def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
     """
     Run the autotuning simulation.
@@ -28,6 +30,12 @@ def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
     :param model: The classifier model used by the tuning procedure.
     :param diagrams: The list of diagrams to run on the tuning procedure.
     """
+
+    # Automatically chooses the device according to the settings, and move diagram data to it.
+    device = get_cuda_device()
+    logger.debug(f'pyTorch device selected: {device}')
+    for diagram in diagrams:
+        diagram.to(device)
 
     # Set up the autotuning procedure according to the settings
     procedure = init_procedure(model)

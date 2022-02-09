@@ -170,11 +170,13 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
     :param final_coord: The final tuning coordinates
     """
 
+    values = d.values.cpu()
+
     if settings.is_named_run() and settings.save_gif:
         images_paths = []  # List of image paths for the gif
         durations = []  # List of duration for each image (ms)
         for scan_i in range(0, len(scan_history), 4):
-            path = plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_{scan_i}', 'nearest',
+            path = plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}_gif_{scan_i}', 'nearest',
                                 d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
                                 show_offset=False)
             images_paths.append(path)
@@ -182,15 +184,15 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
 
         images_paths.extend([
             # Show full diagram with tuning final coordinate
-            plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_end_1', 'nearest',
+            plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}_gif_end_1', 'nearest',
                          d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
                          show_offset=False),
             # Show full diagram with tuning final coordinate + line labels
-            plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_end_2', 'nearest',
+            plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}_gif_end_2', 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=scan_history,
                          final_coord=final_coord, show_offset=False),
             # Show full diagram with tuning final coordinate + line & regime labels
-            plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}_gif_end_3', 'nearest',
+            plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}_gif_end_3', 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, charge_regions=d.charge_areas,
                          scan_history=scan_history, final_coord=final_coord, show_offset=False)
         ])

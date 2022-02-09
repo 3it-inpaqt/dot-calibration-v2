@@ -154,7 +154,7 @@ def get_cuda_device() -> torch.device:
         return torch.device(settings.device)
 
 
-@SectionTimer('run')
+@SectionTimer('line task')
 def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: ClassifierNN) \
         -> None:
     """

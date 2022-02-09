@@ -383,14 +383,15 @@ class AutotuningProcedure:
         :param plot_vanilla: If True, also plot the diagram with no label and steps
         """
         d = self.diagram
+        values = d.values.cpu()
         name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}'
 
         if plot_vanilla:
             # diagram
-            plot_diagram(d.x_axes, d.y_axes, d.values, f'{d.file_basename}', 'nearest', d.x_axes[1] - d.x_axes[0])
+            plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}', 'nearest', d.x_axes[1] - d.x_axes[0])
 
         # diagram + label + step with classification color
-        plot_diagram(d.x_axes, d.y_axes, d.values, name, 'nearest', d.x_axes[1] - d.x_axes[0],
+        plot_diagram(d.x_axes, d.y_axes, values, name, 'nearest', d.x_axes[1] - d.x_axes[0],
                      transition_lines=d.transition_lines, scan_history=self._scan_history, final_coord=final_coord,
                      show_offset=False, history_uncertainty=False)
         # label + step with classification color and uncertainty
