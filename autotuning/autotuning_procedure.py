@@ -6,7 +6,7 @@ from typing import Callable, Iterable, List, Optional, Tuple
 import torch
 
 from classes.classifier import Classifier
-from classes.diagram import Diagram
+from datasets.diagram import Diagram
 from plots.data import plot_diagram, plot_diagram_step_animation
 from utils.settings import settings
 
@@ -122,7 +122,7 @@ class AutotuningProcedure:
                 patch = self.diagram.get_patch((self.x, self.y), self.patch_size)
                 # Reshape as valid input for the model (batch size, chanel, patch x, patch y)
                 size_x, size_y = self.patch_size
-                patch = torch.Tensor(patch).view((1, 1, size_x, size_y))
+                patch = patch.view((1, 1, size_x, size_y))
                 # Send to the model for inference
                 prediction, confidence = self.model.infer(patch, settings.bayesian_nb_sample_test)
                 # Extract data from pytorch tensor

@@ -60,5 +60,6 @@ if __name__ == '__main__':
         logger.critical('Line task interrupted by an unexpected error.', exc_info=True)
     finally:
         # Clean up the environment, ready for a new run
-        del trained_model
+        if 'trained_model' in locals():
+            del trained_model
         clean_up()

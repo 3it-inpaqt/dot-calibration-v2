@@ -1,4 +1,3 @@
-import pickle
 import re
 from dataclasses import asdict
 from itertools import chain
@@ -240,15 +239,15 @@ def save_network(network: Module, file_name: str = 'network') -> None:
     logger.debug(f'Network saved in {save_path}')
 
 
-def save_data_cache(file_path: Path, data: List[Any]) -> None:
+def save_data_cache(file_path: Path, data: torch.Tensor) -> None:
     """
     Save data in pickle file for later fast load.
 
-    :param file_path: The full path to the cache file to write (shouldn't exist)
-    :param data: A list of items
+    :param file_path: The full path to the cache file to write (shouldn't exist).
+    :param data: A torch tensor.
     """
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    pickle.dump(data, open(file_path, 'wb'))
+    torch.save(data, open(file_path, 'wb'))
     logger.debug(f'Data saved in cache ({file_path})')
 
 
@@ -349,14 +348,14 @@ def load_previous_network_version_(network: Module, version_name: str, device: t
     return load_network_(network, save_path, device)
 
 
-def load_data_cache(file_path: Path) -> List[Any]:
+def load_data_cache(file_path: Path) -> torch.Tensor:
     """
     Load data from pickle file (from previous run).
 
     :param file_path: The full path to the file to load.
-    :return: A list of items.
+    :return: A torch tensor.
     """
-    data = pickle.load(open(file_path, 'rb'))
+    data = torch.load(open(file_path, 'rb'))
     logger.info(f'{len(data)} items loaded from cache ({file_path})')
     return data
 

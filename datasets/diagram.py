@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+import torch
 from shapely.geometry import LineString, Point, Polygon
 
 from plots.data import plot_diagram
@@ -51,7 +52,7 @@ class Diagram:
     y_axes: Sequence[float]
 
     # The list of measured voltage according to the 2 gates
-    values: Sequence[float]
+    values: torch.Tensor
 
     # The transition lines annotations
     transition_lines: Optional[List[LineString]]
@@ -59,7 +60,7 @@ class Diagram:
     # The charge area lines annotations
     charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]
 
-    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> Sequence[float]:
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
 
@@ -180,6 +181,16 @@ class Diagram:
 
         # Label is True if any line intersect the patch shape
         return any([line.intersects(patch_shape) for line in self.transition_lines])
+
+    def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
+           copy: bool = False):
+        """
+        Send the dataset to a specific device (cpu or cuda) and/or a convert it to a different type.
+        Modification in place.
+        The arguments correspond to the torch tensor "to" signature.
+        See https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to.
+        """
+        self.values = self.values.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         """
@@ -307,7 +318,7 @@ class Diagram:
         x = np.arange(values.shape[1]) * step + x_start
         y = np.arange(values.shape[0]) * step + y_start
 
-        return x, y, values
+        return x, y, torch.tensor(values, dtype=torch.float)
 
     @staticmethod
     def _load_lines_annotations(lines: Iterable, x, y, pixel_size: float, snap: int = 1) -> List[LineString]:

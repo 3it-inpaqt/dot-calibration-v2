@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import ticker
 
-from classes.diagram import ChargeRegime
+from datasets.diagram import ChargeRegime
 from utils.output import load_runs, set_plot_style
 
 

@@ -12,7 +12,7 @@ from autotuning.shifting import Shifting
 from autotuning.shifting_bayes import ShiftingBayes
 from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
-from classes.diagram import ChargeRegime, Diagram
+from datasets.diagram import ChargeRegime, Diagram
 from plots.autotuning import plot_autotuning_results
 from utils.logger import logger
 from utils.output import save_results

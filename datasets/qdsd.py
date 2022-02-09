@@ -2,11 +2,10 @@ from pathlib import Path
 from random import shuffle
 from typing import Callable, Iterable, List, Tuple
 
-import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from classes.diagram import Diagram
+from datasets.diagram import Diagram
 from utils.logger import logger
 from utils.output import load_data_cache, save_data_cache, save_normalization, save_results
 from utils.settings import settings
@@ -40,7 +39,7 @@ class QDSDLines(Dataset):
         self._patches, self._patches_labels = zip(*patches)
 
         # Convert to torch tensor
-        self._patches = torch.Tensor(np.array(self._patches))
+        self._patches = torch.stack(self._patches)
         self._patches_labels = torch.Tensor(self._patches_labels).bool()
 
         self.transform: List[Callable] = []

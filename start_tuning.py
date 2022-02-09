@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from classes.diagram import Diagram
+from datasets.diagram import Diagram
 from datasets.qdsd import DATA_DIR
 from runs.run_line_task import clean_up, preparation
 from runs.run_tuning_task import run_autotuning

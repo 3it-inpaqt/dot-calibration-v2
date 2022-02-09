@@ -102,4 +102,5 @@ class FeedForward(ClassifierNN):
         """
         Define the data pre-processing to apply on the datasets before to use this neural network.
         """
+        # TODO replace by flatten layer https://stackoverflow.com/a/60117675/2666094
         return [lambda x: torch.flatten(x)]  # Flatten the image
