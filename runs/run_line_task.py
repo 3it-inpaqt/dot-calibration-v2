@@ -43,13 +43,17 @@ def preparation() -> None:
     set_plot_style()
 
     if settings.seed is not None:
-        # Set random seeds for reproducibility
-        random.seed(settings.seed)
-        torch.manual_seed(settings.seed)
-        np.random.seed(settings.seed)
+        fix_seed()
 
     # Print settings
     logger.debug(settings)
+
+
+def fix_seed() -> None:
+    """ Set random number generator seeds for reproducibility """
+    random.seed(settings.seed)
+    torch.manual_seed(settings.seed)
+    np.random.seed(settings.seed)
 
 
 def clean_up() -> None:

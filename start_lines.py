@@ -54,8 +54,7 @@ if __name__ == '__main__':
         trained_model = start_line_task()
 
     except KeyboardInterrupt:
-        logger.error('Line task interrupted by the user.')
-        raise  # Let it go to stop the task planner if needed
+        logger.error('Line task interrupted by the user.', exc_info=True)
     except Exception:
         logger.critical('Line task interrupted by an unexpected error.', exc_info=True)
     finally:

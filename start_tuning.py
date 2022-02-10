@@ -47,8 +47,7 @@ if __name__ == '__main__':
         start_tuning_task()
 
     except KeyboardInterrupt:
-        logger.error('Tuning task interrupted by the user.')
-        raise  # Let it go to stop the task planner if needed
+        logger.error('Tuning task interrupted by the user.', exc_info=True)
     except Exception:
         logger.critical('Tuning task interrupted by an unexpected error.', exc_info=True)
     finally:
