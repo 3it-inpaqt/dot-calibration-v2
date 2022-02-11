@@ -34,6 +34,11 @@ class Settings:
     # If true every baseline are run before the real training. If false this step is skipped.
     evaluate_baselines: bool = True
 
+    # The metric to use for plotting, logging and model performance evaluation.
+    # See https://yonvictor.notion.site/Classification-Metrics-2074032f927847c0885918eb9ddc508c
+    # Possible values: 'precision', 'recall', 'f1'.
+    main_metric: str = 'precision'
+
     # ==================================================================================================================
     # ============================================== Logging and Outputs ===============================================
     # ==================================================================================================================
@@ -161,7 +166,7 @@ class Settings:
     # The number of training epoch.
     nb_epoch: int = 20
 
-    # Save the best network state during the training based on the test accuracy.
+    # Save the best network state during the training based on the test main metric.
     # Then load it when the training is complet.
     # The file will be at the root of run directory, under then name: "best_network.pt"
     # Required checkpoints_per_epoch > 0 and checkpoint_validation = True
@@ -191,10 +196,10 @@ class Settings:
     checkpoints_per_epoch: int = 0
 
     # The number of data in the checkpoint training subset.
-    # Set to 0 to don't compute the train accuracy during checkpoints.
+    # Set to 0 to don't compute the train metrics during checkpoints.
     checkpoint_train_size: int = 640
 
-    # If the inference accuracy of the validation dataset should be computed, or not, during checkpoint.
+    # If the inference metrics of the validation dataset should be computed, or not, during checkpoint.
     checkpoint_validation: bool = True
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at each checkpoint.
@@ -212,10 +217,10 @@ class Settings:
     # Used for baselines.
     autotuning_use_oracle: bool = False
 
-    # If the oracle is enabled, these numbers corrupt its accuracy.
-    # 0.0 = all predictions are based on the ground truth (labels), means 100% accuracy
-    # 0.5 = half of the predictions are random, means 75% accuracy for binary classification.
-    # 1.0 = all the predictions are random, means 50% accuracy for binary classification.
+    # If the oracle is enabled, these numbers corrupt its precision.
+    # 0.0 = all predictions are based on the ground truth (labels), means 100% precision
+    # 0.5 = half of the predictions are random, means 75% precision for binary classification.
+    # 1.0 = all the predictions are random, means 50% precision for binary classification.
     # TODO: implement that (and maybe create an Oracle class)
     autotuning_oracle_line_random: float = 0
     autotuning_oracle_no_line_random: float = 0
@@ -247,6 +252,7 @@ class Settings:
         # General
         assert self.run_name is None or not re.search('[/:"*?<>|\\\\]+', self.run_name), \
             'Invalid character in run name (should be a valid directory name)'
+        assert self.main_metric in ['precision', 'recall', 'f1'], f'Unknown metric "{self.main_metric}"'
 
         # Logging and Outputs
         possible_log_levels = ('CRITICAL', 'FATAL', 'ERROR', 'WARN', 'WARNING', 'INFO', 'DEBUG', 'NOTSET')

@@ -1,12 +1,69 @@
 from typing import List, Optional
 
+import numpy as np
 import torch
 from torch.nn import Module
 from torchinfo import summary
 
+from classes.data_classes import ClassMetrics, ClassificationMetrics
 from utils.logger import logger
 from utils.output import save_network_info
 from utils.settings import settings
+
+
+def classification_metrics(confusion_matrix: np.ndarray) -> ClassificationMetrics:
+    """
+    Compute different metrics to quantify a classification quality.
+    Everything is computer for each class and the overall score.
+    Metrics: accuracy, precision, recall, f1.
+
+    Example:
+    - Input confusion matrix: [[9, 1], [4, 36]]
+
+             |  9 |  1 |
+      Labels -----------
+             |  4 | 36 |
+            Predictions
+
+    - Output:
+      'classes': 'f1': [0.7826086956521738, 0.935064935064935]
+                 'nb': [10, 40]
+                 'precisions': [0.6923076923076923, 0.972972972972973]
+                 'recall': [0.9, 0.9]
+      'overall': 'accuracy': 0.9
+                 'f1': 0.8588368153585544
+                 'nb': 50
+                 'precisions': 0.8326403326403327
+               'recall': 0.9
+
+    :param confusion_matrix: The confusion matrix that contains the number of couple (label, predictions).
+    :return: The different classification result metrics (see ClassificationMetrics dataclass).
+    """
+
+    nb_labels = confusion_matrix.sum()
+    nb_good_class = confusion_matrix.trace()
+
+    classes_nb_labels = confusion_matrix.sum(1)
+    classes_nb_predictions = confusion_matrix.sum(0)
+    classes_nb_good_predictions = confusion_matrix.diagonal()
+    with np.errstate(invalid='ignore'):  # Mute division by 0 errors (will result to NaN)
+        classes_precision = classes_nb_good_predictions / classes_nb_predictions
+        classes_recall = classes_nb_good_predictions / classes_nb_labels
+        classes_f1 = ((classes_precision * classes_recall) / (classes_precision + classes_recall)) * 2
+
+    return ClassificationMetrics(
+        nb=int(nb_labels),
+        accuracy=float(nb_good_class / nb_labels),
+        precision=float(np.nansum(classes_precision) / len(classes_precision)),  # Mean value with NaN as 0
+        recall=float(np.nansum(classes_recall) / len(classes_recall)),  # Mean value with NaN as 0
+        f1=float(np.nansum(classes_f1) / len(classes_f1)),  # Mean value with NaN as 0
+        classes=[ClassMetrics(
+            nb=int(classes_nb_labels[i]),
+            precision=float(classes_precision[i]),
+            recall=float(classes_recall[i]),
+            f1=float(classes_f1[i])
+        ) for i in range(len(confusion_matrix))]
+    )
 
 
 def network_metrics(network: Module, input_dim: List, device: Optional[torch.device],

@@ -51,9 +51,9 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
 
     # Metrics to monitoring the training and draw plots
     loss_evolution: List[float] = []
-    accuracy_evolution: List[dict] = []
+    metrics_evolution: List[dict] = []
     epochs_stats: List[dict] = []
-    best_checkpoint: dict = {'validation_accuracy': 0, 'batch_num': None}
+    best_checkpoint: dict = {'score': 0, 'batch_num': None}
 
     # Use timer and progress bar
     with SectionTimer('network training') as timer, ProgressBarTraining(nb_batch) as progress:
@@ -67,10 +67,11 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
                 # Checkpoint if enable for this batch
                 if i in checkpoints_i:
                     timer.pause()
-                    check_results = _checkpoint(network, epoch * nb_batch + i, train_dataset, validation_dataset,
+                    check_metrics = _checkpoint(network, epoch * nb_batch + i, train_dataset, validation_dataset,
                                                 best_checkpoint, device)
-                    progress.update(accuracy=check_results['validation_accuracy'])
-                    accuracy_evolution.append(check_results)
+                    progress.update(**{'acc': check_metrics['validation'].accuracy,
+                                       settings.main_metric: check_metrics['validation'].main})
+                    metrics_evolution.append(check_metrics)
                     timer.resume()
 
                 # Run one training step for these data
@@ -81,28 +82,29 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
             # Epoch statistics
             _record_epoch_stats(epochs_stats, loss_evolution[-len(train_loader):])
 
-    if len(accuracy_evolution) == 0:
+    if len(metrics_evolution) == 0:
         save_results(epochs_stats=epochs_stats)
     else:
         # Do one last checkpoint to complet the plot
-        accuracy_evolution.append(
+        metrics_evolution.append(
             _checkpoint(network, settings.nb_epoch * nb_batch, train_dataset, validation_dataset, best_checkpoint,
                         device))
-        save_results(epochs_stats=epochs_stats, accuracy_evolution=accuracy_evolution)
+        # TODO convert metrics_evolution content to dict
+        # save_results(epochs_stats=epochs_stats, metrics_validation=metrics_evolution)
 
     if settings.save_network:
         save_network(network, 'final_network')
 
     if best_checkpoint['batch_num'] is not None:
-        save_results(best_validation_accuracy=best_checkpoint['validation_accuracy'],
-                     best_validation_accuracy_batch=best_checkpoint['batch_num'])
+        save_results(best_score=best_checkpoint['score'],
+                     best_validation_batch=best_checkpoint['batch_num'])
 
         # Apply early stopping by loading best version
         if settings.early_stopping:
             _apply_early_stopping(network, best_checkpoint, nb_batch, device)
 
     # Post train plots
-    plot_train_progress(loss_evolution, accuracy_evolution, nb_batch, best_checkpoint)
+    plot_train_progress(loss_evolution, metrics_evolution, nb_batch, best_checkpoint)
 
 
 def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Dataset,
@@ -121,14 +123,14 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
     if settings.checkpoint_save_network:
         save_network(network, f'{batch_num:n}_checkpoint_network')
 
-    validation_accuracy = train_accuracy = None
+    validation_metrics = train_metrics = None
     # Test on the validation dataset
     if settings.checkpoint_validation:
-        validation_accuracy = test(network, validation_dataset, device, test_name='checkpoint validation')
+        validation_metrics = test(network, validation_dataset, device, test_name='checkpoint validation')
         # Check if this is the new best score
-        if validation_accuracy > best_checkpoint['validation_accuracy']:
-            logger.debug(f'New best validation accuracy: {validation_accuracy:5.2%}')
-            best_checkpoint['validation_accuracy'] = validation_accuracy
+        if validation_metrics.main > best_checkpoint['score']:
+            logger.debug(f'New best validation {validation_metrics}')
+            best_checkpoint['score'] = validation_metrics.main
             best_checkpoint['batch_num'] = batch_num
             # Save new best parameters
             if settings.early_stopping:
@@ -137,21 +139,15 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
 
     # Test on a subset of train dataset
     if settings.checkpoint_train_size > 0:
-        train_accuracy = test(network, train_dataset, device, test_name='checkpoint train',
-                              limit=settings.checkpoint_train_size)
+        train_metrics = test(network, train_dataset, device, test_name='checkpoint train',
+                             limit=settings.checkpoint_train_size)
 
     # Set it back to train because it was switched during tests
     network.train()
 
-    logger.debug(f'Checkpoint {batch_num:<6n} '
-                 f'| validation accuracy: {validation_accuracy or 0:5.2%} '
-                 f'| train accuracy: {train_accuracy or 0:5.2%}')
+    logger.debug(f'Checkpoint {batch_num:<6n} | validation {validation_metrics} | train {train_metrics}')
 
-    return {
-        'batch_num': batch_num,
-        'validation_accuracy': validation_accuracy,
-        'train_accuracy': train_accuracy
-    }
+    return {'batch_num': batch_num, 'validation': validation_metrics, 'train': train_metrics}
 
 
 def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> None:
@@ -182,7 +178,7 @@ def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> 
 
 def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch: int, device: torch.device) -> None:
     """
-    Apply early stopping by loading the best network according to the validation classification accuracy ran during
+    Apply early stopping by loading the best network according to the validation classification main metric ran during
     checkpoints.
 
     :param network: The network to load (in place)
@@ -217,5 +213,6 @@ class ProgressBarTraining(ProgressBar):
         super().__init__(nb_batch, settings.nb_epoch, 'Training', 'ep.', auto_display=settings.visual_progress_bar,
                          metrics=(
                              ProgressBarMetrics('loss', more_is_good=False),
-                             ProgressBarMetrics('accuracy', print_value=lambda x: f'{x:<6.2%}')
+                             ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}'),
+                             ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}')
                          ))

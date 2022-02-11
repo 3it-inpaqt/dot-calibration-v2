@@ -1,10 +1,15 @@
+from dataclasses import asdict
+from typing import Optional
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
 from classes.classifier_nn import ClassifierNN
+from classes.data_classes import ClassificationMetrics
 from plots.train_results import plot_classification_sample, plot_confidence, plot_confusion_matrix
 from utils.logger import logger
+from utils.metrics import classification_metrics
 from utils.misc import get_nb_loader_workers
 from utils.output import save_results
 from utils.progress_bar import ProgressBar, ProgressBarMetrics
@@ -13,7 +18,7 @@ from utils.timer import SectionTimer
 
 
 def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
-         limit: int = 0) -> float:
+         limit: int = 0) -> ClassificationMetrics:
     """
     Start testing the network on a dataset.
 
@@ -23,7 +28,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     :param test_name: Name of this test for logging and timers.
     :param final: If true this is the final test, will show in log info and save results in file.
     :param limit: Limit of item from the dataset to evaluate during this testing (0 to run process the whole dataset).
-    :return: The overall accuracy.
+    :return: The different classification result metrics.
     """
 
     if test_name:
@@ -41,8 +46,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     nb_batch = min(len(test_loader), nb_test_items // settings.batch_size)
     nb_classes = len(test_dataset.classes)
 
-    nb_correct = 0
-    nb_total = 0
+    metrics: Optional[ClassificationMetrics] = None
     nb_labels_predictions = np.zeros((nb_classes, nb_classes), dtype=int)
     nb_samples_per_case = 16
     if final:
@@ -66,14 +70,9 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             # Forward
             predicted, confidences = network.infer(inputs, nb_sample)
 
-            # Count the result
-            nb_total += len(labels)
-            nb_correct += torch.eq(predicted, labels).sum()
-            progress.update(accuracy=float(nb_correct / nb_total))
-
             # Process each item of the batch to gather stats
             for j, (label, pred) in enumerate(zip(labels, predicted)):
-                # Count for accuracy per class
+                # Count the number of prediction for each labels
                 nb_labels_predictions[label][pred] += 1
                 if final:
                     # Save confidence per class
@@ -82,22 +81,21 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
                     if len(samples_per_case[label][pred]) < nb_samples_per_case:
                         samples_per_case[label][pred].append((inputs[j].cpu(), confidences[j]))
 
-    accuracy = float(nb_correct / nb_total)
+            metrics = classification_metrics(nb_labels_predictions)
+            progress.update(**{'acc': metrics.accuracy, settings.main_metric: metrics.main})
 
     # Give more information for the final test
     if final:
-        classes_accuracy = [float(l[i] / np.sum(l)) for i, l in enumerate(nb_labels_predictions)]
-        logger.info(f'Test overall accuracy: {accuracy:05.2%}')
-        logger.info(f'Test accuracy per classes:\n\t' +
-                    "\n\t".join(
-                        [f'{test_dataset.classes[i]}: {a:05.2%}' for i, a in enumerate(classes_accuracy)]))
+        logger.info(f'Test overall {metrics} (accuracy: {metrics.accuracy:.2%})')
+        logger.info(f'Test {settings.main_metric} per classes:\n\t' +
+                    "\n\t".join([f'{test_dataset.classes[i]}: {m.main:05.2%}' for i, m in enumerate(metrics)]))
 
-        save_results(final_accuracy=accuracy, final_classes_accuracy=classes_accuracy)
-        plot_confusion_matrix(nb_labels_predictions, class_names=test_dataset.classes)
+        save_results(final_classification_results=asdict(metrics))
+        plot_confusion_matrix(nb_labels_predictions, metrics, class_names=test_dataset.classes)
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
         plot_confidence(confidence_per_case)
 
-    return accuracy
+    return metrics
 
 
 class ProgressBarTesting(ProgressBar):
@@ -106,6 +104,7 @@ class ProgressBarTesting(ProgressBar):
     def __init__(self, nb_batch: int, auto_display: bool = True):
         super().__init__(nb_batch, 1, 'Testing ', auto_display=auto_display,
                          metrics=(
-                             ProgressBarMetrics('accuracy', print_value=lambda x: f'{x:<6.2%}',
-                                                evolution_indicator=False),
+                             ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}', evolution_indicator=False),
+                             ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}',
+                                                evolution_indicator=False)
                          ))

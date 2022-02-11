@@ -5,7 +5,6 @@ import torch
 from datasets.qdsd import QDSDLines
 from plots.baselines import plot_data_feature_distribution
 from utils.logger import logger
-from utils.output import save_results
 from utils.timer import SectionTimer
 
 
@@ -55,7 +54,6 @@ class StdBaseline:
 
         train_accuracy = best_good_classified / nb_values
         logger.debug(f'Std baseline best threshold: {self.threshold:.4f} ({train_accuracy:.2%} accuracy on train)')
-        save_results(baseline_std_train_accuracy=train_accuracy)
 
         plot_data_feature_distribution(patches_std, labels, 'standard deviation',
                                        'Standard deviation distribution in patches values\nby class',

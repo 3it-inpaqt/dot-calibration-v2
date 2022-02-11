@@ -1,5 +1,6 @@
 import gc
 import random
+from dataclasses import asdict
 
 import numpy as np
 import torch
@@ -88,18 +89,18 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
     # Standard deviation baseline
     std = StdBaseline()
     std.train(train_dataset)
-    std_accuracy = test(std, test_dataset, device)
-    save_results(baseline_std_test_accuracy=std_accuracy)
+    std_metrics = test(std, test_dataset, device)
+    save_results(baseline_std_test_metrics=asdict(std_metrics))
 
     # Gap baseline (Max - Min)
     gap = GapBaseline()
     gap.train(train_dataset)
-    gap_accuracy = test(gap, test_dataset, device)
-    save_results(baseline_gap_test_accuracy=gap_accuracy)
+    gap_metrics = test(gap, test_dataset, device)
+    save_results(baseline_gap_test_metrics=asdict(gap_metrics))
 
-    logger.info(f'Baselines accuracies:'
-                f'\n\tstd: {std_accuracy:.2%}'
-                f'\n\tgap: {gap_accuracy:.2%}')
+    logger.info(f'Baselines {settings.main_metric}:'
+                f'\n\tstd: {std_metrics.main:.2%}'
+                f'\n\tgap: {gap_metrics.main:.2%}')
 
 
 def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, validation_dataset: QDSDLines) -> None:

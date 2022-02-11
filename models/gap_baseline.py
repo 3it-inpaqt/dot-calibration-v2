@@ -5,7 +5,6 @@ import torch
 from datasets.qdsd import QDSDLines
 from plots.baselines import plot_data_feature_distribution
 from utils.logger import logger
-from utils.output import save_results
 from utils.timer import SectionTimer
 
 
@@ -55,7 +54,6 @@ class GapBaseline:
 
         train_accuracy = best_good_classified / nb_values
         logger.debug(f'Gap baseline best threshold: {self.threshold:.4f} ({train_accuracy:.2%} accuracy on train)')
-        save_results(baseline_gap_train_accuracy=train_accuracy)
 
         plot_data_feature_distribution(patches_gap, labels, 'gap value',
                                        'Max - Min distribution in patches values\nby class',
