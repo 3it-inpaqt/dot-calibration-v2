@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 from classes.classifier_nn import ClassifierNN
-from classes.data_classes import ClassificationMetrics
+from classes.data_structures import ClassificationMetrics
 from plots.train_results import plot_classification_sample, plot_confidence, plot_confusion_matrix
 from utils.logger import logger
 from utils.metrics import classification_metrics

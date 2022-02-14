@@ -7,7 +7,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter
 
-from classes.data_classes import ClassificationMetrics
+from classes.data_structures import ClassificationMetrics
 from plots.data import plot_samples
 from utils.output import save_plot
 from utils.settings import settings

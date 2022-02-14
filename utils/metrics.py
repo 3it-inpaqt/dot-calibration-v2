@@ -5,7 +5,7 @@ import torch
 from torch.nn import Module
 from torchinfo import summary
 
-from classes.data_classes import ClassMetrics, ClassificationMetrics
+from classes.data_structures import ClassMetrics, ClassificationMetrics
 from utils.logger import logger
 from utils.output import save_network_info
 from utils.settings import settings

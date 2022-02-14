@@ -1,43 +1,14 @@
-from dataclasses import dataclass
-from enum import Enum
 from random import randrange
-from typing import Callable, Iterable, List, Optional, Tuple
+from random import randrange
+from typing import List, Optional, Tuple
 
 import torch
 
 from classes.classifier import Classifier
+from classes.data_structures import BoundaryPolicy, HistoryEntry
 from datasets.diagram import Diagram
 from plots.data import plot_diagram, plot_diagram_step_animation
 from utils.settings import settings
-
-
-class BoundaryPolicy(Enum):
-    """ Enumeration of policies to apply if a scan is requested outside the diagram borders. """
-    HARD = 0  # Don't allow going outside the diagram
-    SOFT_RANDOM = 1  # Allow going outside the diagram and fill unknown data with random values
-    SOFT_VOID = 2  # Allow going outside the diagram and fill unknown data with 0
-
-
-@dataclass(frozen=True)
-class HistoryEntry:
-    coordinates: Tuple[int, int]
-    model_classification: bool
-    model_confidence: bool
-    ground_truth: bool
-
-
-@dataclass
-class Direction:
-    """ Data class to factorise code. """
-    is_stuck: bool = False
-    last_x: int = 0
-    last_y: int = 0
-    move: Callable = None
-    check_stuck: Callable = None
-
-    @staticmethod
-    def all_stuck(directions: Iterable["Direction"]):
-        return all(d.is_stuck for d in directions)
 
 
 class AutotuningProcedure:
