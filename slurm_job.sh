@@ -8,10 +8,10 @@
 module load geos python/3.8.2
 
 # Create python virtual env
-virtualenv --no-download $SLURM_TMPDIR/venv
-source $SLURM_TMPDIR/venv/bin/activate
+virtualenv --no-download "$SLURM_TMPDIR"/venv
+source "$SLURM_TMPDIR"/venv/bin/activate
 pip install --no-index --upgrade pip
 pip install -r requirements.txt
 
 # Start job
-python runs_planner.py
+python runs/run_task_planner.py
