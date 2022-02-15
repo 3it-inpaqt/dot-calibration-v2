@@ -89,8 +89,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
         metrics_evolution.append(
             _checkpoint(network, settings.nb_epoch * nb_batch, train_dataset, validation_dataset, best_checkpoint,
                         device))
-        # TODO convert metrics_evolution content to dict
-        # save_results(epochs_stats=epochs_stats, metrics_validation=metrics_evolution)
+        save_results(epochs_stats=epochs_stats, metrics_validation=metrics_evolution)
 
     if settings.save_network:
         save_network(network, 'final_network')
@@ -163,7 +162,7 @@ def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> 
     }
 
     # Compute the loss difference with the previous epoch
-    stats['losses_mean_diff'] = 0 if len(epochs_stats) == 0 else stats['losses_mean'] - epochs_stats[-1]['losses_mean']
+    diff = 0 if len(epochs_stats) == 0 else stats['losses_mean'] - epochs_stats[-1]['losses_mean']
 
     # Add stat to the list
     epochs_stats.append(stats)
@@ -171,9 +170,7 @@ def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> 
     # Log stats
     epoch_num = len(epochs_stats)
     logger.debug(f"Epoch {epoch_num:3}/{settings.nb_epoch} ({epoch_num / settings.nb_epoch:7.2%}) "
-                 f"| loss: {stats['losses_mean']:.5f} "
-                 f"| diff: {stats['losses_mean_diff']:+.5f} "
-                 f"| std: {stats['losses_std']:.5f}")
+                 f"| loss: {stats['losses_mean']:.5f} | diff: {diff:+.5f} | std: {stats['losses_std']:.5f}")
 
 
 def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch: int, device: torch.device) -> None:

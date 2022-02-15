@@ -14,6 +14,7 @@ from codetiming import Timer
 from torch.nn import Module
 
 from utils.logger import logger
+from utils.misc import yaml_preprocess
 from utils.settings import settings
 
 OUT_DIR = './out'
@@ -140,6 +141,7 @@ def save_results(**results: Any) -> None:
 
     # Append to the file, create it if necessary
     with open(results_path, 'a') as f:
+        results = yaml_preprocess(results)
         yaml.dump(results, f)
 
     logger.debug(f'{len(results)} result(s) saved in {results_path}')

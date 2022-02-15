@@ -1,5 +1,7 @@
 import os
-from typing import Iterable, Tuple
+from copy import copy
+from dataclasses import is_dataclass
+from typing import Any, Dict, Iterable, List, Tuple, Union
 
 import torch
 from torch import nn
@@ -62,3 +64,43 @@ def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[nn.Conv2d
         out_w = (out_w + 2 * padding[1] - dilation[1] * (layer.kernel_size[1] - 1) - 1) / stride[1] + 1
 
     return layers[-1].out_channels, int(out_h), int(out_w)
+
+
+def yaml_preprocess(item: Any) -> Union[str, int, float, List, Dict]:
+    """
+    Convert complex object to datatype accepted by yaml format.
+
+    :param item: The item to process.
+    :return: The converted item.
+    """
+    # FIXME: detect recursive structures
+
+    # If a primitive type know by yalm, then everything is good,
+    if isinstance(item, str) or isinstance(item, int) or isinstance(item, float) or isinstance(item, bool):
+        return item
+
+    # If dataclass use dictionary conversion
+    if is_dataclass(item):
+        item = item.__dict__
+
+    # If it's a dictionary, process the values
+    if isinstance(item, dict):
+        item = copy(item)
+        for name, value in item.items():
+            item[name] = yaml_preprocess(value)
+
+        return item
+
+    try:
+        # Try to convert to a list, if not possible throws error and convert it to string
+        item = list(item)
+        item = copy(item)
+
+        for i in range(len(item)):
+            item[i] = yaml_preprocess(item[i])
+
+        return item
+
+    except TypeError:
+        # Not iterable, then convert to string
+        return str(item)

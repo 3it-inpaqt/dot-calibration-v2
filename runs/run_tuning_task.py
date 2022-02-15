@@ -1,5 +1,4 @@
 from collections import Counter
-from dataclasses import asdict
 from typing import Dict, List
 
 from tabulate import tabulate
@@ -197,5 +196,4 @@ def save_show_final_results(autotuning_results: Dict[str, List[AutotuningResult]
                 tabulate(results_table, headers="firstrow", tablefmt='fancy_grid', floatfmt='.2%'))
 
     # Save results in yaml file
-    save_results(tuning_results={diagram_name: list(map(asdict, r)) for diagram_name, r in autotuning_results.items()},
-                 final_tuning_result=total_success_rate)
+    save_results(tuning_results=autotuning_results, final_tuning_result=total_success_rate)

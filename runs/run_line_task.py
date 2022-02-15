@@ -1,6 +1,5 @@
 import gc
 import random
-from dataclasses import asdict
 
 import numpy as np
 import torch
@@ -90,13 +89,13 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
     std = StdBaseline()
     std.train(train_dataset)
     std_metrics = test(std, test_dataset, device)
-    save_results(baseline_std_test_metrics=asdict(std_metrics))
+    save_results(baseline_std_test_metrics=std_metrics)
 
     # Gap baseline (Max - Min)
     gap = GapBaseline()
     gap.train(train_dataset)
     gap_metrics = test(gap, test_dataset, device)
-    save_results(baseline_gap_test_metrics=asdict(gap_metrics))
+    save_results(baseline_gap_test_metrics=gap_metrics)
 
     logger.info(f'Baselines {settings.main_metric}:'
                 f'\n\tstd: {std_metrics.main:.2%}'
