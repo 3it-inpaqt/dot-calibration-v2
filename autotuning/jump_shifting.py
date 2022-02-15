@@ -1,7 +1,8 @@
 from math import cos, pi, sin
 from typing import List, Optional, Tuple
 
-from autotuning.autotuning_procedure import AutotuningProcedure, Direction
+from autotuning.autotuning_procedure import AutotuningProcedure
+from classes.data_structures import Direction
 
 
 class JumpShifting(AutotuningProcedure):
