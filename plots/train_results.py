@@ -45,8 +45,7 @@ def plot_train_progress(loss_evolution: List[float],
                 ax1.axvline(x=epoch, color='black', linestyle=':', alpha=0.2, label=label if epoch == 0 else '')
 
         # Plot loss
-        ax1.plot(loss_evolution, label='loss', color='tab:gray')
-        ax1.set_ylabel('Loss')
+        ax1.plot(loss_evolution, label='loss', color='dodgerblue', alpha=0.3)
         ax1.set_ylim(bottom=0)
 
         if metrics_evolution:
@@ -57,19 +56,25 @@ def plot_train_progress(loss_evolution: List[float],
             checkpoint_batches = [a['batch_num'] for a in metrics_evolution]
             train_main_metric = [a['train'].main for a in metrics_evolution]
             valid_main_metric = [a['validation'].main for a in metrics_evolution]
-            ax2.plot(checkpoint_batches, train_main_metric, label=f'train {settings.main_metric}', color='tab:orange')
+            ax2.plot(checkpoint_batches, train_main_metric, label=f'train {settings.main_metric}',
+                     color='limegreen', linestyle=(0, (2, 1)), alpha=0.5)
             ax2.plot(checkpoint_batches, valid_main_metric, label=f'validation {settings.main_metric}',
-                     color='tab:green')
+                     color='green')
 
             # Star marker for best validation metric
             if best_checkpoint and best_checkpoint['batch_num'] is not None:
-                ax2.plot(best_checkpoint['batch_num'], best_checkpoint['score'], color='tab:green',
+                ax2.plot(best_checkpoint['batch_num'], best_checkpoint['score'], color='green',
                          marker='*', markeredgecolor='k', markersize=10, label=f'best valid. {settings.main_metric}')
                 legend_y_anchor -= 0.1
 
             ax2.yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.0%}'.format(y)))
-            ax2.set_ylabel(settings.main_metric.capitalize())
             ax2.set_ylim(bottom=0, top=1)
+
+            # Color for both axes
+            ax2.set_ylabel(settings.main_metric.capitalize(), color='darkgreen', fontweight='bold')
+            ax2.tick_params(axis='y', labelcolor='darkgreen')
+            ax1.set_ylabel('Loss', color='dodgerblue', fontweight='bold')
+            ax1.tick_params(axis='y', labelcolor='dodgerblue')
 
             # Place legends at the bottom
             ax1.legend(loc="lower left", bbox_to_anchor=(-0.1, legend_y_anchor))
@@ -77,6 +82,8 @@ def plot_train_progress(loss_evolution: List[float],
         else:
             # Default legend position if there is only loss
             ax1.legend()
+            # And no label color
+            ax1.set_ylabel('Loss')
 
         plt.title('Training evolution')
         ax1.set_xlabel(f'Batch number\n(batch size: {settings.batch_size:n})')

@@ -1,4 +1,5 @@
 from enum import Enum
+from itertools import chain
 from pathlib import Path
 from typing import List, Set
 from zipfile import ZIP_DEFLATED, ZipFile
@@ -35,9 +36,9 @@ def clean_up(affected_dirs: List[Path]) -> None:
 
         # Remove images
         if img_dir.is_dir():
-            # Remove png images files
-            for png_file in img_dir.glob('*.png'):
-                png_file.unlink()
+            # Remove png and gif images files
+            for image_file in chain(img_dir.glob('*.png'), img_dir.glob('*.gif')):
+                image_file.unlink()
                 nb_file_removed += 1
             img_dir.rmdir()
 
