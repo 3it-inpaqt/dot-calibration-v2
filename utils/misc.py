@@ -80,7 +80,7 @@ def yaml_preprocess(item: Any) -> Union[str, int, float, List, Dict]:
         return item
 
     # If dataclass use dictionary conversion
-    if is_dataclass(item):
+    if is_dataclass(item) and not isinstance(item, type):
         item = item.__dict__
 
     # If it's a dictionary, process the values
