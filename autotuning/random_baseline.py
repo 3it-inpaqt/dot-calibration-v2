@@ -16,7 +16,7 @@ class RandomBaseline(AutotuningProcedure):
         """
         super().__init__(None, patch_size, label_offsets, True)
 
-    def tune(self) -> Tuple[int, int]:
+    def _tune(self) -> Tuple[int, int]:
         return random.randint(0, len(self.diagram.x_axes) - 1), random.randint(0, len(self.diagram.y_axes) - 1)
 
     def __str__(self):

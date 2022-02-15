@@ -1,4 +1,5 @@
 from collections import Counter
+from dataclasses import asdict
 from typing import Dict, List
 
 from tabulate import tabulate
@@ -12,6 +13,7 @@ from autotuning.shifting import Shifting
 from autotuning.shifting_bayes import ShiftingBayes
 from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
+from classes.data_structures import AutotuningResult
 from datasets.diagram import ChargeRegime, Diagram
 from plots.autotuning import plot_autotuning_results
 from runs.run_line_task import get_cuda_device
@@ -41,8 +43,7 @@ def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
     procedure = init_procedure(model)
 
     # Variables to store stats and results
-    autotuning_results = {d.file_basename: Counter() for d in diagrams}
-    line_detection_results = {d.file_basename: Counter() for d in diagrams}
+    autotuning_results = {d.file_basename: [] for d in diagrams}
     nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
     nb_error_to_plot = 10
 
@@ -59,21 +60,16 @@ def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
                 procedure.setup_next_tuning(diagram)  # Give diagram and set starting coordinates randomly
                 logger.debug(f'Start tuning diagram {diagram.file_basename} '
                              f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
-                tuned_x, tuned_y = procedure.tune()
+                result = procedure.run_tuning()
 
                 # Save result and log
-                nb_error_to_plot = save_show_intermediate_results(procedure, diagram, tuned_x, tuned_y,
-                                                                  autotuning_results, line_detection_results, i == 0,
-                                                                  nb_error_to_plot)
+                autotuning_results[diagram.file_basename].append(result)
+                nb_error_to_plot = save_show_results(result, procedure, i == 0, nb_error_to_plot)
 
                 progress.incr()
 
-    # Save results in yaml file
-    save_results(final_regimes={file: {str(charge): value for charge, value in counter.items()}
-                                for file, counter in autotuning_results.items()},
-                 line_detection={file: dict(counter) for file, counter in line_detection_results.items()})
     # Log and plot results
-    show_results(autotuning_results, line_detection_results)
+    save_show_final_results(autotuning_results)
 
 
 def init_procedure(model: Classifier) -> AutotuningProcedure:
@@ -106,50 +102,39 @@ def init_procedure(model: Classifier) -> AutotuningProcedure:
         raise ValueError(f'Unknown autotuning procedure name "{settings.autotuning_procedure}".')
 
 
-def save_show_intermediate_results(procedure: AutotuningProcedure, diagram: Diagram, tuned_x: int, tuned_y: int,
-                                   autotuning_results: Dict, line_detection_results: Dict, is_first_tuning: bool,
-                                   nb_error_to_plot: int) -> int:
+def save_show_results(autotuning_result: AutotuningResult, procedure: AutotuningProcedure, is_first_tuning: bool,
+                      nb_error_to_plot: int) -> int:
     """
     Save the current autotuning procedure results.
 
     :param procedure: The procedure which contains tuning stats.
-    :param diagram: The diagram tuned.
-    :param tuned_x: The final tuning x coordinates.
-    :param tuned_y: The final tuning y coordinates.
-    :param autotuning_results: Table to store all autotuning procedure results history.
-    :param line_detection_results: Table to store all autotuning line detection history.
+    :param autotuning_result: The autotuning procedure results.
     :param is_first_tuning: True if this is currently the first tuning of this diagram.
     :param nb_error_to_plot: The remaining number of error procedure that we want to plot.
     :return: The remaining number of error procedure that we want to plot after this one.
     """
-    nb_steps = procedure.get_nb_steps()
-    nb_classification_success = procedure.get_nb_line_detection_success()
-    success_rate = nb_classification_success / nb_steps if nb_steps > 0 else 0
-    charge_area = diagram.get_charge(tuned_x, tuned_y)
-    success_tuning = charge_area is ChargeRegime.ELECTRON_1
-    autotuning_results[diagram.file_basename][charge_area] += 1
-    line_detection_results[diagram.file_basename].update({'steps': nb_steps,
-                                                          'good': nb_classification_success})
+
+    success = autotuning_result.is_success_tuning
 
     # Log information
-    logger.debug(f'End tuning {diagram.file_basename} in {nb_steps} steps '
-                 f'({success_rate:.1%} success). '
-                 f'Final coordinates: ({tuned_x}, {tuned_y}) => {charge_area} e '
-                 f'{"[Good]" if charge_area is ChargeRegime.ELECTRON_1 else "[Bad]"}')
+    logger.debug(f'End tuning {procedure.diagram.file_basename} in {autotuning_result.nb_steps} steps '
+                 f'({autotuning_result.success_rate:.1%} success). '
+                 f'Final coordinates: {autotuning_result.final_coord} => {autotuning_result.charge_area} e '
+                 f'{"[Good]" if success else "[Bad]"}')
 
     # Plot tuning steps for the first round and some error samples
     if is_first_tuning:
-        procedure.plot_step_history((tuned_x, tuned_y), success_tuning)
-        procedure.plot_step_history_animation((tuned_x, tuned_y), success_tuning)
-    elif nb_error_to_plot > 0 and not success_tuning:
-        procedure.plot_step_history((tuned_x, tuned_y), success_tuning, plot_vanilla=False)
-        procedure.plot_step_history_animation((tuned_x, tuned_y), success_tuning)
+        procedure.plot_step_history(autotuning_result.final_coord, success)
+        procedure.plot_step_history_animation(autotuning_result.final_coord, success)
+    elif nb_error_to_plot > 0 and not success:
+        procedure.plot_step_history(autotuning_result.final_coord, success, plot_vanilla=False)
+        procedure.plot_step_history_animation(autotuning_result.final_coord, success)
         nb_error_to_plot -= 1
 
     return nb_error_to_plot
 
 
-def show_results(autotuning_results: dict, line_detection_results: dict) -> None:
+def save_show_final_results(autotuning_results: Dict[str, List[AutotuningResult]]) -> None:
     """
     Show autotuning results in text output and plots.
 
@@ -161,44 +146,56 @@ def show_results(autotuning_results: dict, line_detection_results: dict) -> None
     results_table = [headers]
 
     # Process counter of each diagram
-    for diagram_name, diagram_counter in autotuning_results.items():
-        line_detection_result = line_detection_results[diagram_name]
-        nb_steps = line_detection_result['steps']
-        if line_detection_result['steps'] > 0:
-            model_success = line_detection_result['good'] / line_detection_result['steps']
+    for diagram_name, tuning_results in autotuning_results.items():
+        # Count total final regimes
+        regimes = Counter()
+        for result in tuning_results:
+            regimes[result.charge_area] += 1
+        overall += regimes
+
+        # Count total steps
+        nb_steps = sum(r.nb_steps for r in tuning_results)
+        nb_good_inference = sum(r.nb_classification_success for r in tuning_results)
+        if nb_steps > 0:
+            model_success = nb_good_inference / nb_steps
         else:
             model_success = 0
+        overall['steps'] += nb_steps
+        overall['good'] += nb_good_inference
 
-        nb_good_regime = diagram_counter[ChargeRegime.ELECTRON_1]
-        nb_total = sum(diagram_counter.values())
+        nb_good_regime = regimes[ChargeRegime.ELECTRON_1]
+        nb_total = len(tuning_results)
         nb_bad_regime = nb_total - nb_good_regime
 
         # 'Diagram', 'Steps', 'Model Success'
         results_row = [diagram_name, nb_steps, model_success]
         # Charge Regimes
-        results_row += [diagram_counter[regime] for regime in ChargeRegime]
+        results_row += [regimes[regime] for regime in ChargeRegime]
         # 'Good', 'Bad', 'Tuning Success'
         results_row += [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
         results_table.append(results_row)
-        overall += diagram_counter
-        overall += line_detection_result
 
     plot_autotuning_results(results_table, overall)
 
     # Overall row
+    nb_good_regime = overall[ChargeRegime.ELECTRON_1]
+    nb_total = sum((overall.get(charge, 0) for charge in ChargeRegime))
+    total_success_rate = nb_good_regime / nb_total if nb_total > 0 else 0
     if len(autotuning_results) > 1:
-        nb_good_regime = overall[ChargeRegime.ELECTRON_1]
-        nb_total = sum((overall.get(charge, 0) for charge in ChargeRegime))
         nb_bad_regime = nb_total - nb_good_regime
         nb_total_steps = overall['steps']
         nb_total_model_success = overall['good'] / overall['steps'] if overall['steps'] > 0 else 0
 
         results_row = [f'Sum ({len(autotuning_results)})', nb_total_steps, nb_total_model_success]
         results_row += [overall[regime] for regime in ChargeRegime]
-        results_row += [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
+        results_row += [nb_good_regime, nb_bad_regime, total_success_rate]
         results_table.append(results_row)
         overall += overall
 
     # Print
     logger.info('Autotuning results:\n' +
                 tabulate(results_table, headers="firstrow", tablefmt='fancy_grid', floatfmt='.2%'))
+
+    # Save results in yaml file
+    save_results(tuning_results={diagram_name: list(map(asdict, r)) for diagram_name, r in autotuning_results.items()},
+                 final_tuning_result=total_success_rate)

@@ -9,7 +9,7 @@ class FullScan(AutotuningProcedure):
     For debugging purpose.
     """
 
-    def tune(self) -> Tuple[int, int]:
+    def _tune(self) -> Tuple[int, int]:
         self.x, self.y = (0, 0)
 
         while not self.is_max_up():

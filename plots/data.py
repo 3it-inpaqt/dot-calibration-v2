@@ -25,7 +25,7 @@ def plot_diagram(x_i, y_i,
                  charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: Iterable[LineString] = None,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True,
-                 scan_history: List["HistoryEntry"] = None,
+                 scan_history: List["StepHistoryEntry"] = None,
                  history_uncertainty: bool = False,
                  final_coord: Tuple[int, int] = None) -> Optional[Path]:
     """
@@ -41,7 +41,7 @@ def plot_diagram(x_i, y_i,
     :param transition_lines: The transition line annotation to draw on top of the image
     :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max)
     :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
-    :param scan_history: The tuning steps history (see HistoryEntry dataclass)
+    :param scan_history: The tuning steps history (see StepHistoryEntry dataclass)
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
      the uncertainty
     :param final_coord: The final tuning coordinates
@@ -159,14 +159,14 @@ def plot_diagram(x_i, y_i,
     return save_plot(f'diagram_{image_name}')
 
 
-def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: List["HistoryEntry"],
+def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: List["StepHistoryEntry"],
                                 final_coord: Tuple[int, int]) -> None:
     """
     Plot an animation of the tuning procedure.
 
     :param d: The diagram to plot.
     :param image_name: The name of the image, used for plot title and file name
-    :param scan_history: The tuning steps history (see HistoryEntry dataclass)
+    :param scan_history: The tuning steps history (see StepHistoryEntry dataclass)
     :param final_coord: The final tuning coordinates
     """
 

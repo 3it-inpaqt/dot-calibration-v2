@@ -17,7 +17,7 @@ class JumpShifting(AutotuningProcedure):
     # Coordinate of the leftmost line found so far
     _leftmost_line_coord: Optional[Tuple[int, int]] = None
 
-    def tune(self) -> Tuple[int, int]:
+    def _tune(self) -> Tuple[int, int]:
         self._search_first_line()
         self._line_direction = self._search_line_direction()
         self._search_empty()

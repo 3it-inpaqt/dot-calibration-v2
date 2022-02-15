@@ -17,7 +17,7 @@ class Shifting(AutotuningProcedure):
     _shift_size_follow_line: int = 1  # Number of pixels
     _shift_size_backward_down: int = 2  # Number of pixels
 
-    def tune(self) -> Tuple[int, int]:
+    def _tune(self) -> Tuple[int, int]:
         self._search_line()
         self._search_zero_electron()
         self._search_one_electron()

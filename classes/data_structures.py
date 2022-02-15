@@ -2,10 +2,39 @@
 Bunch of dataclasses and enumerations to structure information and simplify code.
 """
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, unique
 from typing import Callable, Iterable, List, Tuple
 
 from utils.settings import settings
+
+
+@unique
+class ChargeRegime(Enum):
+    """ Charge regime enumeration """
+    UNKNOWN = 'unknown'
+    ELECTRON_0 = '0_electron'
+    ELECTRON_1 = '1_electron'
+    ELECTRON_2 = '2_electrons'
+    ELECTRON_3 = '3_electrons'
+    ELECTRON_4_PLUS = '4_electrons'  # The value is no '4+_electrons' because labelbox remove the '+'
+
+    def __str__(self) -> str:
+        """
+        Convert a charge regime to short string representation.
+
+        :return: Short string name.
+        """
+        short_map = {ChargeRegime.UNKNOWN: 'unk.', ChargeRegime.ELECTRON_0: '0', ChargeRegime.ELECTRON_1: '1',
+                     ChargeRegime.ELECTRON_2: '2', ChargeRegime.ELECTRON_3: '3', ChargeRegime.ELECTRON_4_PLUS: '4+'}
+        return short_map[self]
+
+
+@unique
+class BoundaryPolicy(Enum):
+    """ Enumeration of policies to apply if a scan is requested outside the diagram borders. """
+    HARD = 0  # Don't allow going outside the diagram
+    SOFT_RANDOM = 1  # Allow going outside the diagram and fill unknown data with random values
+    SOFT_VOID = 2  # Allow going outside the diagram and fill unknown data with 0
 
 
 @dataclass(frozen=True)
@@ -45,7 +74,7 @@ class ClassificationMetrics(ClassMetrics):
 
 
 @dataclass(frozen=True)
-class HistoryEntry:
+class StepHistoryEntry:
     coordinates: Tuple[int, int]
     model_classification: bool
     model_confidence: bool
@@ -66,8 +95,17 @@ class Direction:
         return all(d.is_stuck for d in directions)
 
 
-class BoundaryPolicy(Enum):
-    """ Enumeration of policies to apply if a scan is requested outside the diagram borders. """
-    HARD = 0  # Don't allow going outside the diagram
-    SOFT_RANDOM = 1  # Allow going outside the diagram and fill unknown data with random values
-    SOFT_VOID = 2  # Allow going outside the diagram and fill unknown data with 0
+@dataclass(frozen=True)
+class AutotuningResult:
+    nb_steps: int
+    nb_classification_success: int
+    charge_area: ChargeRegime
+    final_coord: Tuple[int, int]
+
+    @property
+    def is_success_tuning(self):
+        return self.charge_area is ChargeRegime.ELECTRON_1
+
+    @property
+    def success_rate(self):
+        return self.nb_classification_success / self.nb_steps if self.nb_steps > 0 else 0

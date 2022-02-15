@@ -4,7 +4,7 @@ from typing import List, Optional, Tuple
 import torch
 
 from classes.classifier import Classifier
-from classes.data_structures import BoundaryPolicy, HistoryEntry
+from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
 from datasets.diagram import Diagram
 from plots.data import plot_diagram, plot_diagram_step_animation
 from utils.settings import settings
@@ -51,8 +51,8 @@ class AutotuningProcedure:
         else:
             self._default_step_x, self._default_step_y = default_step
 
-        # Performance statistic (See HistoryEntry dataclass)
-        self._scan_history: List[HistoryEntry] = []
+        # Performance statistic (See StepHistoryEntry dataclass)
+        self._scan_history: List[StepHistoryEntry] = []
 
     def __str__(self) -> str:
         return f'{type(self).__name__} ({"Oracle" if self.is_oracle_enable else self.model})'
@@ -100,7 +100,7 @@ class AutotuningProcedure:
                 confidence = confidence.item()
 
         # Record the diagram scanning activity.
-        self._scan_history.append(HistoryEntry((self.x, self.y), prediction, confidence, ground_truth))
+        self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth))
 
         return prediction, confidence
 
@@ -394,7 +394,7 @@ class AutotuningProcedure:
         self.diagram = diagram
         self.x, self.y = self.get_random_coordinates_in_diagram() if start_coord is None else start_coord
 
-    def tune(self) -> Tuple[int, int]:
+    def _tune(self) -> Tuple[int, int]:
         """
         Start the tuning procedure on a diagram.
 
@@ -402,3 +402,17 @@ class AutotuningProcedure:
          according to this tuning procedure.
         """
         raise NotImplementedError
+
+    def run_tuning(self) -> AutotuningResult:
+        """
+        Run the tuning procedure and collect stats for results.
+
+        :return: Tuning information and result.
+        """
+
+        tuned_x, tuned_y = self._tune()
+
+        return AutotuningResult(nb_steps=self.get_nb_steps(),
+                                nb_classification_success=self.get_nb_line_detection_success(),
+                                charge_area=self.diagram.get_charge(tuned_x, tuned_y),
+                                final_coord=(tuned_x, tuned_y))

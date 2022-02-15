@@ -2,7 +2,6 @@ import gzip
 import json
 import zipfile
 from dataclasses import dataclass
-from enum import Enum, unique
 from pathlib import Path
 from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Union
 
@@ -10,32 +9,12 @@ import numpy as np
 import torch
 from shapely.geometry import LineString, Point, Polygon
 
+from classes.data_structures import ChargeRegime
 from plots.data import plot_diagram
 from utils.logger import logger
 from utils.misc import clip
 from utils.output import load_normalization
 from utils.settings import settings
-
-
-@unique
-class ChargeRegime(Enum):
-    """ Charge regime enumeration """
-    UNKNOWN = 'unknown'
-    ELECTRON_0 = '0_electron'
-    ELECTRON_1 = '1_electron'
-    ELECTRON_2 = '2_electrons'
-    ELECTRON_3 = '3_electrons'
-    ELECTRON_4_PLUS = '4_electrons'  # The value is no '4+_electrons' because labelbox remove the '+'
-
-    def __str__(self) -> str:
-        """
-        Convert a charge regime to short string representation.
-
-        :return: Short string name.
-        """
-        short_map = {ChargeRegime.UNKNOWN: 'unk.', ChargeRegime.ELECTRON_0: '0', ChargeRegime.ELECTRON_1: '1',
-                     ChargeRegime.ELECTRON_2: '2', ChargeRegime.ELECTRON_3: '3', ChargeRegime.ELECTRON_4_PLUS: '4+'}
-        return short_map[self]
 
 
 @dataclass
