@@ -46,17 +46,28 @@ def classification_metrics(confusion_matrix: np.ndarray) -> ClassificationMetric
     classes_nb_labels = confusion_matrix.sum(1)
     classes_nb_predictions = confusion_matrix.sum(0)
     classes_nb_good_predictions = confusion_matrix.diagonal()
-    with np.errstate(invalid='ignore'):  # Mute division by 0 errors (will result to NaN)
-        classes_precision = classes_nb_good_predictions / classes_nb_predictions
-        classes_recall = classes_nb_good_predictions / classes_nb_labels
-        classes_f1 = ((classes_precision * classes_recall) / (classes_precision + classes_recall)) * 2
+
+    # Division by 0 give 0
+    # Precision
+    classes_precision = np.zeros(classes_nb_labels.shape, dtype=float)
+    np.divide(classes_nb_good_predictions, classes_nb_predictions,
+              out=classes_precision, where=classes_nb_predictions != 0)
+    # Recall
+    classes_recall = np.zeros(classes_nb_labels.shape, dtype=float)
+    np.divide(classes_nb_good_predictions, classes_nb_labels,
+              out=classes_recall, where=classes_nb_labels != 0)
+    # F1
+    classes_f1 = np.zeros(classes_nb_labels.shape, dtype=float)
+    denominator = (classes_precision + classes_recall)
+    np.divide((classes_precision * classes_recall), denominator, out=classes_f1, where=denominator != 0)
+    classes_f1 *= 2
 
     return ClassificationMetrics(
         nb=int(nb_labels),
         accuracy=float(nb_good_class / nb_labels),
-        precision=float(np.nansum(classes_precision) / len(classes_precision)),  # Mean value with NaN as 0
-        recall=float(np.nansum(classes_recall) / len(classes_recall)),  # Mean value with NaN as 0
-        f1=float(np.nansum(classes_f1) / len(classes_f1)),  # Mean value with NaN as 0
+        precision=float(classes_precision.mean()),
+        recall=float(classes_recall.mean()),
+        f1=float(classes_f1.mean()),
         classes=[ClassMetrics(
             nb=int(classes_nb_labels[i]),
             precision=float(classes_precision[i]),
