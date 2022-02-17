@@ -101,7 +101,7 @@ class ProgressBarTesting(ProgressBar):
     """ Override the ProgressBar to define print configuration adapted to testing. """
 
     def __init__(self, nb_batch: int, auto_display: bool = True):
-        super().__init__(nb_batch, 1, 'Testing ', auto_display=auto_display,
+        super().__init__(nb_batch, 1, 'Testing ', auto_display=auto_display, enable_color=settings.console_color,
                          metrics=(
                              ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}', evolution_indicator=False),
                              ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}',

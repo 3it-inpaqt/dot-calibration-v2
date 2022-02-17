@@ -33,6 +33,7 @@ def preparation() -> None:
 
     # Setup console logger but wait to create the directory before to setup the file output
     logger.set_console_level(settings.logger_console_level)
+    logger.set_formatter(settings.console_color)
 
     # Create the output directory to save results and plots
     init_out_directory()

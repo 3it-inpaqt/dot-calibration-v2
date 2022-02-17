@@ -59,6 +59,10 @@ class Settings:
     # Should be use with a logger_console_level as INFO or more for better output.
     visual_progress_bar: bool = True
 
+    # If True add color for pretty console output.
+    # Should be disabled on Windows
+    console_color: bool = True
+
     # If True show matplotlib images when they are ready.
     show_images: bool = True
 

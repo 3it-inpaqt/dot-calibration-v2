@@ -8,6 +8,7 @@ from utils.timer import duration_to_str
 @dataclass
 class ProgressBarMetrics:
     name: str
+    enable_color: bool = True
     last_value: Optional[float] = None
     last_printed_value: Optional[float] = None
     print_value: Callable[[Optional[float]], str] = lambda x: f'{x:7.5f}'
@@ -44,14 +45,23 @@ class ProgressBarMetrics:
         if self.last_printed_value is None:
             return ' '
 
-        loss_diff = self.last_value - self.last_printed_value
+        value_diff = self.last_value - self.last_printed_value
 
-        if loss_diff > 0:
-            return f'{good_color if self.more_is_good else bad_color}▲{reset_color}'
-        elif loss_diff < 0:
-            return f'{bad_color if self.more_is_good else good_color}▼{reset_color}'
+        if value_diff > 0:
+            if self.enable_color:
+                return f'{good_color if self.more_is_good else bad_color}▲{reset_color}'
+            else:
+                return '▲'
+        elif value_diff < 0:
+            if self.enable_color:
+                return f'{bad_color if self.more_is_good else good_color}▼{reset_color}'
+            else:
+                return '▼'
         else:
-            return f'{no_evolution_color}={reset_color}'
+            if self.enable_color:
+                return f'{no_evolution_color}={reset_color}'
+            else:
+                return '='
 
     def __str__(self) -> str:
         # Case with None value
@@ -66,7 +76,7 @@ class ProgressBarMetrics:
 class ProgressBar:
     def __init__(self, tasks_size: int, nb_subtasks: int = 1, task_name: str = 'progress', subtask_name: str = '',
                  metrics: Iterable[ProgressBarMetrics] = tuple(), bar_length: int = 60, subtask_char: str = '⎼',
-                 fill_char: str = ' ', refresh_time: float = 0.5, auto_display: bool = True):
+                 fill_char: str = ' ', refresh_time: float = 0.5, auto_display: bool = True, enable_color: bool = None):
         """
         Create a progress bar to visually tracking progress from task, subtasks and metrics.
 
@@ -81,7 +91,9 @@ class ProgressBar:
         :param subtask_char: The character used for subtask progress done.
         :param fill_char: The character used for subtask progress pending.
         :param refresh_time: The minimal time delta (in seconds) between two auto print, 0 to see all auto print.
-        :param auto_display: If true the bar will be automatically printed at the start, the end and after every value
+        :param auto_display: If true the bar will be automatically printed at the start, the end and after every value.
+        :param enable_color: If not None, will enable or disable color for all metrics. If None, keep default value of
+        each metrics.
         update if the minimal refresh time allow it.
         """
         self.tasks_size = tasks_size
@@ -102,6 +114,10 @@ class ProgressBar:
         self._refresh_time = refresh_time
         self._auto_display = auto_display
 
+        # If enable color set, override it for all metrics
+        if enable_color is not None:
+            for metric in metrics:
+                metric.enable_color = enable_color
         self.metrics = {metric.name: metric for metric in metrics}
 
     def update(self, **metrics: Any):
@@ -244,10 +260,10 @@ class ProgressBar:
         if self._end_time is None:
             # Still in progress
             eta = duration_to_str(self.get_eta(), precision='s')
-            string += f'ETA: {eta}'
+            string += f'ETA: {eta:<10}'  # Fill the end with space to override previous characters
         else:
             # Task ended or interrupted
             duration = duration_to_str(self._end_time - self._start_time, precision='s')
-            string += f'{duration}'
+            string += f'{duration:<15}'  # Fill the end with space to override previous characters
 
         return string

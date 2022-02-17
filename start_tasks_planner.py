@@ -24,7 +24,6 @@ def run_tasks_planner(runs_planner: BasePlanner,
 
     # Typical settings override for planner runs
     settings.run_name = None  # The name should be override during the runs
-    settings.visual_progress_bar = True
     settings.show_images = False
     settings.use_data_cache = True
 

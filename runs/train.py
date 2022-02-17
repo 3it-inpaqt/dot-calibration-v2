@@ -208,6 +208,7 @@ class ProgressBarTraining(ProgressBar):
 
     def __init__(self, nb_batch: int):
         super().__init__(nb_batch, settings.nb_epoch, 'Training', 'ep.', auto_display=settings.visual_progress_bar,
+                         enable_color=settings.console_color,
                          metrics=(
                              ProgressBarMetrics('loss', more_is_good=False),
                              ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}'),

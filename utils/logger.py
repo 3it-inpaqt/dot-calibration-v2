@@ -77,12 +77,8 @@ class SexyLogger(logging.Logger):
         # Set console log level (and the global level at the same time)
         self.set_console_level(console_log_level)
 
-        # Create and set formatter, add console handler to logger
-        if console_log_color:
-            console_formatter = ColorFormatter(fmt=console_log_template, datefmt=console_log_date)
-        else:
-            console_formatter = logging.Formatter(fmt=console_log_template, datefmt=console_log_date)
-        self.console_handler.setFormatter(console_formatter)
+        # Set console formatter
+        self.set_formatter(console_log_color, console_log_template, console_log_date)
         self.addHandler(self.console_handler)
 
         # If log file is enable, set it up now
@@ -174,6 +170,28 @@ class SexyLogger(logging.Logger):
         self.file_handler.setLevel(level)
         # Set global log level to the minimum value between the two handler
         self.setLevel(min(self.console_handler.level, self.file_handler.level))
+
+    def set_formatter(self,
+                      console_log_color: bool = True,
+                      console_log_template: str = '%(asctime)s.%(msecs)03d |%(levelname)-8s| %(message)s',
+                      console_log_date: str = '%H:%M:%S') -> None:
+        """
+        Change the console output formatter.
+
+        :param console_log_color: If true the console log will be colorized
+        :param console_log_template: The template of the console log messages
+                (see https://docs.python.org/3/library/logging.html#logrecord-attributes)
+        :param console_log_date: The template of the console log messages' dates
+                (see https://docs.python.org/3/library/logging.html#logrecord-attributes)
+        """
+
+        # Create and set formatter, add console handler to logger
+        if console_log_color:
+            console_formatter = ColorFormatter(fmt=console_log_template, datefmt=console_log_date)
+        else:
+            console_formatter = logging.Formatter(fmt=console_log_template, datefmt=console_log_date)
+
+        self.console_handler.setFormatter(console_formatter)
 
 
 # Create the logger singleton
