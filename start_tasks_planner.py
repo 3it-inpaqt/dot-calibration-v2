@@ -128,4 +128,20 @@ if __name__ == '__main__':
         Planner('seed', range(2, 4))
     ], runs_basename='layers_size-seed_2')
 
-    run_tasks_planner(repeat, skip_existing_runs=True)
+    train_all_networks = ParallelPlanner([
+        CombinatorPlanner([
+            Planner('model_type', ['FF', 'CNN', 'BCNN']),
+            ParallelPlanner([
+                Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
+                Planner('pixel_size', [0.001, 0.0025]),
+            ])
+        ]),
+        Planner('nb_epoch', [100,  # Michel FF
+                             100,  # Michel CNN
+                             200,  # Michel BCNN
+                             300,  # Louis FF
+                             300,  # Louis CNN
+                             600])  # Louis BCNN
+    ])
+
+    run_tasks_planner(train_all_networks, skip_existing_runs=True)
