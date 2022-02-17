@@ -29,6 +29,7 @@ class Settings:
     run_name: str = ''
 
     # The seed to use for all random number generator during this run.
+    # Forcing reproducibility could lead to a performance lost.
     seed: int = 42
 
     # If true every baseline are run before the real training. If false this step is skipped.

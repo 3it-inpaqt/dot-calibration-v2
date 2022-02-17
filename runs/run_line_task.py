@@ -1,4 +1,5 @@
 import gc
+import os
 import random
 
 import numpy as np
@@ -54,6 +55,11 @@ def fix_seed() -> None:
     random.seed(settings.seed)
     torch.manual_seed(settings.seed)
     np.random.seed(settings.seed)
+
+    # Enable debug to force reproducibility (less performant)
+    # https://docs.nvidia.com/cuda/cublas/index.html#cublasApi_reproducibility
+    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':16:8'
+    torch.use_deterministic_algorithms(True)
 
 
 def clean_up() -> None:
