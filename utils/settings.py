@@ -60,7 +60,7 @@ class Settings:
     visual_progress_bar: bool = True
 
     # If True add color for pretty console output.
-    # Should be disabled on Windows
+    # Should be disabled on Windows.
     console_color: bool = True
 
     # If True show matplotlib images when they are ready.

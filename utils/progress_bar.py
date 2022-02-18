@@ -76,7 +76,8 @@ class ProgressBarMetrics:
 class ProgressBar:
     def __init__(self, tasks_size: int, nb_subtasks: int = 1, task_name: str = 'progress', subtask_name: str = '',
                  metrics: Iterable[ProgressBarMetrics] = tuple(), bar_length: int = 60, subtask_char: str = '⎼',
-                 fill_char: str = ' ', refresh_time: float = 0.5, auto_display: bool = True, enable_color: bool = None):
+                 fill_char: str = ' ', refresh_time: float = 0.5, auto_display: bool = True, enable_color: bool = None,
+                 boring_mode: bool = False):
         """
         Create a progress bar to visually tracking progress from task, subtasks and metrics.
 
@@ -88,12 +89,14 @@ class ProgressBar:
         :param subtask_name: The name of the subtasks.
         :param metrics: A list of metrics to track (they can be updated during the task).
         :param bar_length: The size of the visual progress bar (number of characters).
-        :param subtask_char: The character used for subtask progress done.
+        :param subtask_char: The character used for subtask progress done (only if color enable).
         :param fill_char: The character used for subtask progress pending.
         :param refresh_time: The minimal time delta (in seconds) between two auto print, 0 to see all auto print.
         :param auto_display: If true the bar will be automatically printed at the start, the end and after every value.
         :param enable_color: If not None, will enable or disable color for all metrics. If None, keep default value of
         each metrics.
+        :param boring_mode: If True no visual progress bar displayed and do no remplace to current line (boring mode is
+        truly boring, don't use it).
         update if the minimal refresh time allow it.
         """
         self.tasks_size = tasks_size
@@ -113,12 +116,14 @@ class ProgressBar:
         self._last_print = None
         self._refresh_time = refresh_time
         self._auto_display = auto_display
+        self.boring_mode = boring_mode
 
         # If enable color set, override it for all metrics
         if enable_color is not None:
             for metric in metrics:
                 metric.enable_color = enable_color
         self.metrics = {metric.name: metric for metric in metrics}
+        self.enable_color = True if enable_color is None else enable_color  # Enable color by default (if None)
 
     def update(self, **metrics: Any):
         """
@@ -175,7 +180,7 @@ class ProgressBar:
         """
         :return: The completed percentage of the current subtask.
         """
-        # Force 100% for the end of each sub tasks (if not, modulo will give 0)
+        # Force 100% for the end of each sub-tasks (if not, modulo will give 0)
         if self.current_subtask != 0 and self.task_progress == self.tasks_size * self.current_subtask:
             return 1.0
         return (self.task_progress % self.tasks_size) / self.tasks_size
@@ -215,7 +220,7 @@ class ProgressBar:
 
     def print(self) -> None:
         """ Force print the progression. """
-        print(f'{self}', end='\r', flush=True)
+        print(f'{self}', end='\n' if self.boring_mode else '\r', flush=True)
         self._last_print = time.perf_counter()
         for metric in self.metrics.values():
             metric.printed()
@@ -226,35 +231,65 @@ class ProgressBar:
                 (time.perf_counter() - self._last_print) >= self._refresh_time:
             self.print()
 
+    def get_progress_bar_str(self, task_progress: float, subtask_progress: float) -> str:
+        """
+        Create a nice progress bar with unicode characters.
+
+        :param task_progress: The main task progress (between 0 and 1)
+        :param subtask_progress: The current sub-task progress (between 0 and 1)
+        :return: The progress bar string.
+        """
+
+        nb_task_char = int(task_progress * self.bar_length)
+        nb_subtask_char = int(subtask_progress * self.bar_length) if subtask_progress is not None else 0
+
+        if self.enable_color:
+            if nb_subtask_char:
+                bar = self.task_char * nb_subtask_char + self.fill_char * (self.bar_length - nb_subtask_char)
+            else:
+                bar = self.fill_char * self.bar_length
+
+            # Gray background for task loading
+            bar = '\033[0;100m' + bar[:nb_task_char] + '\033[0m' + bar[nb_task_char:]
+        else:
+            task_and_subtask = min(nb_task_char, nb_subtask_char)
+            subtask_only = max(task_and_subtask, nb_subtask_char) - task_and_subtask
+            task_and_subtask = 0 if task_and_subtask == self.bar_length else task_and_subtask  # If 100% => full
+            task_only = max(task_and_subtask, nb_task_char) - task_and_subtask
+            filler = self.bar_length - task_and_subtask - task_only - subtask_only
+            bar = '▇' * task_and_subtask + '█' * task_only + '▔' * subtask_only + self.fill_char * filler
+
+        return bar
+
     def __str__(self) -> str:
         """
         :return: The progress bar formatted as a string.
         """
-        if self.nb_subtasks > 1:
-            # Subtask progress
-            subtask_progress = self.get_subtask_progress()
-            subtask_formatted_name = self.subtask_name + ' ' if self.subtask_name else ''
-            nb_fill_char = int(subtask_progress * self.bar_length)
-            bar = self.task_char * nb_fill_char + self.fill_char * (self.bar_length - nb_fill_char)
-        else:
-            bar = self.fill_char * self.bar_length
 
+        separator = ' | ' if self.boring_mode else '⎹ '
         # Global task
-        task_progress = self.get_task_progress()
-        nb_task_char = int(task_progress * self.bar_length)
-        # Gray background for task loading
-        bar = '\033[0;100m' + bar[:nb_task_char] + '\033[0m' + bar[nb_task_char:]
+        main_task_progress = self.get_task_progress()
+        # Subtask progress
+        subtask_progress = self.get_subtask_progress() if self.nb_subtasks > 1 else None
 
-        # Progress bar
-        string = f'{self.task_name}⎹ {task_progress:7.2%}⎹{bar}⎸'
+        string = f'{self.task_name}{separator}{main_task_progress:7.2%}'
+
+        if not self.boring_mode:
+            # Progress bar
+            bar = self.get_progress_bar_str(main_task_progress, subtask_progress)
+            string += f'⎹{bar}⎸'
+        else:
+            string += ' | '
 
         # Multiple subtask information
         if self.nb_subtasks > 1:
-            string += f'{subtask_formatted_name}{self.current_subtask}/{self.nb_subtasks} {subtask_progress:4.0%}⎹ '
+            subtask_formatted_name = self.subtask_name + ' ' if self.subtask_name else ''
+            string += f'{subtask_formatted_name}{self.current_subtask}/{self.nb_subtasks} ' \
+                      f'{subtask_progress:4.0%}{separator}'
 
         # Metrics information
         if len(self.metrics) > 0:
-            string += '⎹ '.join(map(str, self.metrics.values())) + '⎹ '
+            string += separator.join(map(str, self.metrics.values())) + separator
 
         # Time information
         if self._end_time is None:

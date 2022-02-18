@@ -49,8 +49,7 @@ def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
     # Start the autotuning testing
     logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
                 f'with the "{procedure}" autotuning procedure')
-    with SectionTimer('autotuning simulation'), \
-            ProgressBar(nb_iterations, task_name='Autotuning', auto_display=settings.visual_progress_bar) as progress:
+    with SectionTimer('autotuning simulation'), ProgressBarTuning(nb_iterations) as progress:
         for i in range(settings.autotuning_nb_iteration):
             for diagram in diagrams:
                 procedure.reset_procedure()
@@ -197,3 +196,13 @@ def save_show_final_results(autotuning_results: Dict[str, List[AutotuningResult]
 
     # Save results in yaml file
     save_results(tuning_results=autotuning_results, final_tuning_result=total_success_rate)
+
+
+class ProgressBarTuning(ProgressBar):
+    """ Override the ProgressBar to define print configuration adapted to tuning. """
+
+    def __init__(self, nb_iterations: int):
+        super().__init__(nb_iterations, task_name='Tuning',
+                         enable_color=settings.console_color,
+                         boring_mode=not settings.visual_progress_bar,
+                         refresh_time=0.5 if settings.visual_progress_bar else 10)

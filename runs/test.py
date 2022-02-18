@@ -56,7 +56,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
 
     # Disable gradient for performances
     with torch.no_grad(), SectionTimer(f'network testing{test_name}', 'info' if final else 'debug'), \
-            ProgressBarTesting(nb_batch, final and settings.visual_progress_bar) as progress:
+            ProgressBarTesting(nb_batch, final) as progress:
         # Iterate batches
         for i, (inputs, labels) in enumerate(test_loader):
             progress.incr()
@@ -102,6 +102,8 @@ class ProgressBarTesting(ProgressBar):
 
     def __init__(self, nb_batch: int, auto_display: bool = True):
         super().__init__(nb_batch, 1, 'Testing ', auto_display=auto_display, enable_color=settings.console_color,
+                         boring_mode=not settings.visual_progress_bar,
+                         refresh_time=0.5 if settings.visual_progress_bar else 10,
                          metrics=(
                              ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}', evolution_indicator=False),
                              ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}',

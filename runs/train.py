@@ -207,8 +207,10 @@ class ProgressBarTraining(ProgressBar):
     """ Override the ProgressBar to define print configuration adapted to training. """
 
     def __init__(self, nb_batch: int):
-        super().__init__(nb_batch, settings.nb_epoch, 'Training', 'ep.', auto_display=settings.visual_progress_bar,
+        super().__init__(nb_batch, settings.nb_epoch, 'Training', 'ep.',
                          enable_color=settings.console_color,
+                         boring_mode=not settings.visual_progress_bar,
+                         refresh_time=0.5 if settings.visual_progress_bar else 10,
                          metrics=(
                              ProgressBarMetrics('loss', more_is_good=False),
                              ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}'),
