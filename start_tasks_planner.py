@@ -143,4 +143,13 @@ if __name__ == '__main__':
                              600])  # Louis BCNN
     ])
 
-    run_tasks_planner(train_all_networks, skip_existing_runs=True)
+    train_batch_size = CombinatorPlanner([
+        Planner('model_type', ['FF', 'CNN']),  # No Bayesian to save time
+        ParallelPlanner([
+            Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
+            Planner('pixel_size', [0.001, 0.0025]),
+        ]),
+        Planner('batch_size', [128, 256, 512, 1024, 2048])
+    ], runs_basename='train_batch_size')
+
+    run_tasks_planner(train_batch_size, skip_existing_runs=True)
