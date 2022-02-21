@@ -21,6 +21,7 @@ def run_tasks_planner(runs_planner: BasePlanner,
     """
     # Setup logger before to start
     logger.set_console_level(settings.logger_console_level)
+    logger.set_formatter(settings.console_color)
 
     # Typical settings override for planner runs
     settings.run_name = None  # The name should be override during the runs

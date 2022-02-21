@@ -36,32 +36,32 @@ class ProgressBarMetrics:
         """
         Return a colored character depending of the direction of the value.
         """
-        good_color = '\033[0;92m'  # Green text
-        bad_color = '\033[0;91m'  # Red text
-        no_evolution_color = '\033[0;33m'  # Orange text
-        reset_color = '\033[0m'
-
         # Case with None previous value
         if self.last_printed_value is None:
             return ' '
 
         value_diff = self.last_value - self.last_printed_value
 
-        if value_diff > 0:
-            if self.enable_color:
+        if self.enable_color:
+            good_color = '\033[0;92m'  # Green text
+            bad_color = '\033[0;91m'  # Red text
+            no_evolution_color = '\033[0;33m'  # Orange text
+            reset_color = '\033[0m'
+
+            if value_diff > 0:
                 return f'{good_color if self.more_is_good else bad_color}▲{reset_color}'
-            else:
-                return '▲'
-        elif value_diff < 0:
-            if self.enable_color:
+            elif value_diff < 0:
                 return f'{bad_color if self.more_is_good else good_color}▼{reset_color}'
             else:
-                return '▼'
-        else:
-            if self.enable_color:
                 return f'{no_evolution_color}={reset_color}'
-            else:
-                return '='
+
+        # No color
+        if value_diff > 0:
+            return '^'
+        elif value_diff < 0:
+            return 'v'
+        else:
+            return '='
 
     def __str__(self) -> str:
         # Case with None value
@@ -283,8 +283,9 @@ class ProgressBar:
 
         # Multiple subtask information
         if self.nb_subtasks > 1:
+            current_task_filled = '{num:0>{fill}}'.format(num=self.current_subtask, fill=len(str(self.nb_subtasks)))
             subtask_formatted_name = self.subtask_name + ' ' if self.subtask_name else ''
-            string += f'{subtask_formatted_name}{self.current_subtask}/{self.nb_subtasks} ' \
+            string += f'{subtask_formatted_name}{current_task_filled}/{self.nb_subtasks} ' \
                       f'{subtask_progress:4.0%}{separator}'
 
         # Metrics information
