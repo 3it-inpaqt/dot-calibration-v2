@@ -1,3 +1,4 @@
+from math import ceil
 from typing import Optional
 
 import numpy as np
@@ -42,7 +43,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     # Use the pyTorch data loader
     test_loader = DataLoader(test_dataset, batch_size=settings.batch_size, shuffle=True,
                              num_workers=get_nb_loader_workers(device))
-    nb_batch = min(len(test_loader), nb_test_items // settings.batch_size)
+    nb_batch = min(len(test_loader), ceil(nb_test_items / settings.batch_size))
     nb_classes = len(test_dataset.classes)
 
     metrics: Optional[ClassificationMetrics] = None

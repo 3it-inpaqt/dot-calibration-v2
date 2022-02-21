@@ -2,6 +2,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Optional
 
+from utils.logger import logger
 from utils.timer import duration_to_str
 
 
@@ -99,10 +100,22 @@ class ProgressBar:
         truly boring, don't use it).
         update if the minimal refresh time allow it.
         """
-        self.tasks_size = tasks_size
-        self.task_progress = 0
 
-        self.nb_subtasks = nb_subtasks
+        if tasks_size <= 0:
+            # Do not raise error to don't stop the program for a silly error about progress bar.
+            logger.warning(f'Invalid progress bar tasks size value: {tasks_size}. Fallback to 1.')
+            self.tasks_size = 1
+        else:
+            self.tasks_size = tasks_size
+
+        if nb_subtasks <= 0:
+            # Do not raise error to don't stop the program for a silly error about progress bar.
+            logger.warning(f'Invalid progress bar nb sub tasks value: {nb_subtasks}. Fallback to 1.')
+            self.nb_subtasks = 1
+        else:
+            self.nb_subtasks = nb_subtasks
+
+        self.task_progress = 0
         self.current_subtask = 0
 
         self.task_name = task_name
