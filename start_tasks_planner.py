@@ -102,10 +102,16 @@ if __name__ == '__main__':
     repeat = Planner('seed', range(3), runs_basename='tmp')
 
     # Patch size study
-    size_range = range(7, 32)
+    size_range = range(8, 28)
     overlap_range = [s // 2 for s in size_range]
-    offset_range = [s // 7 for s in size_range]
+    offset_range = [s // 3 for s in size_range]
     patch_size = CombinatorPlanner([
+        Planner('model_type', ['CNN']),  # No Bayesian to save time
+        ParallelPlanner([
+            Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
+            Planner('pixel_size', [0.001, 0.0025]),
+            Planner('nb_epoch', [80, 150]),
+        ]),
         ParallelPlanner([
             Planner('patch_overlap_x', overlap_range),
             Planner('patch_overlap_y', overlap_range),
@@ -113,20 +119,26 @@ if __name__ == '__main__':
             Planner('label_offset_y', offset_range),
             Planner('patch_size_x', size_range),
             Planner('patch_size_y', size_range),
-        ]),
-        Planner('seed', range(5, 7))
+        ])
     ], runs_basename='patch_size_cnn')
 
     # Hidden layer size study
     layers_size = CombinatorPlanner([
-        SequencePlanner([
-            Planner('hidden_layers_size', [[a] for a in range(5, 50, 5)]),
-            Planner('hidden_layers_size', [[a] for a in range(50, 100, 10)]),
-            # Planner('hidden_layers_size', [[a] for a in range(200, 1000, 100)]),
-            # Planner('hidden_layers_size', [[a] for a in range(1000, 5000, 250)])
+        Planner('model_type', ['CNN', 'FF']),  # No Bayesian to save time
+        ParallelPlanner([
+            Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
+            Planner('pixel_size', [0.001, 0.0025]),
+            Planner('nb_epoch', [80, 150]),
         ]),
-        Planner('seed', range(2, 4))
-    ], runs_basename='layers_size-seed_2')
+        SequencePlanner([
+            # 1 Layer
+            Planner('hidden_layers_size', [[a] for a in range(5, 50, 5)]),
+            Planner('hidden_layers_size', [[a] for a in range(50, 400, 25)]),
+            # 2 Layers
+            Planner('hidden_layers_size', [[a * 2, a] for a in range(5, 50, 5)]),
+            Planner('hidden_layers_size', [[a * 2, a] for a in range(50, 400, 25)]),
+        ]),
+    ], runs_basename='layers_size')
 
     train_all_networks = ParallelPlanner([
         CombinatorPlanner([
