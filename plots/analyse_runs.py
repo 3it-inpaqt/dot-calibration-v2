@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import ticker
-from matplotlib.ticker import PercentFormatter
 from pandas import DataFrame
 
 from datasets.diagram import ChargeRegime
@@ -93,9 +92,9 @@ def layers_size_analyse():
                            hue='Datasets', col='Model', row='Nb Layer',
                            facet_kws={'sharex': 'col', 'margin_titles': True})
 
-        grid.set_axis_labels(x_var='Total number of parameters', y_var=f'Classification {metric}')
+        grid.set_axis_labels(x_var='Total number of parameters')
         grid.set(xscale='log')
-        grid.axes.yaxis.set_major_formatter(PercentFormatter(1))
+        # grid.axes.yaxis.set_major_formatter(PercentFormatter(1))
         # grid.fig.suptitle(f'Evolution of the {metric} score in function of number of parameters')
         # TODO main title, y-axis as % and global x and y axes
 
