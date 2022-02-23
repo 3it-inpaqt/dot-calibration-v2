@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import ticker
+from matplotlib.ticker import PercentFormatter
 from pandas import DataFrame
 
 from datasets.diagram import ChargeRegime
@@ -76,19 +77,27 @@ def repeat_analyse():
 
 
 def layers_size_analyse():
-    data = load_runs('layers_size*')
+    data = load_runs('layers_size-*')
 
-    # print(data['settings.hidden_layers_size'])
+    for metric in ['recall', 'precision', 'accuracy', 'f1']:
+        data[metric.capitalize()] = data['results.final_classification_results'].map(lambda a: a[metric])
+        data['Nb Layer'] = data['settings.hidden_layers_size'].map(lambda a: len(a))
 
-    # Hidden size -> Accuracy
-    plt.axhline(y=data['results.baseline_std_test_accuracy'][0], label='STD Baseline', color='r')
-    sns.lineplot(data=data, x='network_info.total_params', y='results.final_accuracy', label='Feed Forward')
-    plt.title('Evolution of the accuracy in function of number of parameters')
-    plt.xlabel('Total number of parameters')
-    plt.ylabel('Classification accuracy')
+        # Rename col for auto plot labels
+        data.rename(columns={'network_info.total_params': 'Nb Parameter',
+                             'settings.research_group': 'Datasets',
+                             'settings.model_type': 'Model'}, inplace=True)
 
-    # plt.xlim(right=10_000)
-    # plt.xlim(left=0)
+        # Hidden size -> metric
+        grid = sns.relplot(data=data, kind='line', x='Nb Parameter', y=metric.capitalize(),
+                           hue='Datasets', col='Model', row='Nb Layer',
+                           facet_kws={'sharex': 'col', 'margin_titles': True})
+
+        grid.set_axis_labels(x_var='Total number of parameters', y_var=f'Classification {metric}')
+        grid.set(xscale='log')
+        grid.axes.yaxis.set_major_formatter(PercentFormatter(1))
+        # grid.fig.suptitle(f'Evolution of the {metric} score in function of number of parameters')
+        # TODO main title, y-axis as % and global x and y axes
 
     plt.show(block=False)
 
@@ -119,4 +128,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    compare_autotuning()
+    layers_size_analyse()
