@@ -169,7 +169,16 @@ class Settings:
     batch_size: int = 32
 
     # The number of training epoch.
+    # Can't be set as the same time as nb_train_update, since it indirectly define nb_epoch.
+    # 0 is disabled (nb_train_update must me > 0)
     nb_epoch: int = 20
+
+    # The number of update before to stop the training.
+    # This is just a convenant way to define the number of epoch with variable batch and dataset size.
+    # The final value will be a multiple of the number of batch in 1 epoch (rounded to the higher number of epoch).
+    # Can't be set as the same time as nb_epoch, since it indirectly define it.
+    # 0 is disabled (nb_epoch must me > 0)
+    nb_train_update: int = 0
 
     # Save the best network state during the training based on the test main metric.
     # Then load it when the training is complet.
@@ -288,7 +297,10 @@ class Settings:
         # TODO should also accept "cuda:1" format
         assert self.device in ('auto', 'cpu', 'cuda'), f'Not valid torch device name: {self.device}'
         assert self.batch_size > 0, 'Batch size should be a positive integer'
-        assert self.nb_epoch > 0, 'Number of epoch should be at least 1'
+        assert self.nb_epoch > 0 or self.nb_train_update > 0, 'Number of epoch or number of train step ' \
+                                                              'should be at least 1'
+        assert not (self.nb_epoch > 0 and self.nb_train_update > 0), 'Exactly one should be set between' \
+                                                                     ' number of epoch and number of train step'
         assert self.bayesian_nb_sample_train > 0, 'The number of bayesian sample should be at least 1'
         assert self.bayesian_nb_sample_valid > 0, 'The number of bayesian sample should be at least 1'
         assert self.bayesian_nb_sample_test > 0, 'The number of bayesian sample should be at least 1'

@@ -1,3 +1,5 @@
+from itertools import chain
+
 from runs.run_line_task import clean_up, fix_seed
 from start_lines import start_line_task
 from start_tuning import start_tuning_task
@@ -110,7 +112,8 @@ if __name__ == '__main__':
         ParallelPlanner([
             Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
             Planner('pixel_size', [0.001, 0.0025]),
-            Planner('nb_epoch', [80, 150]),
+            Planner('nb_epoch', [0, 0]),  # Nb epoch defined by nb_train_update
+            Planner('nb_train_update', [20000, 2400]),
         ]),
         ParallelPlanner([
             Planner('patch_overlap_x', overlap_range),
@@ -128,7 +131,8 @@ if __name__ == '__main__':
         ParallelPlanner([
             Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
             Planner('pixel_size', [0.001, 0.0025]),
-            Planner('nb_epoch', [80, 150]),
+            Planner('nb_epoch', [0, 0]),  # Nb epoch defined by nb_train_update
+            Planner('nb_train_update', [20000, 2400]),
         ]),
         SequencePlanner([
             # 1 Layer
@@ -156,13 +160,18 @@ if __name__ == '__main__':
                              600])  # Louis BCNN
     ])
 
+    batch_sizes = list(range(25, 150, 25)) + list(range(150, 500, 50)) + list(range(500, 2000, 100))
+    nb_epochs = []
+
     train_batch_size = CombinatorPlanner([
         Planner('model_type', ['FF', 'CNN']),  # No Bayesian to save time
         ParallelPlanner([
             Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
             Planner('pixel_size', [0.001, 0.0025]),
+            Planner('nb_epoch', [0, 0]),  # Nb epoch defined by nb_train_update
+            Planner('nb_train_update', [25000, 3000]),
         ]),
-        Planner('batch_size', [128, 256, 512, 1024, 2048])
+        Planner('batch_size', list(chain(range(25, 150, 25), range(150, 500, 50), range(500, 2000, 100))))
     ], runs_basename='train_batch_size')
 
     run_tasks_planner(train_batch_size, skip_existing_runs=True)

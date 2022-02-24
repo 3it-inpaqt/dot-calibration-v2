@@ -1,3 +1,4 @@
+from math import ceil
 from typing import List
 
 import numpy as np
@@ -44,6 +45,8 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
                               shuffle=not settings.balance_class_sampling,
                               num_workers=get_nb_loader_workers(device))
     nb_batch = len(train_loader)
+    nb_epoch = settings.nb_epoch if settings.nb_epoch > 0 else ceil(settings.nb_train_update / nb_batch)
+    logger.info(f'Train on {nb_batch:n} batches for {nb_epoch:n} epochs ({nb_epoch * nb_batch} parameters updates)')
 
     # Define the indexes of checkpoints for each epoch
     # Eg.: with 'nb_batch' = 100 and 'checkpoints_per_epoch' = 3, then the indexes will be [0, 33, 66]
@@ -56,9 +59,9 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
     best_checkpoint: dict = {'score': 0, 'batch_num': None}
 
     # Use timer and progress bar
-    with SectionTimer('network training') as timer, ProgressBarTraining(nb_batch) as progress:
+    with SectionTimer('network training') as timer, ProgressBarTraining(nb_batch, nb_epoch) as progress:
         # Iterate epoch
-        for epoch in range(settings.nb_epoch):
+        for epoch in range(nb_epoch):
             progress.next_subtask()
             # Iterate batches
             for i, (inputs, labels) in enumerate(train_loader):
@@ -80,14 +83,14 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
                 loss_evolution.append(float(loss))
 
             # Epoch statistics
-            _record_epoch_stats(epochs_stats, loss_evolution[-len(train_loader):])
+            _record_epoch_stats(epochs_stats, loss_evolution[-len(train_loader):], nb_epoch)
 
     if len(metrics_evolution) == 0:
         save_results(epochs_stats=epochs_stats)
     else:
         # Do one last checkpoint to complet the plot
         metrics_evolution.append(
-            _checkpoint(network, settings.nb_epoch * nb_batch, train_dataset, validation_dataset, best_checkpoint,
+            _checkpoint(network, nb_epoch * nb_batch, train_dataset, validation_dataset, best_checkpoint,
                         device))
         save_results(epochs_stats=epochs_stats, metrics_validation=metrics_evolution)
 
@@ -100,7 +103,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
 
         # Apply early stopping by loading best version
         if settings.early_stopping:
-            _apply_early_stopping(network, best_checkpoint, nb_batch, device)
+            _apply_early_stopping(network, best_checkpoint, nb_batch, nb_epoch, device)
 
     # Post train plots
     plot_train_progress(loss_evolution, metrics_evolution, nb_batch, best_checkpoint)
@@ -149,12 +152,13 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
     return {'batch_num': batch_num, 'validation': validation_metrics, 'train': train_metrics}
 
 
-def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> None:
+def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float], nb_epoch: int) -> None:
     """
     Record the statics for one epoch.
 
     :param epochs_stats: The list where to store the stats, append in place.
     :param epoch_losses: The losses list of the current epoch.
+    :param nb_epoch: The number of epoch.
     """
     stats = {
         'losses_mean': float(np.mean(epoch_losses)),
@@ -169,34 +173,36 @@ def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float]) -> 
 
     # Log stats
     epoch_num = len(epochs_stats)
-    logger.debug(f"Epoch {epoch_num:3}/{settings.nb_epoch} ({epoch_num / settings.nb_epoch:7.2%}) "
+    logger.debug(f"Epoch {epoch_num:3}/{nb_epoch} ({epoch_num / nb_epoch:7.2%}) "
                  f"| loss: {stats['losses_mean']:.5f} | diff: {diff:+.5f} | std: {stats['losses_std']:.5f}")
 
 
-def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch: int, device: torch.device) -> None:
+def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch: int, nb_epoch: int,
+                          device: torch.device, ) -> None:
     """
     Apply early stopping by loading the best network according to the validation classification main metric ran during
     checkpoints.
 
-    :param network: The network to load (in place)
-    :param best_checkpoint: A dictionary containing at least 'batch_num' of the best one
-    :param nb_batch: The number of batch per epoch during this training
-    :param device: The device used to store the network and datasets
+    :param network: The network to load (in place).
+    :param best_checkpoint: A dictionary containing at least 'batch_num' of the best one.
+    :param nb_batch: The number of batch per epoch during this training.
+    :param nb_epoch: The number of epoch.
+    :param device: The device used to store the network and datasets.
     """
     best_batch_num = best_checkpoint['batch_num']
 
     # Skip if the last version of the network is already the best.
-    if best_batch_num == settings.nb_epoch * nb_batch:
+    if best_batch_num == nb_epoch * nb_batch:
         logger.info('Early stopping not necessary here because the last epoch is th best. '
-                    f'The number of epoch ({settings.nb_epoch}) could be increased.')
+                    f'The number of epoch ({nb_epoch}) could be increased.')
         return
 
     best_epoch_num = best_batch_num // nb_batch + 1
-    last_batch_num = settings.nb_epoch * nb_batch
+    last_batch_num = nb_epoch * nb_batch
     logger.info(f'Applying early stopping by loading the best version of the network: '
                 f'batch {best_batch_num:n}/{last_batch_num:n} '
                 f'({best_batch_num / last_batch_num:.0%}) - '
-                f'epoch {best_epoch_num}/{settings.nb_epoch}')
+                f'epoch {best_epoch_num}/{nb_epoch}')
 
     # Load network in place
     if not load_previous_network_version_(network, 'best_network', device):
@@ -206,8 +212,8 @@ def _apply_early_stopping(network: ClassifierNN, best_checkpoint: dict, nb_batch
 class ProgressBarTraining(ProgressBar):
     """ Override the ProgressBar to define print configuration adapted to training. """
 
-    def __init__(self, nb_batch: int):
-        super().__init__(nb_batch, settings.nb_epoch, 'Training', 'ep.',
+    def __init__(self, nb_batch: int, nb_epoch: int):
+        super().__init__(nb_batch, nb_epoch, 'Training', 'ep.',
                          enable_color=settings.console_color,
                          boring_mode=not settings.visual_progress_bar,
                          refresh_time=0.5 if settings.visual_progress_bar else 10,
