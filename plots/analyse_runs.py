@@ -148,8 +148,38 @@ def patch_size_analyse():
         # plt.show(block=False)
 
 
+def batch_size_analyse():
+    # Load selected runs' files
+    data = load_runs('train_batch_size-*')
+    # Rename col for auto plot labels
+    data.rename(columns={'timers.network_training': 'Training Time (s)',
+                         'settings.batch_size': 'Batch Size',
+                         'settings.research_group': 'Datasets',
+                         'settings.model_type': 'Model'}, inplace=True)
+
+    for metric in ['recall', 'precision', 'accuracy', 'f1']:
+        data[metric.capitalize()] = data['results.final_classification_results'].map(lambda a: a[metric])
+
+        # Patch size -> metric
+        grid = sns.relplot(data=data, kind='line', x='Batch Size', y=metric.capitalize(), hue='Datasets', col='Model')
+
+        plt.gca().yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
+        grid.fig.suptitle(f'Evolution of the {metric} in function of batch size')
+
+        plt.tight_layout()
+        plt.show(block=False)
+
+    # Patch size -> training time
+    sns.relplot(data=data, kind='line', x='Batch Size', y='Training Time (s)', hue='Datasets', col='Model')
+
+    grid.fig.suptitle('Evolution of the training time in function of batch size')
+
+    plt.tight_layout()
+    plt.show(block=False)
+
+
 if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    patch_size_analyse()
+    batch_size_analyse()
