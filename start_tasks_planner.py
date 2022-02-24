@@ -109,6 +109,7 @@ if __name__ == '__main__':
     offset_range = [s // 3 for s in size_range]
     patch_size = CombinatorPlanner([
         Planner('model_type', ['CNN']),  # No Bayesian to save time
+        Planner('evaluate_baselines', [True]),
         ParallelPlanner([
             Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
             Planner('pixel_size', [0.001, 0.0025]),

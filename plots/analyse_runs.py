@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import ticker
+from matplotlib.ticker import PercentFormatter
 from pandas import DataFrame
 
 from datasets.diagram import ChargeRegime
@@ -98,6 +99,7 @@ def layers_size_analyse():
         # grid.fig.suptitle(f'Evolution of the {metric} score in function of number of parameters')
         # TODO main title, y-axis as % and global x and y axes
 
+    plt.tight_layout()
     plt.show(block=False)
 
 
@@ -105,26 +107,49 @@ def patch_size_analyse():
     # Load selected runs' files
     data = load_runs('patch_size_cnn*')
 
-    # Patch size -> Accuracy
-    sns.lineplot(data=data, x='settings.patch_size_x', y='results.final_accuracy', label='CNN')
-    sns.lineplot(data=data, x='settings.patch_size_x', y='results.baseline_std_test_accuracy', label='STD baseline')
-    plt.title('Evolution of the accuracy in function of patch size')
-    plt.xlabel('Patch size in pixel')
-    plt.ylabel('Classification accuracy')
-    plt.show(block=False)
+    for metric in ['recall', 'precision', 'accuracy', 'f1']:
+        data[metric.capitalize()] = data['results.final_classification_results'].map(lambda a: a[metric])
 
-    # Patch size -> Train size
-    uniq_seed = data.drop_duplicates(subset='settings.patch_size_x').copy()
-    uniq_seed['total_train'] = uniq_seed['results.train_dataset_size'] + uniq_seed['results.train_dataset_augmentation']
-    sns.lineplot(data=uniq_seed, x='settings.patch_size_x', y='total_train')
-    plt.title('Size of training dataset in function of patch size')
-    plt.xlabel('Patch size in pixel')
-    plt.ylabel('Number of training patch')
-    plt.show(block=False)
+        # TODO add independent lines for both classes
+        # if metric != 'accuracy':
+        #     data[f'No Line {metric.capitalize()}'] = data['results.final_classification_results']\
+        #         .map(lambda a: a['classes'][0][metric])
+        #     data[f'Line {metric.capitalize()}'] = data['results.final_classification_results']\
+        #         .map(lambda a: a['classes'][1][metric])
+
+        # Rename col for auto plot labels
+        data.rename(columns={'network_info.total_params': 'Nb Parameter',
+                             'settings.research_group': 'Datasets',
+                             'settings.model_type': 'Model'}, inplace=True)
+
+        # Patch size -> metric
+        sns.relplot(data=data, kind='line', x='settings.patch_size_x', y=metric.capitalize(), hue='Datasets')
+        # if metric != 'accuracy':
+        #     sns.relplot(data=data, kind='line', x='settings.patch_size_x', y=f'No Line {metric.capitalize()}',
+        #                 hue='Datasets', linestyle=':')
+        #     sns.relplot(data=data, kind='line', x='settings.patch_size_x', y=f'Line {metric.capitalize()}',
+        #                 hue='Datasets', linestyle='--')
+        # sns.lineplot(data=data, x='settings.patch_size_x', y='results.baseline_std_test_accuracy',
+        #              label='STD baseline')
+
+        plt.title(f'Evolution of the {metric} in function of patch size')
+        plt.xlabel('Patch size in pixel')
+        plt.gca().yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
+        plt.tight_layout()
+        plt.show(block=False)
+
+        # Patch size -> Train size
+        # uniq_seed = data.drop_duplicates(subset='settings.patch_size_x').copy()
+        # uniq_seed['total_train'] = uniq_seed['results.train_dataset_size'] + uniq_seed['results.train_dataset_augmentation']
+        # sns.lineplot(data=uniq_seed, x='settings.patch_size_x', y='total_train')
+        # plt.title('Size of training dataset in function of patch size')
+        # plt.xlabel('Patch size in pixel')
+        # plt.ylabel('Number of training patch')
+        # plt.show(block=False)
 
 
 if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    layers_size_analyse()
+    patch_size_analyse()
