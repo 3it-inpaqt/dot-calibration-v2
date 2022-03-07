@@ -80,6 +80,10 @@ class StepHistoryEntry:
     model_confidence: bool
     ground_truth: bool
 
+    def is_classification_correct(self) -> bool:
+        """ Return True only if model_classification is the same as the ground_truth. """
+        return self.model_classification == self.ground_truth
+
 
 @dataclass
 class Direction:

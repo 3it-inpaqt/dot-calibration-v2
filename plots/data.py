@@ -29,7 +29,8 @@ def plot_diagram(x_i, y_i,
                  scan_history: List["StepHistoryEntry"] = None,
                  history_uncertainty: bool = False,
                  final_coord: Tuple[int, int] = None,
-                 save_in_buffer: bool = False) -> Optional[Union[Path, io.BytesIO]]:
+                 save_in_buffer: bool = False,
+                 text_stats: bool = False) -> Optional[Union[Path, io.BytesIO]]:
     """
     Plot the interpolated image.
 
@@ -48,6 +49,7 @@ def plot_diagram(x_i, y_i,
      the uncertainty.
     :param final_coord: The final tuning coordinates.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
+    :param text_stats: If True, add statistics information in the plot.
     :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
      instead of the path.
     """
@@ -149,6 +151,43 @@ def plot_diagram(x_i, y_i,
         # Add the patch to the Axes
         plt.gca().add_patch(rect)
 
+    if text_stats:
+        text = ''
+        if scan_history and len(scan_history) > 0:
+            # Local import to avoid circular mess
+            from datasets.qdsd import QDSDLines
+
+            accuracy = sum(1 for s in scan_history if s.is_classification_correct()) / len(scan_history)
+            nb_line = sum(1 for s in scan_history if s.ground_truth)  # s.ground_truth == True means line
+            nb_no_line = sum(1 for s in scan_history if not s.ground_truth)  # s.ground_truth == False means no line
+
+            if nb_line > 0:
+                line_success = sum(
+                    1 for s in scan_history if s.ground_truth and s.is_classification_correct()) / nb_line
+            else:
+                line_success = None
+
+            if nb_no_line > 0:
+                no_line_success = sum(1 for s in scan_history
+                                      if not s.ground_truth and s.is_classification_correct()) / nb_no_line
+            else:
+                no_line_success = None
+
+            last_correct = scan_history[-1].is_classification_correct()
+            last_class = QDSDLines.classes[scan_history[-1].model_classification]
+
+            text += f'Nb step: {len(scan_history): >3n} (acc: {accuracy: >4.0%})\n'
+            text += f'{QDSDLines.classes[True].capitalize(): <7}: {nb_line: >3n}'
+            text += '\n' if line_success is None else f' (acc: {line_success:>4.0%})\n'
+            text += f'{QDSDLines.classes[False].capitalize(): <7}: {nb_no_line: >3n}'
+            text += '\n' if no_line_success is None else f' (acc: {no_line_success:>4.0%})\n\n'
+            text += f'Last scan:\n'
+            text += f'  - Pred: {last_class.capitalize(): <7} {"(good) " if last_correct else "(wrong)"}\n'
+            text += f'  - Conf: {scan_history[-1].model_confidence: >4.0%}'
+
+        plt.text(1.03, 0.7, text, horizontalalignment='left', verticalalignment='top', fontsize=8,
+                 fontfamily='monospace', transform=plt.gca().transAxes)
+
     plt.title(f'{image_name}\ninterpolated ({interpolation_method}) - pixel size {round(pixel_size, 10) * 1_000}mV')
     plt.xlabel('Gate 1 (V)')
     plt.xticks(rotation=30)
@@ -194,10 +233,11 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
         # Use minimal ratio for image generation
         image_rate = min(rate_gif, rate_video) if settings.save_video else rate_gif
         for scan_i in range(0, len(scan_history), image_rate):
+            # TODO: Possible multi-thread optimization here
             # Generate image
             buffer = plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                                   d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
-                                  show_offset=False, save_in_buffer=True)
+                                  show_offset=False, save_in_buffer=True, text_stats=True)
             all_frames.append(buffer)
 
             # GIF frames
@@ -214,15 +254,16 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             # Show full diagram with tuning final coordinate
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
-                         show_offset=False, save_in_buffer=True),
+                         show_offset=False, save_in_buffer=True, text_stats=True),
             # Show full diagram with tuning final coordinate + line labels
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=scan_history,
-                         final_coord=final_coord, show_offset=False, save_in_buffer=True),
+                         final_coord=final_coord, show_offset=False, save_in_buffer=True, text_stats=True),
             # Show full diagram with tuning final coordinate + line & regime labels
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, charge_regions=d.charge_areas,
-                         scan_history=scan_history, final_coord=final_coord, show_offset=False, save_in_buffer=True)
+                         scan_history=scan_history, final_coord=final_coord, show_offset=False, save_in_buffer=True,
+                         text_stats=True)
         ]
 
         all_frames.extend(end_frames)
