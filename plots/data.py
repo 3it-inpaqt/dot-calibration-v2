@@ -177,16 +177,40 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
     values = d.values.cpu()
 
     if settings.is_named_run() and (settings.save_gif or settings.save_video):
-        images = []  # List of image byte for the animation
-        durations = []  # List of duration for each image (ms)
-        for scan_i in range(0, len(scan_history), 4):
-            path = plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
-                                d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
-                                show_offset=False, save_in_buffer=True)
-            images.append(path)
-            durations.append(500)
 
-        images.extend([
+        # Animation speed => Time for an image (ms)
+        base_fps = 100
+        # Ratio of image to skip for the animation frames (1 means nothing skipped, 4 means 1 keep for 3 skip)
+        rate_gif = 4
+        rate_video = 1
+        # List of image bytes for the animation
+        all_frames = []
+        frames_gif = []
+        frames_video = []
+        # List of duration for each image (ms)
+        durations_gif = []
+        durations_video = []  # List of duration for each image (ms)
+
+        # Use minimal ratio for image generation
+        image_rate = min(rate_gif, rate_video) if settings.save_video else rate_gif
+        for scan_i in range(0, len(scan_history), image_rate):
+            # Generate image
+            buffer = plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
+                                  d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
+                                  show_offset=False, save_in_buffer=True)
+            all_frames.append(buffer)
+
+            # GIF frames
+            if scan_i % rate_gif == 0:
+                frames_gif.append(buffer)
+                durations_gif.append(base_fps * rate_gif)
+
+            # Video frames
+            if scan_i % rate_video == 0:
+                frames_video.append(buffer)
+                durations_video.append(base_fps * rate_video)
+
+        end_frames = [
             # Show full diagram with tuning final coordinate
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
@@ -199,15 +223,20 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, charge_regions=d.charge_areas,
                          scan_history=scan_history, final_coord=final_coord, show_offset=False, save_in_buffer=True)
-        ])
-        durations.extend([1000, 2000, 6000])
+        ]
 
-        save_gif(images, image_name, duration=durations)
-        save_video(images, image_name, duration=durations)
+        all_frames.extend(end_frames)
+        frames_gif.extend(end_frames)
+        frames_video.extend(end_frames)
+        durations_gif.extend([base_fps * 10, base_fps * 20, base_fps * 50])
+        durations_video.extend([base_fps * 10, base_fps * 20, base_fps * 50])
+
+        save_gif(frames_gif, image_name, duration=durations_gif)
+        save_video(frames_video, image_name, duration=durations_video)
 
         # Close buffers
-        for img in images:
-            img.close()
+        for frame in all_frames:
+            frame.close()
 
 
 def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool = True) -> None:

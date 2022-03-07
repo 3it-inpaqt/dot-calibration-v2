@@ -1,5 +1,6 @@
 import io
 import re
+from collections.abc import Iterable
 from dataclasses import asdict
 from itertools import chain
 from pathlib import Path
@@ -258,9 +259,14 @@ def save_video(images: List[io.BytesIO], file_name: str, duration: Union[List[in
     if settings.is_named_run() and settings.save_video:
         save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, 'mp4', allow_overwrite)
 
-        writer = imageio.get_writer(save_path, fps=1_000 / 200)
-        for data in images:
-            writer.append_data(imageio.imread(data))
+        smallest_duration = min(duration) if isinstance(duration, Iterable) else duration
+        writer = imageio.get_writer(save_path, fps=1_000 / smallest_duration)
+        for data, d in zip(images, duration):
+            current_duration = 0
+            # Add frames until we reach the targeted duration
+            while current_duration < d:
+                writer.append_data(imageio.imread(data))
+                current_duration += smallest_duration
         writer.close()
 
         logger.debug(f'Video generated from {len(images)} images. Saved in: {save_path}')
