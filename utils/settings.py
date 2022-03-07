@@ -72,6 +72,9 @@ class Settings:
     # If True and the run have a valid name, save animated GIF in the run directory
     save_gif: bool = False
 
+    # If Ture and the run have a valid name, save video in the run directory
+    save_video: bool = False
+
     # If True and the run have a valid name, save the neural network parameters in the run directory at the end of the
     # training. Saved before applying early stopping if enabled.
     # The file will be at the root of run directory, under then name: "final_network.pt"

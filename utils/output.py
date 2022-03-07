@@ -1,9 +1,11 @@
+import io
 import re
 from dataclasses import asdict
 from itertools import chain
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 
+import imageio
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -83,7 +85,7 @@ def remove_out_directory(directory: Path) -> None:
     # Remove images
     if img_dir.is_dir():
         # Remove png and gif images files
-        for image_file in chain(img_dir.glob('*.png'), img_dir.glob('*.gif')):
+        for image_file in chain(img_dir.glob('*.png'), img_dir.glob('*.gif'), img_dir.glob('*.mp4')):
             image_file.unlink()
         img_dir.rmdir()
 
@@ -147,13 +149,46 @@ def save_results(**results: Any) -> None:
     logger.debug(f'{len(results)} result(s) saved in {results_path}')
 
 
-def save_plot(file_name: str, allow_overwrite: bool = False) -> Optional[Path]:
+def get_save_path(directory: Path, file_name: str, extension: str, allow_overwrite: bool = False,
+                  index_limit: int = 100) -> Path:
+    """
+    Get a valid save path if possible. If not allow overwriting, will iterate the name until one available found, or
+    limit reached.
+
+    :param directory: The directory to use.
+    :param file_name: The target file name (an index could be added).
+    :param extension: The file extension.
+    :param allow_overwrite: If True allow to return a file path that already exist. If False, will iterate the name.
+    :param index_limit: The maximum number of name interation to try.
+    :raise FileExistsError: If allow_overwrite is false and index_limit is reached.
+    :return: The file path.
+    """
+
+    save_path = Path(directory, f'{file_name}.{extension}')
+
+    # Check if file exist and rename if we want to avoid overwriting
+    if save_path.is_file() and not allow_overwrite:
+        for i in range(2, index_limit, 1):
+            save_path = Path(directory, f'{file_name} ({i:02d}).{extension}')
+            if not save_path.is_file():
+                break  # We found a valid name
+
+        if save_path.is_file():
+            # No valid name found
+            raise FileExistsError(f'Image name already exist and maximum index reached ({index_limit}): {save_path}')
+
+    return save_path
+
+
+def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: bool = False) \
+        -> Optional[Union[Path, io.BytesIO]]:
     """
     Save a plot image in the directory
 
     :param file_name: the output png file name (no extension).
     :param allow_overwrite: If True, overwrite existing file if existing with same name. If False, add a number to the
     file name to avoid overwriting.
+    :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
 
     :return: The path where the plot is saved, or None if not saved.
     """
@@ -161,20 +196,17 @@ def save_plot(file_name: str, allow_overwrite: bool = False) -> Optional[Path]:
     # Adjust the padding between and around subplots
     plt.tight_layout()
 
+    # Keep the image in buffer, but no plot and no save it as a file.
+    if save_in_buffer:
+        buffer = io.BytesIO()
+        plt.savefig(buffer, dpi=200, format='png')
+        plt.close()
+        buffer.seek(0)
+        return buffer
+
     save_path = None
     if settings.is_named_run() and settings.save_images:
-        save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name}.png')
-
-        # Check if file exist and rename if we want to avoid overwriting
-        if save_path.is_file() and not allow_overwrite:
-            for i in range(2, 100, 1):
-                save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name} ({i:02d}).png')
-                if not save_path.is_file():
-                    break  # We found a valid name
-
-            if save_path.is_file():
-                # No valid name found
-                raise FileExistsError(f'Image name already exist and maximum index reached (100): {save_path}')
+        save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, 'png', allow_overwrite)
 
         plt.savefig(save_path, dpi=200)
         logger.debug(f'Plot saved in {save_path}')
@@ -185,41 +217,53 @@ def save_plot(file_name: str, allow_overwrite: bool = False) -> Optional[Path]:
     return save_path
 
 
-def save_gif(images_paths: List[Path], file_name: str, remove_images: bool = True,
-             duration: Union[List[int], int] = 200, loop: int = 0, allow_overwrite: bool = False) -> Optional[Path]:
+def save_gif(images: List[io.BytesIO], file_name: str, duration: Union[List[int], int] = 200, loop: int = 0,
+             allow_overwrite: bool = False) -> Optional[Path]:
     """
     Transform a list of image into an animated gif and save it.
 
-    :param images_paths: The list of sorted image paths that should be used as gif frames.
+    :param images: The list of sorted image data that should be used as image frames.
     :param file_name: The output gif file name (no extension).
-    :param remove_images: If True all files in images_paths will be removed after being used in the gif.
-    :param duration: The time to display the current frame of the GIF, in milliseconds.
-    :param loop: The number of times the GIF should loop. 0 means that it will loop forever.
+    :param duration: The time to display the current frame of the gif, in milliseconds.
+    :param loop: The number of times the gif should loop. 0 means that it will loop forever.
     :param allow_overwrite: If True, overwrite existing file if existing with same name. If False, add a number to the
     file name to avoid overwriting.
     :return:The path where the gif is saved, or None if not saved.
     """
     save_path = None
     if settings.is_named_run() and settings.save_gif:
-        save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name}.gif')
+        save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, 'gif', allow_overwrite)
 
-        # Check if file exist and rename if we want to avoid overwriting
-        if save_path.is_file() and not allow_overwrite:
-            for i in range(2, 100, 1):
-                save_path = Path(OUT_DIR, settings.run_name, 'img', f'{file_name} ({i:02d}).gif')
-                if not save_path.is_file():
-                    break  # We found a valid name
-
-            if save_path.is_file():
-                # No valid name found
-                raise FileExistsError(f'Image name already exist and maximum index reached (100): {save_path}')
-
-        img, *imgs = (Image.open(f) for f in images_paths)
+        img, *imgs = (Image.open(f) for f in images)
         img.save(fp=save_path, format='GIF', append_images=imgs, save_all=True, duration=duration, loop=loop)
 
-        if remove_images:
-            for png_file in images_paths:
-                png_file.unlink()
+        logger.debug(f'Gif generated from {len(images)} images. Saved in: {save_path}')
+
+    return save_path
+
+
+def save_video(images: List[io.BytesIO], file_name: str, duration: Union[List[int], int] = 200,
+               allow_overwrite: bool = False) -> Optional[Path]:
+    """
+    Transform a list of image into a video and save it.
+
+    :param images: The list of sorted image data that should be used as image frames.
+    :param file_name: The output video file name (no extension).
+    :param duration: The time to display the current frame of the video, in milliseconds.
+    :param allow_overwrite: If True, overwrite existing file if existing with same name. If False, add a number to the
+    file name to avoid overwriting.
+    :return:The path where the video is saved, or None if not saved.
+    """
+    save_path = None
+    if settings.is_named_run() and settings.save_video:
+        save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, 'mp4', allow_overwrite)
+
+        writer = imageio.get_writer(save_path, fps=1_000 / 200)
+        for data in images:
+            writer.append_data(imageio.imread(data))
+        writer.close()
+
+        logger.debug(f'Video generated from {len(images)} images. Saved in: {save_path}')
 
     return save_path
 

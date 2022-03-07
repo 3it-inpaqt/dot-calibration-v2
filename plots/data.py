@@ -1,3 +1,4 @@
+import io
 from math import ceil, sqrt
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
@@ -11,7 +12,7 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
-from utils.output import save_gif, save_plot
+from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
 
 
@@ -27,25 +28,28 @@ def plot_diagram(x_i, y_i,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True,
                  scan_history: List["StepHistoryEntry"] = None,
                  history_uncertainty: bool = False,
-                 final_coord: Tuple[int, int] = None) -> Optional[Path]:
+                 final_coord: Tuple[int, int] = None,
+                 save_in_buffer: bool = False) -> Optional[Union[Path, io.BytesIO]]:
     """
     Plot the interpolated image.
 
-    :param x_i: The x coordinates of the pixels (post interpolation)
-    :param y_i: The y coordinates of the pixels (post interpolation)
-    :param pixels: The list of pixels to plot
-    :param image_name: The name of the image, used for plot title and file name
-    :param interpolation_method: The pixels' interpolation method, used for plot title
-    :param pixel_size: The size of pixels, in voltage, used for plot title
-    :param charge_regions: The charge region annotations to draw on top of the image
-    :param transition_lines: The transition line annotation to draw on top of the image
-    :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max)
-    :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
-    :param scan_history: The tuning steps history (see StepHistoryEntry dataclass)
+    :param x_i: The x coordinates of the pixels (post interpolation).
+    :param y_i: The y coordinates of the pixels (post interpolation).
+    :param pixels: The list of pixels to plot.
+    :param image_name: The name of the image, used for plot title and file name.
+    :param interpolation_method: The pixels' interpolation method, used for plot title.
+    :param pixel_size: The size of pixels, in voltage, used for plot title.
+    :param charge_regions: The charge region annotations to draw on top of the image.
+    :param transition_lines: The transition line annotation to draw on top of the image.
+    :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
+    :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0).
+    :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
-     the uncertainty
-    :param final_coord: The final tuning coordinates
-    :return: The path where the plot is saved, or None if not saved.
+     the uncertainty.
+    :param final_coord: The final tuning coordinates.
+    :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
+    :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
+     instead of the path.
     """
 
     legend = False
@@ -156,7 +160,7 @@ def plot_diagram(x_i, y_i,
     if focus_area:
         plt.axis(focus_area)
 
-    return save_plot(f'diagram_{image_name}')
+    return save_plot(f'diagram_{image_name}', save_in_buffer=save_in_buffer)
 
 
 def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: List["StepHistoryEntry"],
@@ -172,33 +176,38 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
 
     values = d.values.cpu()
 
-    if settings.is_named_run() and settings.save_gif:
-        images_paths = []  # List of image paths for the gif
+    if settings.is_named_run() and (settings.save_gif or settings.save_video):
+        images = []  # List of image byte for the animation
         durations = []  # List of duration for each image (ms)
         for scan_i in range(0, len(scan_history), 4):
-            path = plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}_gif_{scan_i}', 'nearest',
+            path = plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                                 d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
-                                show_offset=False)
-            images_paths.append(path)
+                                show_offset=False, save_in_buffer=True)
+            images.append(path)
             durations.append(500)
 
-        images_paths.extend([
+        images.extend([
             # Show full diagram with tuning final coordinate
-            plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}_gif_end_1', 'nearest',
+            plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
-                         show_offset=False),
+                         show_offset=False, save_in_buffer=True),
             # Show full diagram with tuning final coordinate + line labels
-            plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}_gif_end_2', 'nearest',
+            plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=scan_history,
-                         final_coord=final_coord, show_offset=False),
+                         final_coord=final_coord, show_offset=False, save_in_buffer=True),
             # Show full diagram with tuning final coordinate + line & regime labels
-            plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}_gif_end_3', 'nearest',
+            plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, charge_regions=d.charge_areas,
-                         scan_history=scan_history, final_coord=final_coord, show_offset=False)
+                         scan_history=scan_history, final_coord=final_coord, show_offset=False, save_in_buffer=True)
         ])
         durations.extend([1000, 2000, 6000])
 
-        save_gif(images_paths, image_name, duration=durations)
+        save_gif(images, image_name, duration=durations)
+        save_video(images, image_name, duration=durations)
+
+        # Close buffers
+        for img in images:
+            img.close()
 
 
 def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool = True) -> None:

@@ -164,7 +164,7 @@ def batch_size_analyse():
         grid = sns.relplot(data=data, kind='line', x='Batch Size', y=metric.capitalize(), hue='Datasets', col='Model')
 
         plt.gca().yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
-        grid.fig.suptitle(f'Evolution of the {metric} in function of batch size')
+        grid.fig.suptitle(f'Evolution of the {metric.capitalize()} in function of batch size')
 
         plt.tight_layout()
         plt.show(block=False)
@@ -182,4 +182,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    batch_size_analyse()
+    layers_size_analyse()

@@ -100,6 +100,7 @@ def init_procedure(model: Classifier) -> AutotuningProcedure:
         raise ValueError(f'Unknown autotuning procedure name "{settings.autotuning_procedure}".')
 
 
+@SectionTimer('save results', log_level='debug')
 def save_show_results(autotuning_result: AutotuningResult, procedure: AutotuningProcedure, is_first_tuning: bool,
                       nb_error_to_plot: int) -> int:
     """
@@ -132,6 +133,7 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
     return nb_error_to_plot
 
 
+@SectionTimer('save results', log_level='debug')
 def save_show_final_results(autotuning_results: Dict[str, List[AutotuningResult]]) -> None:
     """
     Show autotuning results in text output and plots.

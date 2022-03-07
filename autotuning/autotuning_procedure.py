@@ -379,8 +379,7 @@ class AutotuningProcedure:
 
         name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}'
         # Generate a gif image
-        plot_diagram_step_animation(self.diagram, name, self._scan_history,
-                                    final_coord)
+        plot_diagram_step_animation(self.diagram, name, self._scan_history, final_coord)
 
     def setup_next_tuning(self, diagram: Diagram, start_coord: Optional[Tuple[int, int]] = None) -> None:
         """
