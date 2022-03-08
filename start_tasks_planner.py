@@ -145,21 +145,29 @@ if __name__ == '__main__':
         ]),
     ], runs_basename='layers_size')
 
-    train_all_networks = ParallelPlanner([
+    train_all_networks = CombinatorPlanner([
         CombinatorPlanner([
-            Planner('model_type', ['FF', 'CNN', 'BCNN']),
+            Planner('evaluate_baselines', [True]),
+            Planner('patch_size_x', [18]),
+            Planner('patch_size_y', [18]),
+            Planner('patch_overlap_x', [10]),
+            Planner('patch_overlap_y', [10]),
+            ParallelPlanner([
+                Planner('model_type', ['FF', 'CNN', 'BCNN']),
+                Planner('hidden_layers_size', [[200, 100], [100, 50], [100, 50]]),
+                Planner('learning_rate', [0.0005, 0.001, 0.001]),
+                Planner('nb_train_update', [30_000, 20_000, 25_000]),
+            ]),
             ParallelPlanner([
                 Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
                 Planner('pixel_size', [0.001, 0.0025]),
+                Planner('nb_epoch', [0, 0]),  # Nb epoch defined by nb_train_update
+                Planner('label_offset_x', [6, 7]),
+                Planner('label_offset_y', [6, 7]),
             ])
         ]),
-        Planner('nb_epoch', [100,  # Michel FF
-                             100,  # Michel CNN
-                             200,  # Michel BCNN
-                             300,  # Louis FF
-                             300,  # Louis CNN
-                             600])  # Louis BCNN
-    ])
+        Planner('seed', range(10))
+    ], runs_basename='ref')
 
     batch_sizes = list(range(25, 150, 25)) + list(range(150, 500, 50)) + list(range(500, 2000, 100))
     nb_epochs = []
@@ -175,4 +183,4 @@ if __name__ == '__main__':
         Planner('batch_size', list(chain(range(25, 150, 25), range(150, 500, 50), range(500, 2000, 100))))
     ], runs_basename='train_batch_size')
 
-    run_tasks_planner(train_batch_size, skip_existing_runs=True)
+    run_tasks_planner(train_all_networks, skip_existing_runs=True)
