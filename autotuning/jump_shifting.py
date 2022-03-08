@@ -33,7 +33,7 @@ class JumpShifting(AutotuningProcedure):
 
         :return: True if we found a line, False if we reach the step limit without detecting a line.
         """
-        self._step_label = 'Search first line'
+        self._step_label = '1. Search first line'
 
         # First scan at the start position
         if self._is_confirmed_line():
@@ -78,7 +78,7 @@ class JumpShifting(AutotuningProcedure):
         """
         Explore the diagram by scanning patch perpendicular to the estimated lines direction.
         """
-        self._step_label = 'Search empty regime'
+        self._step_label = '2. Search 0 e-'
 
         # At the beginning of this function we should be on a line.
         # Since this is the first we met, this is the leftmost by default.

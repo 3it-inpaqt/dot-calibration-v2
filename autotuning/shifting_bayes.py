@@ -15,7 +15,7 @@ class ShiftingBayes(Shifting):
         """
         Search the 0 electron regime.
         """
-        self._step_label = 'Search empty regime'
+        self._step_label = '2. Search 0 e-'
 
         no_line_in_a_row = 0
         nb_steps = 0
@@ -23,7 +23,7 @@ class ShiftingBayes(Shifting):
         # left corder of the diagram (for hard policy only)
         while no_line_in_a_row < self._nb_validation_empty and \
                 nb_steps < self._search_zero_electron_limit and \
-                not (self.is_max_left() and self.is_max_up()):
+                not self.is_max_left():
             nb_steps += 1
             line_detected, confidence = self.is_transition_line()
 

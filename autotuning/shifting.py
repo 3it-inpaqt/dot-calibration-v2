@@ -32,7 +32,7 @@ class Shifting(AutotuningProcedure):
 
         :return: True if we found a line, False if we reach the step limit without detecting a line.
         """
-        self._step_label = 'Search first line'
+        self._step_label = '1. Search first line'
 
         step_count = 0
         # Search until step limit reach, or we arrive at the top left corder of the diagram (for hard policy only)
@@ -56,7 +56,7 @@ class Shifting(AutotuningProcedure):
         """
         Search the 0 electron regime.
         """
-        self._step_label = 'Search empty regime'
+        self._step_label = '2. Search 0 e-'
 
         no_line_in_a_row = 0
         nb_steps = 0
@@ -64,7 +64,7 @@ class Shifting(AutotuningProcedure):
         # left corder of the diagram (for hard policy only)
         while no_line_in_a_row < self._nb_validation_empty and \
                 nb_steps < self._search_zero_electron_limit and \
-                not (self.is_max_left() and self.is_max_up()):
+                not self.is_max_left():
             nb_steps += 1
             line_detected, _ = self.is_transition_line()
 
@@ -89,7 +89,7 @@ class Shifting(AutotuningProcedure):
 
         :return: True if we found the first line, False if we reach the step limit without detecting a line.
         """
-        self._step_label = 'Search 1 e−'
+        self._step_label = '3. Search 1 e−'
 
         nb_steps = 0
         # Search until step limit reach, or we arrive at the bottom right corder of the diagram (for hard policy only)
