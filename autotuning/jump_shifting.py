@@ -7,8 +7,8 @@ from classes.data_structures import Direction
 
 class JumpShifting(AutotuningProcedure):
     # Number of exploration steps before to give up each phase
-    _max_steps_exploration: int = 400
-    _max_steps_search_empty: int = 60
+    _max_steps_exploration: int = 600
+    _max_steps_search_empty: int = 300
 
     # Line angle degree (0 = horizontal - 90 = vertical)
     _line_direction: int = 90
@@ -90,7 +90,7 @@ class JumpShifting(AutotuningProcedure):
                          check_stuck=self.is_max_left)
         right = Direction(last_x=self.x, last_y=self.y, move=self._move_right_perpendicular_to_line,
                           check_stuck=self.is_max_right)
-        directions = [left, right]
+        directions = (left, right)
 
         while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions):
             for direction in (d for d in directions if not d.is_stuck):
@@ -116,7 +116,7 @@ class JumpShifting(AutotuningProcedure):
 
         x, y = self._leftmost_line_coord
         self.move_to_coord(x, y)
-        self._move_right_perpendicular_to_line()
+        self._move_right_perpendicular_to_line(self._default_step_x * 2)
 
         # Enforce the boundary policy to make sure the final guess is in the diagram area
         self._enforce_boundary_policy(force=True)
@@ -129,7 +129,6 @@ class JumpShifting(AutotuningProcedure):
 
         :return: True if a line is detected and considered as valid.
         """
-        self._step_label = self._step_label + '\n    > checking line'
 
         # Infer with the model at the current position
         line_detected, _ = self.is_transition_line()
