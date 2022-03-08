@@ -79,6 +79,7 @@ class StepHistoryEntry:
     model_classification: bool
     model_confidence: bool
     ground_truth: bool
+    step_label: str
 
     def is_classification_correct(self) -> bool:
         """ Return True only if model_classification is the same as the ground_truth. """

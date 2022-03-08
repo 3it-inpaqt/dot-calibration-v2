@@ -16,6 +16,8 @@ class JumpShiftingBayes(JumpShifting):
 
         :return: True if a line is detected and considered as valid.
         """
+        self._step_label = self._step_label + '\n    > checking line'
+
         # Infer with the model at the current position
         line_detected, confidence = self.is_transition_line()
 
