@@ -27,7 +27,7 @@ class JumpShiftingBayes(JumpShifting):
             self.move_to_coord(x, y)  # Back to the position we were before checking
 
         # If this is the leftmost line detected so far, save it
-        if line_detected and (self._leftmost_line_coord is None or self.y < self._leftmost_line_coord[1]):
+        if line_detected and (self._leftmost_line_coord is None or self.x < self._leftmost_line_coord[1]):
             self._leftmost_line_coord = self.x, self.y
 
         return line_detected
