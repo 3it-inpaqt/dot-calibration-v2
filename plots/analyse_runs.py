@@ -66,6 +66,34 @@ def compare_autotuning():
     plt.show(block=False)
 
 
+def compare_models():
+    data = load_runs('ref-01*')
+
+    # Rename col for auto plot labels
+    data.rename(columns={'settings.research_group': 'Datasets',
+                         'settings.model_type': 'Model'}, inplace=True)
+
+    for metric in ['recall', 'precision', 'accuracy', 'f1']:
+        metric_col = metric.capitalize()
+        data[metric_col] = data['results.final_classification_results'].map(lambda a: a[metric])
+
+        order = ['FF', 'CNN', 'BCNN']
+        ax = sns.barplot(x="Model", y=metric_col, data=data, hue='Datasets', ci='sd', order=order)
+
+        # Limit min / max value +/- 10%
+        ax.set(ylim=(max(data[metric_col].min() - 0.1, 0), min(data[metric_col].max() + 0.1, 1)))
+        plt.gca().yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
+        # Write values in bars
+        for ctr in ax.containers:
+            ax.bar_label(ctr, padding=-25, labels=[f'{x:.1%}' for x in ctr.datavalues], fontsize=14, color='w')
+
+        plt.title(f'Trained models {metric_col} comparison')
+        # Put the legend out of the figure (middle bottom)
+        plt.legend(bbox_to_anchor=(0.5, -0.2), loc='center', ncol=2)
+        plt.tight_layout()
+        plt.show(block=False)
+
+
 def repeat_analyse():
     # Print average result of a repeated run with different seed
     data = load_runs('tmp-*')
@@ -182,4 +210,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    layers_size_analyse()
+    compare_models()
