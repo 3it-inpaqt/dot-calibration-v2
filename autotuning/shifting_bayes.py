@@ -15,7 +15,7 @@ class ShiftingBayes(Shifting):
         """
         Search the 0 electron regime.
         """
-        self._step_label = '2. Search 0 e-'
+        self._step_name = '2. Search 0 e-'
 
         no_line_in_a_row = 0
         nb_steps = 0
@@ -49,7 +49,7 @@ class ShiftingBayes(Shifting):
         :param current_confidence: The line classification confidence for the inference of the current position.
         :return: True if it was possible to follow the line the required number of time in a row.
         """
-        self._step_label = self._step_label + '\n    > checking line'
+        self._step_descr = 'checking line'
 
         max_to_confirm = self._nb_validation_line_forward if up else self._nb_validation_line_backward
         best_guess, best_confidence = current_line, current_confidence

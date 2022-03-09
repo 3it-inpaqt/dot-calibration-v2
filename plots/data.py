@@ -185,7 +185,7 @@ def plot_diagram(x_i, y_i,
             text += f'  - Pred: {last_class.capitalize(): <7} {"(good) " if last_correct else "(wrong)"}\n'
             text += f'  - Conf: {scan_history[-1].model_confidence: >4.0%}\n\n'
             text += f'Tuning step:\n'
-            text += f'  {scan_history[-1].step_label}'
+            text += f'  {scan_history[-1].description}'
 
         plt.text(1.03, 0.8, text, horizontalalignment='left', verticalalignment='top', fontsize=8,
                  fontfamily='monospace', transform=plt.gca().transAxes)

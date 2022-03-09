@@ -33,7 +33,7 @@ class JumpShifting(AutotuningProcedure):
 
         :return: True if we found a line, False if we reach the step limit without detecting a line.
         """
-        self._step_label = '1. Search first line'
+        self._step_name = '1. Search first line'
 
         # First scan at the start position
         if self._is_confirmed_line():
@@ -70,7 +70,7 @@ class JumpShifting(AutotuningProcedure):
 
         :return: The estimated direction in degree.
         """
-        self._step_label = 'Search line direction'
+        self._step_name = 'Search line direction'
 
         return 75  # Hardcoded for now
 
@@ -78,7 +78,7 @@ class JumpShifting(AutotuningProcedure):
         """
         Explore the diagram by scanning patch perpendicular to the estimated lines direction.
         """
-        self._step_label = '2. Search 0 e-'
+        self._step_name = '2. Search 0 e-'
 
         # At the beginning of this function we should be on a line.
         # Since this is the first we met, this is the leftmost by default.
@@ -97,7 +97,7 @@ class JumpShifting(AutotuningProcedure):
         while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions):
             for direction in (d for d in directions if not d.is_stuck):
                 avg_line_distance = self._get_avg_line_distance()
-                self._step_label = f'2. Search 0 e-\n    > avg line dist: {avg_line_distance:.1f}'
+                self._step_descr = f'avg line dist: {avg_line_distance:.1f}'
                 nb_search_steps += 1
 
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
@@ -150,7 +150,7 @@ class JumpShifting(AutotuningProcedure):
         line_detected, _ = self.is_transition_line()
 
         # If this is the leftmost line detected so far, save it
-        if line_detected and (self._leftmost_line_coord is None or self.y < self._leftmost_line_coord[1]):
+        if line_detected and (self._leftmost_line_coord is None or self.x < self._leftmost_line_coord[0]):
             self._leftmost_line_coord = self.x, self.y
 
         return line_detected

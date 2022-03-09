@@ -32,7 +32,7 @@ class Shifting(AutotuningProcedure):
 
         :return: True if we found a line, False if we reach the step limit without detecting a line.
         """
-        self._step_label = '1. Search first line'
+        self._step_name = '1. Search first line'
 
         step_count = 0
         # Search until step limit reach, or we arrive at the top left corder of the diagram (for hard policy only)
@@ -56,7 +56,7 @@ class Shifting(AutotuningProcedure):
         """
         Search the 0 electron regime.
         """
-        self._step_label = '2. Search 0 e-'
+        self._step_name = '2. Search 0 e-'
 
         no_line_in_a_row = 0
         nb_steps = 0
@@ -89,7 +89,7 @@ class Shifting(AutotuningProcedure):
 
         :return: True if we found the first line, False if we reach the step limit without detecting a line.
         """
-        self._step_label = '3. Search 1 e−'
+        self._step_name = '3. Search 1 e−'
 
         nb_steps = 0
         # Search until step limit reach, or we arrive at the bottom right corder of the diagram (for hard policy only)
@@ -122,7 +122,7 @@ class Shifting(AutotuningProcedure):
         :param current_confidence: The line classification confidence for the inference of the current position.
         :return: True if it was possible to follow the line the required number of time in a row.
         """
-        self._step_label = self._step_label + '\n    > checking line'
+        self._step_descr = 'checking line'
 
         nb_to_confirm = self._nb_validation_line_forward if up else self._nb_validation_line_backward
 
@@ -138,5 +138,7 @@ class Shifting(AutotuningProcedure):
                 self.move_down()
             line_detected, _ = self.is_transition_line()
             if not line_detected or self.is_max_up():
+                self._step_descr = ''
                 return False
+        self._step_descr = ''
         return True  # Line confirmed

@@ -41,7 +41,10 @@ class AutotuningProcedure:
         self.diagram: Optional[Diagram] = None
         self.x: Optional[int] = None
         self.y: Optional[int] = None
-        self._step_label: str = 'Not started'
+
+        # Text description of the current activity for plotting
+        self._step_name: str = 'Not started'
+        self._step_descr: str = ''
 
         # The default move step. If None the (patch size - offset) is use.
         if default_step is None:
@@ -69,7 +72,8 @@ class AutotuningProcedure:
         self.x = None
         self.y = None
         self._scan_history.clear()
-        self._step_label = 'Not started'
+        self._step_name = 'Not started'
+        self._step_descr: str = ''
 
     def is_transition_line(self) -> (bool, float):
         """
@@ -105,8 +109,9 @@ class AutotuningProcedure:
                 confidence = confidence.item()
 
         # Record the diagram scanning activity.
+        step_description = self._step_name + (f'\n    > {self._step_descr}' if len(self._step_descr) > 0 else '')
         self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
-                                                   self._step_label))
+                                                   step_description))
 
         return prediction, confidence
 

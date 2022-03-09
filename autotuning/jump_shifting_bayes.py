@@ -40,7 +40,6 @@ class JumpShiftingBayes(JumpShifting):
         :param current_confidence: The line classification confidence for the inference of the current position.
         :return: True if it was possible to follow the line the required number of time in a row.
         """
-        self._step_label = self._step_label + '\n    > checking line'
 
         nb_search_steps = 0
 
@@ -53,6 +52,7 @@ class JumpShiftingBayes(JumpShifting):
         while nb_search_steps < self._max_steps_checking_line and not Direction.all_stuck(directions):
             for direction in (d for d in directions if not d.is_stuck):
                 nb_search_steps += 1
+                self._step_descr = f'checking line ({nb_search_steps}/{self._max_steps_checking_line})'
 
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
                 direction.move()  # Move according to the current direction
@@ -63,10 +63,12 @@ class JumpShiftingBayes(JumpShifting):
 
                 if confidence > self._confidence_valid:
                     # Enough confidence to confirm or not
+                    self._step_descr = ''
                     return line_detected
 
                 # Not enough information to validate, but keep the best inference
                 if confidence > best_confidence:
                     best_guess = line_detected
 
+        self._step_descr = ''
         return best_guess
