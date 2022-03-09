@@ -55,6 +55,9 @@ class AutotuningProcedure:
         # Performance statistic (See StepHistoryEntry dataclass)
         self._scan_history: List[StepHistoryEntry] = []
 
+        # Initialise procedure parameters (could be useful for child classes)
+        self.reset_procedure()
+
     def __str__(self) -> str:
         return f'{type(self).__name__} ({"Oracle" if self.is_oracle_enable else self.model})'
 

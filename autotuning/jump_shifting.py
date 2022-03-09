@@ -8,7 +8,7 @@ from classes.data_structures import Direction
 class JumpShifting(AutotuningProcedure):
     # Number of exploration steps before to give up each phase
     _max_steps_exploration: int = 600
-    _max_steps_search_empty: int = 300
+    _max_steps_search_empty: int = 100
 
     # Line angle degree (0 = horizontal - 90 = vertical)
     _line_direction: int = 90
@@ -91,9 +91,13 @@ class JumpShifting(AutotuningProcedure):
         right = Direction(last_x=self.x, last_y=self.y, move=self._move_right_perpendicular_to_line,
                           check_stuck=self.is_max_right)
         directions = (left, right)
+        left.no_line_count = 0
+        right.no_line_count = 0
 
         while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions):
             for direction in (d for d in directions if not d.is_stuck):
+                avg_line_distance = self._get_avg_line_distance()
+                self._step_label = f'2. Search 0 e-\n    > avg line dist: {avg_line_distance:.1f}'
                 nb_search_steps += 1
 
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
@@ -101,7 +105,19 @@ class JumpShifting(AutotuningProcedure):
                 direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                 direction.is_stuck = direction.check_stuck()  # Check if reach a corner
 
-                self._is_confirmed_line()  # Check line and save position if leftmost one
+                line_detected = self._is_confirmed_line()  # Check line and save position if leftmost one
+
+                # If new line detected, save distance and reset counter
+                if line_detected:
+                    if direction.no_line_count >= 1:
+                        self._line_distances.append(direction.no_line_count)
+                    direction.no_line_count = 0
+                # If no line detected since long time compare to the average distance between line, stop to go in this
+                # direction
+                else:
+                    direction.no_line_count += 1
+                    if direction.no_line_count > 3 * avg_line_distance:  # TODO could use x2 mean + x2 std
+                        direction.is_stuck = True
 
     def _guess_one_electron(self) -> None:
         """
@@ -182,8 +198,12 @@ class JumpShifting(AutotuningProcedure):
     def _move_down_follow_line(self, step_size: Optional[int] = None) -> None:
         self._move_relative_to_line(-self._line_direction, step_size)
 
+    def _get_avg_line_distance(self) -> float:
+        """ Get the mean line distance. """
+        return sum(self._line_distances) / len(self._line_distances)
+
     def reset_procedure(self):
         super().reset_procedure()
-        self._line_direction = 90
-        self._line_distances = []
+        self._line_direction = 90  # Prior assumption about line direction
+        self._line_distances = [5]  # Prior assumption about distance between lines
         self._leftmost_line_coord = None
