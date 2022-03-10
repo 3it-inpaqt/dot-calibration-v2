@@ -1,4 +1,5 @@
 import io
+from copy import copy
 from math import ceil, sqrt
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
@@ -9,6 +10,7 @@ import seaborn as sns
 from matplotlib import patches
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, Normalize
+from matplotlib.legend_handler import HandlerBase
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
@@ -65,12 +67,14 @@ def plot_diagram(x_i, y_i,
         else:
             plt.imshow(pixels, interpolation='none', cmap='copper', extent=boundaries)
 
+    charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
         for regime, polygon in charge_regions:
             polygon_x, polygon_y = polygon.exterior.coords.xy
-            plt.fill(polygon_x, polygon_y, 'b', alpha=.3, edgecolor='b', snap=True)
+            plt.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
             label_x, label_y = list(polygon.centroid.coords)[0]
-            plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b')
+            charge_text = plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b', weight='bold',
+                                   bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
 
     if transition_lines is not None:
         for i, line in enumerate(transition_lines):
@@ -196,7 +200,18 @@ def plot_diagram(x_i, y_i,
     plt.ylabel('Gate 2 (V)')
 
     if legend:
-        plt.legend(ncol=5, loc='lower center', bbox_to_anchor=(0.5, -0.35))
+        handles, labels = plt.gca().get_legend_handles_labels()
+        handler_map = None
+        if charge_text is not None:
+            # Create custom legend for charge regime text
+            charge_text = copy(charge_text)
+            charge_text.set(text='N')
+            handler_map = {type(charge_text): TextHandler()}
+            handles.append(charge_text)
+            labels.append('Charge regime')
+
+        plt.legend(ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.35), handles=handles, labels=labels,
+                   handler_map=handler_map)
 
     if focus_area:
         plt.axis(focus_area)
@@ -381,3 +396,21 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
     fig.suptitle(title)
 
     save_plot(f'sample_{file_name}')
+
+
+class TextHandler(HandlerBase):
+    """
+    Custom legend handler for text field.
+    From: https://stackoverflow.com/a/47382270/2666094
+    """
+
+    def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+        h = copy(orig_handle)
+        h.set_position((width / 2., height / 2.))
+        h.set_transform(trans)
+        h.set_ha("center")
+        h.set_va("center")
+        fp = orig_handle.get_font_properties().copy()
+        fp.set_size(fontsize)
+        h.set_font_properties(fp)
+        return [h]
