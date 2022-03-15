@@ -1,11 +1,32 @@
+from typing import List, Union
+
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 from matplotlib import ticker
 from matplotlib.ticker import PercentFormatter
 from pandas import DataFrame
+from tabulate import tabulate
 
 from datasets.diagram import ChargeRegime
 from utils.output import load_runs, set_plot_style
+
+
+def load_runs_clean(patterns: Union[str, List[str]]) -> pd.DataFrame:
+    """
+    Load all information form files in the out directory matching with patterns.
+    Then process some field for easier use.
+
+    :param patterns: The pattern, or a list of pattern, to filter runs.
+    :return: A dataframe containing all information, with the columns as "file.key".
+    """
+    data = load_runs(patterns)
+
+    # Move metrics results to root level
+    for metric in ['recall', 'precision', 'accuracy', 'f1']:
+        data[metric.capitalize()] = data['results.final_classification_results'].map(lambda a: a[metric])
+
+    return data
 
 
 def compare_autotuning():
@@ -64,6 +85,39 @@ def compare_autotuning():
     plt.title(f'Autotuning procedures number of steps')
     plt.tight_layout()
     plt.show(block=False)
+
+
+def compare_autotuning_stats():
+    data = load_runs_clean([
+        'ref-louis-ff',
+        'ref-louis-cnn',
+        'ref-louis-bcnn',
+    ])
+    stats_cols_names = {'F1': 'F1',
+                        'Accuracy': 'Accuracy',
+                        'timers.network_training': 'Training (s)',
+                        'network_info.total_params': 'Nb parameters'}
+
+    # Select stats columns
+    stats_cols = data[stats_cols_names.keys()]
+    stats_cols = stats_cols.rename(columns=stats_cols_names)
+
+    # Select settings columns
+    settings_cols = data.filter(regex=r'^settings\..*')
+    # Convert list to tuple for hashable uniques values
+    settings_cols = settings_cols.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
+    # Remove columns with same values
+    nb_unique = settings_cols.nunique()
+    cols_to_drop = nb_unique[nb_unique == 1].index
+    settings_cols.drop(cols_to_drop, axis=1, inplace=True)
+    # Rename and order
+    settings_cols.rename(columns={n: n[9:] for n in settings_cols.columns}, inplace=True)
+    settings_cols.insert(0, 'run_name', settings_cols.pop('run_name'))
+
+    # Print all
+    all_cols = pd.concat([settings_cols, stats_cols], axis=1)
+    all_cols.rename(columns={n: n.capitalize().replace('_', ' ') for n in all_cols.columns}, inplace=True)
+    print(tabulate(all_cols, showindex=False, headers="keys", tablefmt='fancy_grid'))
 
 
 def compare_models():
@@ -210,4 +264,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    compare_models()
+    compare_autotuning_stats()
