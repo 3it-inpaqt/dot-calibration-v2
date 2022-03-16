@@ -1,7 +1,6 @@
 import io
 import re
 from collections.abc import Iterable
-from dataclasses import asdict
 from itertools import chain
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
@@ -66,7 +65,7 @@ def init_out_directory() -> None:
 
     parameter_file = run_dir / OUT_FILES['settings']
     with open(parameter_file, 'w+') as f:
-        yaml.dump(asdict(settings), f)
+        yaml.dump(yaml_preprocess(settings), f)
 
     logger.debug(f'Parameters saved in {parameter_file}')
 

@@ -26,8 +26,11 @@ class CNN(ClassifierNN):
         super().__init__()
 
         self.conv_layers = nn.ModuleList()
-        self.conv_layers.append(nn.Conv2d(in_channels=1, out_channels=12, kernel_size=4))
-        self.conv_layers.append(nn.Conv2d(in_channels=12, out_channels=24, kernel_size=4))
+        last_nb_channel = 1
+        for channel, kernel in zip(settings.conv_layers_channel, settings.conv_layers_kernel):
+            self.conv_layers.append(nn.Conv2d(in_channels=last_nb_channel, out_channels=channel,
+                                              kernel_size=(kernel, kernel)))
+            last_nb_channel = channel
 
         # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 

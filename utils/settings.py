@@ -140,10 +140,14 @@ class Settings:
 
     # The type of model to use (could be a neural network).
     # Have to be in the implemented list: FF, BFF, CNN, BCNN.
-    model_type: str = 'FF'
+    model_type: str = 'CNN'
 
-    # The number hidden layer and their respective number of neurons.
-    hidden_layers_size: Sequence = (200, 200)
+    # The number of fully connected hidden layer and their respective number of neurons.
+    hidden_layers_size: Sequence = (100, 50)
+
+    # The number of convolution layers and their respective properties (for CNN models only).
+    conv_layers_kernel: Sequence = (3, 3)
+    conv_layers_channel: Sequence = (6, 12)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -295,6 +299,10 @@ class Settings:
         assert isinstance(self.model_type, str) and self.model_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN'], \
             f'Invalid network type {self.model_type}'
         assert all((a > 0 for a in self.hidden_layers_size)), 'Hidden layer size should be more than 0'
+        assert len(self.conv_layers_channel) == len(self.conv_layers_kernel), \
+            'Convolution channel and kernels list should have the same length'
+        assert all((a > 0 for a in self.conv_layers_channel)), 'Conv layer nb channel should be more than 0'
+        assert all((a > 1 for a in self.conv_layers_kernel)), 'Conv layer kernel size should be more than 1'
 
         # Training
         # TODO should also accept "cuda:1" format

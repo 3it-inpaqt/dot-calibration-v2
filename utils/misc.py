@@ -1,6 +1,6 @@
 import os
 from copy import copy
-from dataclasses import is_dataclass
+from dataclasses import asdict, is_dataclass
 from typing import Any, Dict, Iterable, List, Tuple, Union
 
 import torch
@@ -81,13 +81,13 @@ def yaml_preprocess(item: Any) -> Union[str, int, float, List, Dict]:
 
     # If dataclass use dictionary conversion
     if is_dataclass(item) and not isinstance(item, type):
-        item = item.__dict__
+        item = asdict(item)
 
     # If it's a dictionary, process the values
     if isinstance(item, dict):
         item = copy(item)
         for name, value in item.items():
-            item[name] = yaml_preprocess(value)
+            item[name] = yaml_preprocess(value)  # TODO Process name too?
 
         return item
 
