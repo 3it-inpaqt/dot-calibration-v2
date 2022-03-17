@@ -132,7 +132,8 @@ def main(operations: Set[Operation], pattern: str) -> None:
             clean_up(affected_dirs)
 
         if Operation.ARCHIVE in operations:
-            archive(affected_dirs, runs_dir / 'out-archive.zip')
+            file_name = 'out-archive' if pattern.strip() == '*' else pattern.replace('*', '').strip()
+            archive(affected_dirs, runs_dir / f'{file_name}.zip')
 
         if Operation.REMOVE in operations:
             remove(affected_dirs)
