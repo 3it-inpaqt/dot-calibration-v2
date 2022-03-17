@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.data_structures import Direction
+from utils.settings import settings
 
 
 class JumpShifting(AutotuningProcedure):
@@ -72,7 +73,11 @@ class JumpShifting(AutotuningProcedure):
         """
         self._step_name = 'Search line direction'
 
-        return 75  # Hardcoded for now
+        # Hardcoded for now
+        if settings.research_group == 'michel_pioro_ladriere':
+            return 75
+        elif settings.research_group == 'louis_gaudreau':
+            return 45
 
     def _search_empty(self) -> None:
         """
@@ -132,7 +137,7 @@ class JumpShifting(AutotuningProcedure):
 
         x, y = self._leftmost_line_coord
         self.move_to_coord(x, y)
-        self._move_right_perpendicular_to_line(self._default_step_x * 2)
+        self._move_right_perpendicular_to_line(self._default_step_x * (self._get_avg_line_distance() / 2 + 1))
 
         # Enforce the boundary policy to make sure the final guess is in the diagram area
         self._enforce_boundary_policy(force=True)
