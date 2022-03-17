@@ -93,10 +93,19 @@ def compare_autotuning_stats():
         'ref-louis-cnn',
         'ref-louis-bcnn',
     ])
-    stats_cols_names = {'F1': 'F1',
+    stats_cols_names = {'timers.network_training': 'Training (s)',
+                        'network_info.total_params': 'Nb parameters',
                         'Accuracy': 'Accuracy',
-                        'timers.network_training': 'Training (s)',
-                        'network_info.total_params': 'Nb parameters'}
+                        'F1': 'F1', }
+
+    hidden_cols = ('settings.plot_diagrams', 'settings.save_gif', 'settings.save_images', 'settings.show_images',
+                   'settings.visual_progress_bar', 'settings.logger_console_level', 'settings.save_video',
+                   'settings.console_color', 'settings.seed', 'settings.label_offset_x', 'settings.label_offset_y',
+                   'settings.pixel_size')
+
+    # Remove hidden columns
+    for col in hidden_cols:
+        del data[col]
 
     # Select stats columns
     stats_cols = data[stats_cols_names.keys()]
