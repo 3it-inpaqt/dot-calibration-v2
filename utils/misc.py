@@ -43,9 +43,11 @@ def clip(n, smallest, largest):
     return max(smallest, min(n, largest))
 
 
-def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[nn.Conv2d]) -> Tuple[int, ...]:
+def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[Union[nn.Conv2d, nn.MaxPool2d]]) \
+        -> Tuple[int, ...]:
     """
-    Compute the size of output dimension of a list of convolutional layers, according to the initial input size.
+    Compute the size of output dimension of a list of convolutional and max pooling layers, according to the initial
+    input size.
     Doesn't take the batch size into account.
 
     :param input_size: The initial input size.
@@ -53,15 +55,15 @@ def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[nn.Conv2d
     :return: The final output dimension.
     """
     out_h, out_w = input_size
-    for layer in layers:
-        # Compatibility with BayesianConv2d where padding, dilation and stride are integer instead of tuple
-        padding = (layer.padding, layer.padding) if isinstance(layer.padding, int) else layer.padding
-        dilation = (layer.dilation, layer.dilation) if isinstance(layer.dilation, int) else layer.dilation
-        stride = (layer.stride, layer.stride) if isinstance(layer.stride, int) else layer.stride
+    for la in layers:
+        # Compatibility with Max Pooling and BayesianConv2d where properties are integer instead of tuple
+        padding = (la.padding, la.padding) if isinstance(la.padding, int) else la.padding
+        dilation = (la.dilation, la.dilation) if isinstance(la.dilation, int) else la.dilation
+        stride = (la.stride, la.stride) if isinstance(la.stride, int) else la.stride
+        kernel_size = (la.kernel_size, la.kernel_size) if isinstance(la.kernel_size, int) else la.kernel_size
 
-        out_h = (out_h + 2 * padding[0] - dilation[0] * (layer.kernel_size[0] - 1) - 1) / stride[0] + 1
-
-        out_w = (out_w + 2 * padding[1] - dilation[1] * (layer.kernel_size[1] - 1) - 1) / stride[1] + 1
+        out_h = (out_h + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1
+        out_w = (out_w + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1
 
     return layers[-1].out_channels, int(out_h), int(out_w)
 

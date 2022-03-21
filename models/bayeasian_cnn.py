@@ -36,8 +36,6 @@ class BCNN(ClassifierBayesNN):
                                                    kernel_size=(kernel, kernel)))
             last_nb_channel = channel
 
-        # self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-
         # Number of neurons per layer
         # eg: input_size, hidden size 1, hidden size 2, ..., nb_classes
         fc_layer_sizes = [math.prod(calc_out_conv_layers(input_shape, self.conv_layers))]
