@@ -38,7 +38,7 @@ class Settings:
     # The metric to use for plotting, logging and model performance evaluation.
     # See https://yonvictor.notion.site/Classification-Metrics-2074032f927847c0885918eb9ddc508c
     # Possible values: 'precision', 'recall', 'f1'.
-    main_metric: str = 'precision'
+    main_metric: str = 'f1'
 
     # ==================================================================================================================
     # ============================================== Logging and Outputs ===============================================
@@ -72,7 +72,7 @@ class Settings:
     # If True and the run have a valid name, save animated GIF in the run directory
     save_gif: bool = False
 
-    # If Ture and the run have a valid name, save video in the run directory
+    # If True and the run have a valid name, save video in the run directory
     save_video: bool = False
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at the end of the
@@ -89,29 +89,29 @@ class Settings:
     # ==================================================================================================================
 
     # If true the data will be loaded from cache if possible.
-    use_data_cache: bool = True
+    use_data_cache: bool = False
 
     # The size of a diagram patch send to the network input (number of pixel)
-    patch_size_x: int = 10
-    patch_size_y: int = 10
+    patch_size_x: int = 18
+    patch_size_y: int = 18
 
     # The patch overlapping (number of pixel)
-    patch_overlap_x: int = 5
-    patch_overlap_y: int = 5
+    patch_overlap_x: int = 10
+    patch_overlap_y: int = 10
 
     # The width of the border to ignore during the patch labeling (number of pixel)
     # Eg.: If one line touch only 1 pixel at the right of the patch and the label_offset_x is >1 then the patch will be
     # labeled as "no_line"
-    label_offset_x: int = 0
-    label_offset_y: int = 0
+    label_offset_x: int = 6
+    label_offset_y: int = 6
 
     # The size of the interpolated pixel in Volt.
     # Should be available in the dataset folder.
-    pixel_size: float = 0.0025
+    pixel_size: float = 0.001
 
     # The name of the research group who provide the data (currently: 'louis_gaudreau' or 'michel_pioro_ladriere').
     # Should be available in the dataset folder.
-    research_group: str = 'louis_gaudreau'
+    research_group: str = 'michel_pioro_ladriere'
 
     # The percentage of data kept for testing only
     test_ratio: float = 0.2
@@ -128,7 +128,7 @@ class Settings:
 
     # If True, the training dataset is balanced using weighted random sampling.
     # see https://github.com/ufoym/imbalanced-dataset-sampler
-    balance_class_sampling: bool = False
+    balance_class_sampling: bool = True
 
     # The path to yaml file containing the normalization values (min and max).
     # Use to consistant normalization of the data after the training.
@@ -146,8 +146,8 @@ class Settings:
     hidden_layers_size: Sequence = (100, 50)
 
     # The number of convolution layers and their respective properties (for CNN models only).
-    conv_layers_kernel: Sequence = (3, 3)
-    conv_layers_channel: Sequence = (6, 12)
+    conv_layers_kernel: Sequence = (4, 4)
+    conv_layers_channel: Sequence = (12, 24)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -170,37 +170,37 @@ class Settings:
     # Dropout rate for every dropout layers defined in networks.
     # If a notwork model doesn't have a dropout layer this setting will have no effect.
     # 0 skip dropout layers
-    dropout: int = 0.2
+    dropout: int = 0.4
 
     # The size of the mini-batch for the training and testing.
-    batch_size: int = 32
+    batch_size: int = 512
 
     # The number of training epoch.
     # Can't be set as the same time as nb_train_update, since it indirectly define nb_epoch.
     # 0 is disabled (nb_train_update must me > 0)
-    nb_epoch: int = 20
+    nb_epoch: int = 0
 
     # The number of update before to stop the training.
     # This is just a convenant way to define the number of epoch with variable batch and dataset size.
     # The final value will be a multiple of the number of batch in 1 epoch (rounded to the higher number of epoch).
     # Can't be set as the same time as nb_epoch, since it indirectly define it.
     # 0 is disabled (nb_epoch must me > 0)
-    nb_train_update: int = 0
+    nb_train_update: int = 20_000
 
     # Save the best network state during the training based on the test main metric.
     # Then load it when the training is complet.
     # The file will be at the root of run directory, under then name: "best_network.pt"
     # Required checkpoints_per_epoch > 0 and checkpoint_validation = True
-    early_stopping: bool = False
+    early_stopping: bool = True
 
     # The number of sample used to compute the loss of bayesian networks.
     bayesian_nb_sample_train: int = 3
 
     # The number of sample used to compute model inference during the validation.
-    bayesian_nb_sample_valid: int = 10
+    bayesian_nb_sample_valid: int = 3
 
     # The number of sample used to compute model inference during the testing.
-    bayesian_nb_sample_test: int = 100
+    bayesian_nb_sample_test: int = 10
 
     # The metric to use to compute the model inference confidence.
     # Should be in: 'std', 'norm_std', 'entropy', 'norm_entropy'
@@ -232,7 +232,7 @@ class Settings:
 
     # The name of the autotuning procedure to use.
     # Have to be in the implemented list: random, shifting, shifting_b, jump, jump_b, full
-    autotuning_procedure: str = 'random'
+    autotuning_procedure: str = 'jump_b'
 
     # If True the line classification model cheat by using the diagram labels (no neural network loaded).
     # Used for baselines.
@@ -247,7 +247,7 @@ class Settings:
     autotuning_oracle_no_line_random: float = 0
 
     # Number of iteration per diagram for the autotuning test
-    autotuning_nb_iteration: int = 100
+    autotuning_nb_iteration: int = 50
 
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
