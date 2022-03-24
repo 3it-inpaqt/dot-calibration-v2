@@ -181,7 +181,7 @@ class Diagram:
         """
         plot_diagram(self.x_axes, self.y_axes, self.values, self.file_basename + label_extra, 'nearest',
                      self.x_axes[1] - self.x_axes[0], transition_lines=self.transition_lines,
-                     charge_regions=self.charge_areas, focus_area=focus_area, show_offset=False)
+                     charge_regions=self.charge_areas, focus_area=focus_area, show_offset=False, scale_bar=True)
 
     @staticmethod
     def load_diagrams(pixel_size,

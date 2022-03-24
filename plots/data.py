@@ -30,6 +30,7 @@ def plot_diagram(x_i, y_i,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True,
                  scan_history: List["StepHistoryEntry"] = None,
                  history_uncertainty: bool = False,
+                 scale_bar: bool = False,
                  final_coord: Tuple[int, int] = None,
                  save_in_buffer: bool = False,
                  text_stats: bool = False) -> Optional[Union[Path, io.BytesIO]]:
@@ -49,6 +50,8 @@ def plot_diagram(x_i, y_i,
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
      the uncertainty.
+    :param scale_bar: If True and pixels provided, plot the pixel color scale at the right of the diagram. If the data
+     are normalized this scale unit doesn't make sense.
     :param final_coord: The final tuning coordinates.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
     :param text_stats: If True, add statistics information in the plot.
@@ -66,6 +69,8 @@ def plot_diagram(x_i, y_i,
                        extent=boundaries)
         else:
             plt.imshow(pixels, interpolation='none', cmap='copper', extent=boundaries)
+            if scale_bar:
+                plt.colorbar(shrink=0.85, label='Current (A)')
 
     charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
@@ -329,7 +334,7 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
                             figsize=(number_per_class * 2, nb_classes * 2 + 1))
 
     for i, cl in enumerate(data_per_class):
-        axs[i, 0].set_title(f'{number_per_class} examples of "{QDSDLines.classes[i]}"', loc='left',
+        axs[i, 0].set_title(f'{number_per_class} examples of "{QDSDLines.classes[i].capitalize()}"', loc='left',
                             fontsize='xx-large', fontweight='bold')
         for j, class_data in enumerate(cl):
             axs[i, j].imshow(class_data.reshape(settings.patch_size_x, settings.patch_size_y),
