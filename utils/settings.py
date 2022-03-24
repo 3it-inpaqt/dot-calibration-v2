@@ -84,6 +84,9 @@ class Settings:
     # Always skipped if patches are loaded from cache.
     plot_diagrams: bool = False
 
+    # If True the image are saved in a format adapted to latex format (vectorial and no title).
+    image_latex_format: bool = False
+
     # ==================================================================================================================
     # ==================================================== Dataset =====================================================
     # ==================================================================================================================

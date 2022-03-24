@@ -84,8 +84,11 @@ def remove_out_directory(directory: Path) -> None:
 
     # Remove images
     if img_dir.is_dir():
-        # Remove png and gif images files
-        for image_file in chain(img_dir.glob('*.png'), img_dir.glob('*.gif'), img_dir.glob('*.mp4')):
+        # Remove every image or video files
+        for image_file in chain(img_dir.glob('*.png'),
+                                img_dir.glob('*.svg'),
+                                img_dir.glob('*.gif'),
+                                img_dir.glob('*.mp4')):
             image_file.unlink()
         img_dir.rmdir()
 
@@ -105,7 +108,8 @@ def set_plot_style():
         'axes.titlesize': 15,
         'figure.titlesize': 18,
         'axes.labelsize': 13,
-        'figure.autolayout': True
+        'figure.autolayout': True,
+        'svg.fonttype': 'none'  # Assume fonts are installed on the machine where the SVG will be viewed
     })
 
 
@@ -206,9 +210,10 @@ def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: boo
 
     save_path = None
     if settings.is_named_run() and settings.save_images:
-        save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, 'png', allow_overwrite)
+        out_format = 'svg' if settings.image_latex_format else 'png'
+        save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, out_format, allow_overwrite)
 
-        plt.savefig(save_path, dpi=200)
+        plt.savefig(save_path, dpi=200, transparent=settings.image_latex_format)
         logger.debug(f'Plot saved in {save_path}')
 
     # Plot image or close it

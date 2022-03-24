@@ -33,7 +33,8 @@ def plot_diagram(x_i, y_i,
                  scale_bar: bool = False,
                  final_coord: Tuple[int, int] = None,
                  save_in_buffer: bool = False,
-                 text_stats: bool = False) -> Optional[Union[Path, io.BytesIO]]:
+                 text_stats: bool = False,
+                 show_title: Optional[bool] = None) -> Optional[Union[Path, io.BytesIO]]:
     """
     Plot the interpolated image.
 
@@ -55,11 +56,14 @@ def plot_diagram(x_i, y_i,
     :param final_coord: The final tuning coordinates.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
     :param text_stats: If True, add statistics information in the plot.
+    :param show_title: If True plot figure title. If omitted, show title only if not latex format.
     :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
      instead of the path.
     """
 
     legend = False
+    # By default do not plot title for latex format.
+    show_title = not settings.image_latex_format if show_title is None else show_title
 
     with sns.axes_style("ticks"):  # Temporary change the axe style (avoid white ticks)
         boundaries = [np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)]
@@ -68,7 +72,7 @@ def plot_diagram(x_i, y_i,
             plt.imshow(np.zeros((len(x_i), len(y_i))), cmap=LinearSegmentedColormap.from_list('', ['white', 'white']),
                        extent=boundaries)
         else:
-            plt.imshow(pixels, interpolation='none', cmap='copper', extent=boundaries)
+            plt.imshow(pixels, interpolation='nearest', cmap='copper', extent=boundaries)
             if scale_bar:
                 plt.colorbar(shrink=0.85, label='Current (A)')
 
@@ -199,7 +203,9 @@ def plot_diagram(x_i, y_i,
         plt.text(1.03, 0.8, text, horizontalalignment='left', verticalalignment='top', fontsize=8,
                  fontfamily='monospace', transform=plt.gca().transAxes)
 
-    plt.title(f'{image_name}\ninterpolated ({interpolation_method}) - pixel size {round(pixel_size, 10) * 1_000}mV')
+    if show_title:
+        plt.title(f'{image_name}\ninterpolated ({interpolation_method}) - pixel size {round(pixel_size, 10) * 1_000}mV')
+
     plt.xlabel('Gate 1 (V)')
     plt.xticks(rotation=30)
     plt.ylabel('Gate 2 (V)')
@@ -259,7 +265,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             # Generate image
             buffer = plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                                   d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
-                                  show_offset=False, save_in_buffer=True, text_stats=True)
+                                  show_offset=False, save_in_buffer=True, text_stats=True, show_title=False)
             all_frames.append(buffer)
 
             # GIF frames
@@ -276,16 +282,17 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             # Show full diagram with tuning final coordinate
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
-                         show_offset=False, save_in_buffer=True, text_stats=True),
+                         show_offset=False, save_in_buffer=True, text_stats=True, show_title=False),
             # Show full diagram with tuning final coordinate + line labels
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=scan_history,
-                         final_coord=final_coord, show_offset=False, save_in_buffer=True, text_stats=True),
+                         final_coord=final_coord, show_offset=False, save_in_buffer=True, text_stats=True,
+                         show_title=False),
             # Show full diagram with tuning final coordinate + line & regime labels
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, charge_regions=d.charge_areas,
                          scan_history=scan_history, final_coord=final_coord, show_offset=False, save_in_buffer=True,
-                         text_stats=True)
+                         text_stats=True, show_title=False)
         ]
 
         all_frames.extend(end_frames)
@@ -338,7 +345,7 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
                             fontsize='xx-large', fontweight='bold')
         for j, class_data in enumerate(cl):
             axs[i, j].imshow(class_data.reshape(settings.patch_size_x, settings.patch_size_y),
-                             interpolation='none',
+                             interpolation='nearest',
                              cmap='copper')
 
             if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
@@ -375,7 +382,7 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
 
     for i, s in enumerate(samples):
         ax = axs[i // plot_length, i % plot_length]
-        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='none', cmap='copper')
+        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='nearest', cmap='copper')
 
         if confidences:
             # If it's a tuple we assume it is: mean, std, entropy
