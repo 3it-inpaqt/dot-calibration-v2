@@ -1,6 +1,6 @@
 from pathlib import Path
 from random import shuffle
-from typing import Callable, Iterable, List, Tuple
+from typing import Callable, Iterable, List, Tuple, Union
 
 import torch
 from torch.utils.data import Dataset
@@ -123,7 +123,7 @@ class QDSDLines(Dataset):
     @staticmethod
     def build_split_datasets(pixel_size,
                              research_group,
-                             test_ratio: float,
+                             test_ratio_or_names: Union[float, List[str]],
                              single_dot: bool = True,
                              validation_ratio: float = 0,
                              patch_size: Tuple[int, int] = (10, 10),
@@ -137,7 +137,8 @@ class QDSDLines(Dataset):
         :param pixel_size: The dataset pixel size to load
         :param research_group: The dataset research group to load
         :param single_dot: The dataset number of quantum dot to load
-        :param test_ratio: The ratio of patches reserved for test data
+        :param test_ratio_or_names: The ratio of patches reserved for test data or the list of diagram names to include
+         in test data.
         :param validation_ratio: The ratio of patches reserved for validation data (ignored if 0)
         :param patch_size: The size in pixel (x, y) of the patch to process (sub-area of the stability diagram)
         :param overlap: The overlapping size, in pixel (x, y) of the patch
@@ -146,12 +147,16 @@ class QDSDLines(Dataset):
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
 
+        use_test_ratio = isinstance(test_ratio_or_names, float)
+        test_patches = []
+        patches = []
         cache_path = Path(DATA_DIR, 'cache',
                           f'qdsd_lines_{research_group}_{pixel_size}V_'
                           f'{"single_" if single_dot else "double_"}'
                           f'{patch_size[0]}-{patch_size[1]}_{overlap[0]}-{overlap[1]}_'
                           f'{label_offset[0]}-{label_offset[1]}.p')
-        if settings.use_data_cache and cache_path.is_file():
+
+        if settings.use_data_cache and use_test_ratio and cache_path.is_file():
             # Fast load from cache
             patches = load_data_cache(cache_path)
         else:
@@ -163,23 +168,33 @@ class QDSDLines(Dataset):
                                              single_dot,
                                              True, False)
 
-            patches = []
             for diagram in diagrams:
-                patches.extend(diagram.get_patches(patch_size, overlap, label_offset))
+                diagram_patches = diagram.get_patches(patch_size, overlap, label_offset)
+                if not use_test_ratio and diagram.file_basename in test_ratio_or_names:
+                    test_patches.extend(diagram_patches)
+                else:
+                    patches.extend(diagram_patches)
 
-            logger.info(f'{len(patches)} items loaded from {len(diagrams)} diagrams')
+            logger.info(f'{len(patches) + len(test_patches)} items loaded from {len(diagrams)} diagrams')
+            if not use_test_ratio:
+                logger.info(f'{len(test_ratio_or_names)} diagrams used for test set ({len(test_patches)} items): '
+                            f'{", ".join(test_ratio_or_names)}')
 
-            if settings.use_data_cache:
+            if settings.use_data_cache and use_test_ratio:
                 # Save in cache for later runs
                 save_data_cache(cache_path, patches)
 
-        nb_patches = len(patches)
+        nb_patches = len(patches) + len(test_patches)
 
         # Shuffle patches before to split them into different the datasets
         shuffle(patches)
 
-        test_index = round(nb_patches * test_ratio)
-        test_set = QDSDLines(patches[:test_index], 'test')
+        if use_test_ratio:
+            test_index = round(nb_patches * test_ratio_or_names)
+            test_set = QDSDLines(patches[:test_index], 'test')
+        else:
+            test_index = 0
+            test_set = QDSDLines(test_patches, 'test')
 
         # With validation dataset
         if validation_ratio != 0:

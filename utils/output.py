@@ -126,7 +126,7 @@ def save_network_info(network_metrics: dict) -> None:
 
     network_info_file = Path(OUT_DIR, settings.run_name, OUT_FILES['network_info'])
 
-    with open(network_info_file, 'w+') as f:
+    with open(network_info_file, 'w') as f:
         yaml.dump(network_metrics, f)
 
     logger.debug(f'Network info saved in {network_info_file}')
@@ -338,7 +338,7 @@ def save_normalization(min_value: float, max_value: float) -> None:
         return
 
     normalization_file = Path(OUT_DIR, settings.run_name, OUT_FILES['normalization'])
-    with open(normalization_file, 'w+') as f:
+    with open(normalization_file, 'w') as f:
         yaml.dump({'min': min_value, 'max': max_value}, f)
 
     logger.debug(f'Normalization values saved in {normalization_file}')

@@ -17,8 +17,10 @@ def start_line_task() -> Classifier:
     """
 
     with SectionTimer('datasets loading', 'debug'):
+        # If some test diagrams are defined in settings, use them for the test set, otherwise use the test ratio
+        test_ratio_or_names = [settings.test_diagram] if len(settings.test_diagram) > 0 else settings.test_ratio
         # Load datasets for line classification task (only line labels)
-        train_set, test_set, valid_set = QDSDLines.build_split_datasets(test_ratio=settings.test_ratio,
+        train_set, test_set, valid_set = QDSDLines.build_split_datasets(test_ratio_or_names=test_ratio_or_names,
                                                                         validation_ratio=settings.validation_ratio,
                                                                         patch_size=(settings.patch_size_x,
                                                                                     settings.patch_size_y),
@@ -52,7 +54,6 @@ if __name__ == '__main__':
     # noinspection PyBroadException
     try:
         trained_model = start_line_task()
-
     except KeyboardInterrupt:
         logger.error('Line task interrupted by the user.', exc_info=True)
     except Exception:

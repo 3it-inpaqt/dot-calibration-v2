@@ -27,7 +27,8 @@ def start_tuning_task() -> None:
                                          labels_path=Path(DATA_DIR, 'labels.json'),
                                          single_dot=True,
                                          load_lines=True,
-                                         load_areas=True)
+                                         load_areas=True,
+                                         white_list=[settings.test_diagram] if settings.test_diagram else None)
 
         # Normalize the diagram with the same min/max value used during the training.
         # The values are fetch via the "normalization_values_path" setting or in the current run directory.

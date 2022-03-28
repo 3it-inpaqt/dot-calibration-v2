@@ -31,6 +31,8 @@ def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
     :param model: The classifier model used by the tuning procedure.
     :param diagrams: The list of diagrams to run on the tuning procedure.
     """
+    if len(diagrams) == 0:
+        raise ValueError('No diagram provided to the tuning run.')
 
     # Automatically chooses the device according to the settings, and move diagram data to it.
     device = get_cuda_device()
@@ -44,7 +46,7 @@ def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
     # Variables to store stats and results
     autotuning_results = {d.file_basename: [] for d in diagrams}
     nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
-    nb_error_to_plot = 10
+    nb_error_to_plot = 5
 
     # Start the autotuning testing
     logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '

@@ -116,8 +116,14 @@ class Settings:
     # Should be available in the dataset folder.
     research_group: str = 'michel_pioro_ladriere'
 
-    # The percentage of data kept for testing only
+    # The percentage of data kept for testing only.
+    # If test_diagram is set, this value should be 0.
     test_ratio: float = 0.2
+
+    # The base name (no extension) of the diagram file to use as test for line and tuning task.
+    # To use for cross-validation.
+    # If test_ratio != 0, this value should be empty string.
+    test_diagram: str = ''
 
     # The percentage of data kept for testing only
     validation_ratio: float = 0.1
@@ -294,7 +300,9 @@ class Settings:
         assert self.patch_overlap_y < self.patch_size_y, 'Patch overlapping should be lower than the patch size'
         assert self.label_offset_x < (self.patch_size_x // 2), 'Label offset should be lower than patch size // 2'
         assert self.label_offset_y < (self.patch_size_y // 2), 'Label offset should be lower than patch size // 2'
-        assert self.test_ratio > 0, 'Test data ratio should be more than 0'
+        assert self.test_ratio > 0 or len(self.test_diagram) > 0, 'Test data ratio or test diagram should be set'
+        assert not (self.test_ratio > 0 and len(self.test_diagram) > 0), 'Only one between "test ratio" and ' \
+                                                                         '"test diagram" should be set'
         assert self.test_ratio + self.validation_ratio < 1, 'test_ratio + validation_ratio should be less than 1 to' \
                                                             ' have training data'
 

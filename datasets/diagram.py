@@ -190,7 +190,8 @@ class Diagram:
                       labels_path: Path = None,
                       single_dot: bool = True,
                       load_lines: bool = True,
-                      load_areas: bool = True) -> List["Diagram"]:
+                      load_areas: bool = True,
+                      white_list: List[str] = None) -> List["Diagram"]:
         """
         Load stability diagrams and annotions from files.
 
@@ -201,6 +202,7 @@ class Diagram:
         :param labels_path: The path to the json file containing line and charge area labels.
         :param load_lines: If True the line labels should be loaded.
         :param load_areas: If True the charge area labels should be loaded.
+        :param white_list: If defined, only diagrams with base name include in this list will be loaded (no extension).
         :return: A list of Diagram objects.
         """
 
@@ -222,9 +224,14 @@ class Diagram:
 
         diagrams = []
         nb_no_label = 0
+        nb_excluded = 0
         # Iterate over all csv files inside the zip file
         for diagram_name in zip_dir.iterdir():
             file_basename = Path(str(diagram_name)).stem  # Remove extension
+
+            if white_list and not (file_basename in white_list):
+                nb_excluded += 1
+                continue
 
             if f'{file_basename}.png' not in labels:
                 logger.debug(f'No label found for {file_basename}')
@@ -271,7 +278,10 @@ class Diagram:
                     diagram.plot()
 
         if nb_no_label > 0:
-            logger.warning(f'{nb_no_label} diagrams skipped because no label found')
+            logger.warning(f'{nb_no_label} diagram(s) skipped because no label found')
+
+        if nb_excluded > 0:
+            logger.info(f'{nb_excluded} diagram(s) excluded because not in white list')
 
         if len(diagrams) == 0:
             logger.error(f'No diagram loaded in "{zip_dir}"')

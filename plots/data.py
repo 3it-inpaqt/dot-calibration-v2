@@ -377,6 +377,9 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
     """
     plot_length = ceil(sqrt(len(samples)))
 
+    if plot_length <= 1:
+        return  # FIXME: deal with 1 or 0 sample
+
     # Create subplots
     fig, axs = plt.subplots(nrows=plot_length, ncols=plot_length, figsize=(plot_length * 2, plot_length * 2 + 1))
 
