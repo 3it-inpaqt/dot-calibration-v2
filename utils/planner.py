@@ -238,7 +238,6 @@ class SequencePlanner(BasePlanner):
         try:
             # Try to iterate inside the current planner
             next(self._current_planner_iterator)
-
             return self.get_formatted_name()
         except StopIteration:
             # Reset settings as original value before next planner
@@ -407,6 +406,7 @@ class CombinatorPlanner(BasePlanner):
     def __iter__(self):
         """ See :func:`~utils.planner.BasePlanner.__iter__` """
         # Iterate over every planner
+        self._first_iter = True
         self._planners_iterators = [iter(p) for p in self.planners]
 
         return self
@@ -424,7 +424,6 @@ class CombinatorPlanner(BasePlanner):
         for i in range(len(self.planners)):
             try:
                 next(self._planners_iterators[i])
-
                 return self.get_formatted_name()
             except StopIteration:
                 # If stop iteration trigger for the last sub-planner then the iteration is over, and we let error

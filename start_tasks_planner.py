@@ -44,6 +44,7 @@ def run_tasks_planner(runs_planner: BasePlanner,
         except AssertionError as exc:
             raise RuntimeError('Invalid planned settings, runs aborted before to start') from exc
 
+        BasePlanner.reset_names()
         logger.info('Completed successful validation of the runs planner')
 
     nb_runs = len(runs_planner)
@@ -141,7 +142,7 @@ if __name__ == '__main__':
             Planner('patch_size_x', size_range),
             Planner('patch_size_y', size_range),
         ])
-    ], runs_basename='patch_size_cnn')
+    ], runs_name='patch_size_cnn')
 
     # Hidden layer size study
     layers_size = CombinatorPlanner([
@@ -157,7 +158,7 @@ if __name__ == '__main__':
             Planner('hidden_layers_size', [[a * 2, a] for a in range(5, 50, 5)]),
             Planner('hidden_layers_size', [[a * 2, a] for a in range(50, 400, 25)]),
         ]),
-    ], runs_basename='layers_size')
+    ], runs_name='layers_size')
 
     # Batch size study
     train_batch_size = CombinatorPlanner([
@@ -167,7 +168,7 @@ if __name__ == '__main__':
         Planner('nb_train_update', [ff_update, cnn_update]),
         datasets_planner,
         Planner('batch_size', list(chain(range(25, 150, 25), range(150, 500, 50), range(500, 2000, 100))))
-    ], runs_basename='train_batch_size')
+    ], runs_name='train_batch_size')
 
     # Make full scan plots
     full_scan_all = CombinatorPlanner([
@@ -183,7 +184,7 @@ if __name__ == '__main__':
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
         ]),
         datasets_planner
-    ], runs_basename='full_scan')
+    ], runs_name='full_scan')
 
     # Train all networks with all datasets
     train_all_networks = CombinatorPlanner([
@@ -197,8 +198,8 @@ if __name__ == '__main__':
             ]),
             datasets_planner
         ]),
-        Planner('seed', list(range(10)))
-    ], runs_basename='ref')
+        Planner('seed', range(10))
+    ], runs_name='ref')
 
     # Run tuning on all datasets and procedures
     tune_all_diagrams = CombinatorPlanner([
@@ -217,6 +218,6 @@ if __name__ == '__main__':
         ]),
         Planner('autotuning_procedure', ['shifting', 'shifting_b', 'jump', 'jump_b']),
         # TODO turn the autotuning_procedure setting into a list to avoid multiple training
-    ], runs_basename='tuning')
+    ], runs_name='tuning')
 
-    # run_tasks_planner(train_all_networks, skip_existing_runs=True, tuning_task=False)
+    run_tasks_planner(train_all_networks, skip_existing_runs=True, tuning_task=False)
