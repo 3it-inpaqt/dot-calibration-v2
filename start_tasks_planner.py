@@ -102,16 +102,37 @@ def run_tasks_planner(runs_planner: BasePlanner,
 
 if __name__ == '__main__':
     # Same run several times with the default settings but different seed
-    repeat = Planner('seed', range(3), runs_basename='tmp')
+    repeat = Planner('seed', range(3), runs_name='tmp')
 
     # Default settings for each dataset (for code factorisation)
-    datasets_planner = ParallelPlanner([
-        Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
-        Planner('pixel_size', [0.001, 0.0025]),
-        Planner('nb_epoch', [0, 0]),  # Nb epoch defined by nb_train_update
-        Planner('label_offset_x', [6, 7]),
-        Planner('label_offset_y', [6, 7]),
-        Planner('conv_layers_channel', [[12, 24], [6, 12]]),
+    datasets_planner = SequencePlanner([
+        CombinatorPlanner([
+            Planner('research_group', ['michel_pioro_ladriere']),
+            Planner('pixel_size', [0.001]),
+            Planner('nb_epoch', [0]),  # Nb epoch defined by nb_train_update
+            Planner('label_offset_x', [6]),
+            Planner('label_offset_y', [6]),
+            Planner('conv_layers_channel', [[12, 24]]),
+            Planner('test_ratio', [0]),
+            # List diagrams for cross-validation
+            Planner('test_diagram',
+                    ['1779Dev2-20161127_443', '1779Dev2-20161127_442', '1779Dev2-20161127_145', '1779Dev2-20161127_970',
+                     '1779Dev2-20161127_146', '1779Dev2-20161127_468', '1779Dev2-20161127_402', '1779Dev2-20161127_386'
+                     ]),
+        ]),
+        CombinatorPlanner([
+            Planner('research_group', ['louis_gaudreau']),
+            Planner('pixel_size', [0.0025]),
+            Planner('nb_epoch', [0]),  # Nb epoch defined by nb_train_update
+            Planner('label_offset_x', [7]),
+            Planner('label_offset_y', [7]),
+            Planner('conv_layers_channel', [[6, 12]]),
+            Planner('test_ratio', [0]),
+            # List diagrams for cross-validation
+            Planner('test_diagram',
+                    ['Jan12200s', 'Jan06019s', 'Jan07300s', 'Jan10100s', 'jan09_200ser', 'Jan07100s', 'Jan14300s',
+                     'oct24100s', 'oct28000s']),
+        ])
     ])
 
     # Default settings for each NN
@@ -142,7 +163,7 @@ if __name__ == '__main__':
             Planner('patch_size_x', size_range),
             Planner('patch_size_y', size_range),
         ])
-    ], runs_name='patch_size_cnn')
+    ], runs_name='patch_size-{research_group}-{model_type}-{patch_size_x}x{patch_size_y}')
 
     # Hidden layer size study
     layers_size = CombinatorPlanner([
@@ -158,7 +179,7 @@ if __name__ == '__main__':
             Planner('hidden_layers_size', [[a * 2, a] for a in range(5, 50, 5)]),
             Planner('hidden_layers_size', [[a * 2, a] for a in range(50, 400, 25)]),
         ]),
-    ], runs_name='layers_size')
+    ], runs_name='layers_size-{research_group}-{model_type}')
 
     # Batch size study
     train_batch_size = CombinatorPlanner([
@@ -168,7 +189,7 @@ if __name__ == '__main__':
         Planner('nb_train_update', [ff_update, cnn_update]),
         datasets_planner,
         Planner('batch_size', list(chain(range(25, 150, 25), range(150, 500, 50), range(500, 2000, 100))))
-    ], runs_name='train_batch_size')
+    ], runs_name='train_batch_size-{research_group}-{model_type}-{batch_size}')
 
     # Make full scan plots
     full_scan_all = CombinatorPlanner([
@@ -184,22 +205,20 @@ if __name__ == '__main__':
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
         ]),
         datasets_planner
-    ], runs_name='full_scan')
+    ], runs_name='full_scan-{research_group}-{model_type}-{test_diagram}')
 
     # Train all networks with all datasets
     train_all_networks = CombinatorPlanner([
-        CombinatorPlanner([
-            Planner('evaluate_baselines', [True]),
-            ParallelPlanner([
-                Planner('model_type', ['FF', 'CNN', 'BCNN']),
-                Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
-                Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
-                Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
-            ]),
-            datasets_planner
+        Planner('evaluate_baselines', [True]),
+        ParallelPlanner([
+            Planner('model_type', ['FF', 'CNN', 'BCNN']),
+            Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
+            Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
+            Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
         ]),
-        Planner('seed', range(10))
-    ], runs_name='ref')
+        datasets_planner,
+        # Planner('seed', range(10))
+    ], runs_name='line-{research_group}-{model_type}-{test_diagram}')
 
     # Run tuning on all datasets and procedures
     tune_all_diagrams = CombinatorPlanner([
@@ -216,8 +235,8 @@ if __name__ == '__main__':
                 datasets_planner
             ]),
         ]),
-        Planner('autotuning_procedure', ['shifting', 'shifting_b', 'jump', 'jump_b']),
+        Planner('autotuning_procedure', ['jump']),
         # TODO turn the autotuning_procedure setting into a list to avoid multiple training
-    ], runs_name='tuning')
+    ], runs_name='tuning-{research_group}-{model_type}-{autotuning_procedure}-{test_diagram}')
 
     run_tasks_planner(train_all_networks, skip_existing_runs=True, tuning_task=False)
