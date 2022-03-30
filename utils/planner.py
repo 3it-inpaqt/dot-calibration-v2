@@ -1,5 +1,7 @@
 import math
-from typing import Any, Collection, Iterator, List, Optional
+from collections import Counter
+from dataclasses import asdict
+from typing import Collection, Iterator, List, Optional
 
 from utils.settings import settings
 
@@ -12,16 +14,22 @@ class BasePlanner:
     values.
     """
 
-    def __init__(self, runs_basename: Optional[str] = None):
+    _existing_names = Counter()
+
+    def __init__(self, runs_name: Optional[str] = None):
         """
         Create an abstract setting planner object.
 
-        :param runs_basename: The basename of the run names generate by this planner. If defined, the names will be as:
-        "basename-num" (eg: "plop-001", ""plop-002", "plop-003", ...). If this parameter is None or empty, the name will
-        be generated according to the setting name, which is very descriptive but could be quite long.
+        :param runs_name: The string template to use to generate each run name. Allow specifying any setting field with
+            default f-string syntaxe. If multiple run have the same name, add increment. If this parameter is None, the
+            name will be generated according to the settings name, which is very descriptive but could be quite long.
+            The special key "i" refer to the current run index.
+            Eg:
+                runs_name="run-{model_type}" => "run-CNN", "run-FF", "run-RNN", ...
+                runs_name="test-run" => "test-run", "test-run-002, "test-run-003", ...
+                runs_name="{i:03d}-{method}" => "01-method_a", "02-method_b", ...
         """
-        self.runs_basename = runs_basename
-        self.num_count = 0
+        self.runs_name = self.default_runs_name() if runs_name is None else runs_name
         self.is_sub_planner = False
 
     def __iter__(self) -> Iterator:
@@ -45,27 +53,46 @@ class BasePlanner:
         """
         raise NotImplemented('Length abstract method need to be override')
 
-    def incr_num(self) -> None:
-        self.num_count += 1
-
-    def basename(self):
+    def default_runs_name(self) -> Optional[str]:
         """
-        Format the name of this run according to the count number and the basename defined by the user.
-        :return: The basename of this run
+        Get the default runs name if none is explicitly specify.
+        :return: The default name.
         """
-        return f'{self.runs_basename}-{self.num_count:03d}'
+        raise NotImplemented('Default runs name abstract method need to be override')
 
     def reset_original_values(self) -> None:
         """
         Reset the setting value as it was before the start of the iteration.
         """
-        raise NotImplemented('Reset abstract method need to be override ')
+        raise NotImplemented('Reset abstract method need to be override')
 
     def reset_state(self) -> None:
         """
-        Reset the counter used in basename to 0.
+        Reset the planner state.
         """
-        self.num_count = 0
+        raise NotImplemented('Reset state abstract method need to be override')
+
+    def get_formatted_name(self) -> str:
+        """
+        Get the final formatted run name according to the runs_name template if this is the root planner. Otherwise, is
+        this is a sub planner, return the intermediate name (raw f-string).
+        """
+        if self.is_sub_planner:
+            # Not the final name, so no formatting
+            return self.runs_name
+
+        try:
+            counter_total = sum(BasePlanner._existing_names.values()) + 1
+            base = self.runs_name.format_map({**asdict(settings), **{'i': counter_total}})
+        except KeyError as err:
+            raise KeyError(f'Invalid run name "{self.runs_name}", because the setting "{err.args[0]}" do not exist.') \
+                from err
+
+        if len(base) == 0:
+            raise ValueError(f'Invalid run name "{self.runs_name}", can not be empty.')
+
+        BasePlanner._existing_names[base] += 1
+        return base if BasePlanner._existing_names[base] == 1 else f'{base}-{BasePlanner._existing_names[base]:03d}'
 
     def stop_iter(self):
         """
@@ -75,6 +102,11 @@ class BasePlanner:
             self.reset_original_values()
             self.reset_state()
 
+    @classmethod
+    def reset_names(cls):
+        """ Reset the existing names. """
+        cls._existing_names.clear()
+
 
 class Planner(BasePlanner):
     """
@@ -83,22 +115,28 @@ class Planner(BasePlanner):
     values.
     """
 
-    def __init__(self, setting_name: str, setting_values: Collection, runs_basename: str = ''):
+    def __init__(self, setting_name: str, setting_values: Collection, runs_name: Optional[str] = None):
         """
         Create a simple planner that will iterate value of a specific setting.
 
         :param setting_name: The name of the setting to change.
         :param setting_values: The collection of value to iterate (the collection should be iterable and have a length).
-        :param runs_basename: The basename of the run names generate by this planner. If defined, the names will be as:
-        "basename-num" (eg: "plop-001", ""plop-002", "plop-003", ...). If this parameter is None or empty, the name will
-        be generated according to the setting name, which is very descriptive but could be quite long.
+        :param runs_name: The string template to use to generate each run name. Allow specifying any setting field with
+            default f-string syntaxe. If multiple run have the same name, add increment. If this parameter is None, the
+            name will be generated according to the settings name, which is very descriptive but could be quite long.
+            The special key "i" refer to the current run index.
+            Eg:
+                runs_name="run-{model_type}" => "run-CNN", "run-FF", "run-RNN", ...
+                runs_name="test-run" => "test-run", "test-run-002, "test-run-003", ...
+                runs_name="{i:03d}-{method}" => "01-method_a", "02-method_b", ...
         """
-        super().__init__(runs_basename)
-
         self.setting_name = setting_name
         self.setting_values = setting_values
+
         self._setting_original_value = None  # Will be set when the iteration start
         self._values_iterator = None
+
+        super().__init__(runs_name)
 
     def __iter__(self) -> Iterator:
         """ See :func:`~utils.planner.BasePlanner.__iter__` """
@@ -124,24 +162,15 @@ class Planner(BasePlanner):
         # Set new value
         setattr(settings, self.setting_name, value)
 
-        # Increase count and return the name of this run
-        self.incr_num()
-        return self.format_name(value)
+        return self.get_formatted_name()
 
     def __len__(self) -> int:
         """ See :func:`~utils.planner.BasePlanner.__len__` """
         return len(self.setting_values)
 
-    def format_name(self, value: Any) -> str:
-        """
-        Format the name in case the basename is not set.
-        As: "setting_name-value" (eg: "epoch-15")
-
-        :param value: The current setting value
-        :return: The formatted name
-        """
-        # If no runs basename provided use the variable name and value as run name
-        return self.basename() if self.runs_basename else f'{self.setting_name}-{value}'
+    def default_runs_name(self) -> Optional[str]:
+        """ See :func:`~utils.planner.BasePlanner.default_runs_name` """
+        return f'{self.setting_name}_{{{self.setting_name}}}'
 
     def reset_original_values(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_original_values` """
@@ -152,7 +181,6 @@ class Planner(BasePlanner):
 
     def reset_state(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_counters` """
-        super().reset_state()
         self._setting_original_value = None  # Will be set when the iteration start
         self._values_iterator = None
 
@@ -166,18 +194,21 @@ class SequencePlanner(BasePlanner):
     values.
     """
 
-    def __init__(self, planners: List[BasePlanner], runs_basename: str = ''):
+    def __init__(self, planners: List[BasePlanner], runs_name: Optional[str] = None):
         """
         Create a planner that will iterate some sub-planners one by one.
         The settings will be reset between each sub-planners.
 
         :param planners: The list of sub-planners to iterate, it can be any subclass of BasePlanner.
-        :param runs_basename: The basename of the run names generate by this planner. If defined, the names will be as:
-        "basename-num" (eg: "plop-001", ""plop-002", "plop-003", ...). If this parameter is None or empty, the name will
-        be generated according to the setting name, which is very descriptive but could be quite long.
+        :param runs_name: The string template to use to generate each run name. Allow specifying any setting field with
+            default f-string syntaxe. If multiple run have the same name, add increment. If this parameter is None, the
+            name will be generated according to the settings name, which is very descriptive but could be quite long.
+            The special key "i" refer to the current run index.
+            Eg:
+                runs_name="run-{model_type}" => "run-CNN", "run-FF", "run-RNN", ...
+                runs_name="test-run" => "test-run", "test-run-002, "test-run-003", ...
+                runs_name="{i:03d}-{method}" => "01-method_a", "02-method_b", ...
         """
-        super().__init__(runs_basename)
-
         if len(planners) == 0:
             raise ValueError('Empty planners list for sequence planner')
 
@@ -190,9 +221,11 @@ class SequencePlanner(BasePlanner):
         for p in self.planners:
             p.is_sub_planner = True
 
+        super().__init__(runs_name)
+
     def __iter__(self):
         """ See :func:`~utils.planner.BasePlanner.__iter__` """
-        # First iterate over every planners
+        # First iterate over every planner
         self._planners_iterator = iter(self.planners)
         self._current_planner_id = 0
         # Then iterate inside each planner
@@ -204,10 +237,9 @@ class SequencePlanner(BasePlanner):
         """ See :func:`~utils.planner.BasePlanner.__next__` """
         try:
             # Try to iterate inside the current planner
-            sub_run_name = next(self._current_planner_iterator)
-            # Increase count and return the name of this run
-            self.incr_num()
-            return self.format_name(sub_run_name)
+            next(self._current_planner_iterator)
+
+            return self.get_formatted_name()
         except StopIteration:
             # Reset settings as original value before next planner
             self.planners[self._current_planner_id].reset_original_values()
@@ -229,16 +261,9 @@ class SequencePlanner(BasePlanner):
         """ See :func:`~utils.planner.BasePlanner.__len__` """
         return sum(map(len, self.planners))
 
-    def format_name(self, sub_run_name: str) -> str:
-        """
-        Format the name in case the basename is not set.
-        Use the name of the current sub-planners formatted names
-
-        :param sub_run_name: The name of the current sub-planners names
-        :return: The formatted name
-        """
-        # If no runs basename provided use the name of the last sub-planner
-        return self.basename() if self.runs_basename else sub_run_name
+    def default_runs_name(self) -> Optional[str]:
+        """ See :func:`~utils.planner.BasePlanner.default_runs_name` """
+        return '-'.join(filter(None, (p.get_formatted_name() for p in self.planners)))
 
     def reset_original_values(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_original_values` """
@@ -247,7 +272,6 @@ class SequencePlanner(BasePlanner):
 
     def reset_state(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_counters` """
-        super().reset_state()
         self._current_planner_id = 0
         self._planners_iterator = None
         self._current_planner_iterator = None
@@ -258,14 +282,14 @@ class SequencePlanner(BasePlanner):
 class ParallelPlanner(BasePlanner):
     """
     To organise planners in parallel.
-    All planners will be apply at the same time.
+    All planners will be applied at the same time.
     The total length of this planner will be equal to the length of the sub-planners (which should all have the same
     length).
     Global settings are changed in place, but at the end of the iteration every settings are rollback to their initial
     values.
     """
 
-    def __init__(self, planners: List[BasePlanner], runs_basename: str = ''):
+    def __init__(self, planners: List[BasePlanner], runs_name: Optional[str] = None):
         """
         Create a planner that will change the settings according to several sub-planners at the same time.
         Eg: At iteration the 5 with 2 sub-planners, the setting will be set as sub-planner[0][5] and sub-planner[1][5].
@@ -273,18 +297,23 @@ class ParallelPlanner(BasePlanner):
 
         :param planners: The list of sub-planners to iterate in parallel, it can be any subclass of BasePlanner but they
         all need to have the same length.
-        :param runs_basename: The basename of the run names generate by this planner. If defined, the names will be as:
-        "basename-num" (eg: "plop-001", ""plop-002", "plop-003", ...). If this parameter is None or empty, the name will
-        be generated according to the setting name, which is very descriptive but could be quite long.
+        :param runs_name: The string template to use to generate each run name. Allow specifying any setting field with
+            default f-string syntaxe. If multiple run have the same name, add increment. If this parameter is None, the
+            name will be generated according to the settings name, which is very descriptive but could be quite long.
+            The special key "i" refer to the current run index.
+            Eg:
+                runs_name="run-{model_type}" => "run-CNN", "run-FF", "run-RNN", ...
+                runs_name="test-run" => "test-run", "test-run-002, "test-run-003", ...
+                runs_name="{i:03d}-{method}" => "01-method_a", "02-method_b", ...
         """
-        super().__init__(runs_basename)
-
         if len(planners) == 0:
             raise ValueError('Empty planners list for parallel planner')
 
         # Check planners length
-        if not all(len(x) == len(planners[0]) for x in planners):
+        if not all(len(x) == len(planners[0]) for x in planners[1:]):
             raise ValueError('Impossible to run parallel planner if all sub-planners don\'t have the same length')
+
+        # TODO forbid same setting multiple times
 
         self.planners: List[BasePlanner] = planners
         self._planners_iterators: List[Optional[Iterator]] = [None] * len(planners)
@@ -293,9 +322,11 @@ class ParallelPlanner(BasePlanner):
         for p in self.planners:
             p.is_sub_planner = True
 
+        super().__init__(runs_name)
+
     def __iter__(self):
         """ See :func:`~utils.planner.BasePlanner.__iter__` """
-        # Iterate over every planners
+        # Iterate over every planner
         self._planners_iterators = [iter(p) for p in self.planners]
 
         return self
@@ -303,30 +334,22 @@ class ParallelPlanner(BasePlanner):
     def __next__(self):
         """ See :func:`~utils.planner.BasePlanner.__next__` """
         try:
-            sub_runs_name = [next(it) for it in self._planners_iterators]
+            for it in self._planners_iterators:
+                next(it)
         except StopIteration:
             # Call last method before to trigger StopIteration
             self.stop_iter()
             raise
 
-        # Increase count and return the name of this run
-        self.incr_num()
-        return self.format_name(sub_runs_name)
+        return self.get_formatted_name()
 
     def __len__(self):
         """ See :func:`~utils.planner.BasePlanner.__len__` """
         return len(self.planners[0])
 
-    def format_name(self, sub_runs_name: List[str]) -> str:
-        """
-        Format the name in case the basename is not set.
-        As: "setting_name-value_setting_name-value" (eg: "epoch-15_learning_rate-0.01")
-
-        :param sub_runs_name: The list of sub-planners names
-        :return: The formatted name
-        """
-        # If no runs basename provided use the concatenation of all sub-planners names
-        return self.basename() if self.runs_basename else '_'.join(sub_runs_name)
+    def default_runs_name(self) -> Optional[str]:
+        """ See :func:`~utils.planner.BasePlanner.default_runs_name` """
+        return '-'.join(filter(None, (p.get_formatted_name() for p in self.planners)))
 
     def reset_original_values(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_original_values` """
@@ -335,7 +358,6 @@ class ParallelPlanner(BasePlanner):
 
     def reset_state(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_counters` """
-        super().reset_state()
         self._planners_iterators = [None] * len(self.planners)
         for p in self.planners:
             p.reset_state()
@@ -350,7 +372,7 @@ class CombinatorPlanner(BasePlanner):
     values.
     """
 
-    def __init__(self, planners: List[BasePlanner], runs_basename: str = ''):
+    def __init__(self, planners: List[BasePlanner], runs_name: Optional[str] = None):
         """
         Creat a combinator planner that will iterate over all possible combinations of sub-planners values.
         Eg: with sub-planner A iterates through [1, 2] abd sub-planner B iterates through [True, False], this planner
@@ -358,27 +380,33 @@ class CombinatorPlanner(BasePlanner):
 
         :param planners: The list of sub-planners to iterate in parallel, it can be any subclass of BasePlanner but they
         all need to have the same length.
-        :param runs_basename: The basename of the run names generate by this planner. If defined, the names will be as:
-        "basename-num" (eg: "plop-001", ""plop-002", "plop-003", ...). If this parameter is None or empty, the name will
-        be generated according to the setting name, which is very descriptive but could be quite long.
+        :param runs_name: The string template to use to generate each run name. Allow specifying any setting field with
+            default f-string syntaxe. If multiple run have the same name, add increment. If this parameter is None, the
+            name will be generated according to the settings name, which is very descriptive but could be quite long.
+            The special key "i" refer to the current run index.
+            Eg:
+                runs_name="run-{model_type}" => "run-CNN", "run-FF", "run-RNN", ...
+                runs_name="test-run" => "test-run", "test-run-002, "test-run-003", ...
+                runs_name="{i:03d}-{method}" => "01-method_a", "02-method_b", ...
         """
-        super().__init__(runs_basename)
-
         if len(planners) == 0:
             raise ValueError('Empty planners list for combinator planner')
 
+        # TODO forbid same setting multiple times
+
         self.planners: List[BasePlanner] = planners
         self._planners_iterators: List[Optional[Iterator]] = [None] * len(planners)
-        self._runs_name: List[Optional[str]] = [None] * len(planners)
         self._first_iter = True
 
         # Tell to sub-planners who is the boss
         for p in self.planners:
             p.is_sub_planner = True
 
+        super().__init__(runs_name)
+
     def __iter__(self):
         """ See :func:`~utils.planner.BasePlanner.__iter__` """
-        # Iterate over every planners
+        # Iterate over every planner
         self._planners_iterators = [iter(p) for p in self.planners]
 
         return self
@@ -388,19 +416,18 @@ class CombinatorPlanner(BasePlanner):
         # For the first iteration, initialise every sub-planners with their first value
         if self._first_iter:
             self._first_iter = False
-            self._runs_name = [next(it) for it in self._planners_iterators]
-            # Increase count and return the name of this run
-            self.incr_num()
-            return self.format_name()
+            for it in self._planners_iterators:
+                next(it)
+
+            return self.get_formatted_name()
 
         for i in range(len(self.planners)):
             try:
-                self._runs_name[i] = next(self._planners_iterators[i])
-                # Increase count and return the name of this run
-                self.incr_num()
-                return self.format_name()
+                next(self._planners_iterators[i])
+
+                return self.get_formatted_name()
             except StopIteration:
-                # If stop iteration trigger for the last sub-planner then the iteration is over and we let error
+                # If stop iteration trigger for the last sub-planner then the iteration is over, and we let error
                 # propagate.
                 if i == (len(self.planners) - 1):
                     # Call last method before to trigger StopIteration
@@ -409,21 +436,15 @@ class CombinatorPlanner(BasePlanner):
 
                 # If stop iteration trigger for an intermediate sub-planner, reset it and continue the loop
                 self._planners_iterators[i] = iter(self.planners[i])
-                self._runs_name[i] = next(self._planners_iterators[i])
+                next(self._planners_iterators[i])
 
     def __len__(self):
         """ See :func:`~utils.planner.BasePlanner.__len__` """
         return math.prod(map(len, self.planners))
 
-    def format_name(self) -> str:
-        """
-        Format the name in case the basename is not set.
-        As: "setting_name-value_setting_name-value" (eg: "epoch-15_learning_rate-0.01")
-
-        :return: The formatted name
-        """
-        # If no runs basename provided use the concatenation of all sub-planners names
-        return self.basename() if self.runs_basename else '_'.join(self._runs_name)
+    def default_runs_name(self) -> Optional[str]:
+        """ See :func:`~utils.planner.BasePlanner.default_runs_name` """
+        return '-'.join(filter(None, (p.get_formatted_name() for p in self.planners)))
 
     def reset_original_values(self):
         """ See :func:`~utils.planner.BasePlanner.reset_original_values` """
@@ -432,9 +453,7 @@ class CombinatorPlanner(BasePlanner):
 
     def reset_state(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_counters` """
-        super().reset_state()
         self._planners_iterators = [None] * len(self.planners)
-        self._runs_name = [None] * len(self.planners)
         self._first_iter = True
         for p in self.planners:
             p.reset_state()
