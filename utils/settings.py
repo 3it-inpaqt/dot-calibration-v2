@@ -239,9 +239,9 @@ class Settings:
     # =================================================== Autotuning ===================================================
     # ==================================================================================================================
 
-    # The name of the autotuning procedure to use.
+    # List of autotuning procedure names to use.
     # Have to be in the implemented list: random, shifting, shifting_b, jump, jump_b, full
-    autotuning_procedure: str = 'jump_b'
+    autotuning_procedures: Sequence = ('jump_b',)
 
     # If True the line classification model cheat by using the diagram labels (no neural network loaded).
     # Used for baselines.
@@ -333,9 +333,10 @@ class Settings:
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'
 
         # Autotuning
-        procedures_allow = ['random', 'shifting', 'shifting_b', 'jump', 'jump_b', 'full']
-        assert isinstance(self.autotuning_procedure, str) and self.autotuning_procedure.lower() in procedures_allow, \
-            f'Invalid autotuning procedure name {self.autotuning_procedure}'
+        procedures_allow = ('random', 'shifting', 'shifting_b', 'jump', 'jump_b', 'full')
+        for procedure in self.autotuning_procedures:
+            assert isinstance(procedure, str) and procedure.lower() in procedures_allow, \
+                f'Invalid autotuning procedure name {procedure}'
         assert self.autotuning_nb_iteration >= 1, 'At least 1 autotuning iteration required'
 
     def __init__(self):

@@ -193,7 +193,7 @@ if __name__ == '__main__':
 
     # Make full scan plots
     full_scan_all = CombinatorPlanner([
-        Planner('autotuning_procedure', ['full']),
+        Planner('autotuning_procedures', [['full']]),
         Planner('autotuning_nb_iteration', [1]),
         Planner('autotuning_use_oracle', [False]),
         Planner('save_images', [True]),
@@ -223,20 +223,15 @@ if __name__ == '__main__':
     # Run tuning on all datasets and procedures
     tune_all_diagrams = CombinatorPlanner([
         Planner('autotuning_nb_iteration', [50]),
+        Planner('autotuning_procedures', [['jump', 'shifting', 'jump_b', 'shifting_b']]),
         ParallelPlanner([
-            CombinatorPlanner([
-                ParallelPlanner([
-                    Planner('model_type', ['CNN', 'CNN', 'BCNN']),
-                    Planner('hidden_layers_size', [cnns_hidden_size, cnns_hidden_size, cnns_hidden_size]),
-                    Planner('learning_rate', [cnns_lr, cnns_lr, cnns_lr]),
-                    Planner('nb_train_update', [1, cnn_update, bcnn_update]),
-                    Planner('autotuning_use_oracle', [True, False, False]),
-                ]),
-                datasets_planner
-            ]),
+            Planner('model_type', ['CNN', 'CNN', 'BCNN']),
+            Planner('hidden_layers_size', [cnns_hidden_size, cnns_hidden_size, cnns_hidden_size]),
+            Planner('learning_rate', [cnns_lr, cnns_lr, cnns_lr]),
+            Planner('nb_train_update', [1, cnn_update, bcnn_update]),
+            Planner('autotuning_use_oracle', [True, False, False]),
         ]),
-        Planner('autotuning_procedure', ['jump']),
-        # TODO turn the autotuning_procedure setting into a list to avoid multiple training
-    ], runs_name='tuning-{research_group}-{model_type}-{autotuning_procedure}-{test_diagram}')
+        datasets_planner
+    ], runs_name='tuning-{research_group}-{model_type}-{autotuning_procedures}-{test_diagram}')
 
-    run_tasks_planner(train_all_networks, skip_existing_runs=True, tuning_task=False)
+    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=False)

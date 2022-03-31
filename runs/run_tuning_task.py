@@ -1,5 +1,6 @@
-from collections import Counter
-from typing import Dict, List
+from collections import Counter, defaultdict
+from itertools import chain
+from typing import Dict, List, Tuple
 
 from tabulate import tabulate
 
@@ -40,41 +41,45 @@ def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
     for diagram in diagrams:
         diagram.to(device)
 
-    # Set up the autotuning procedure according to the settings
-    procedure = init_procedure(model)
-
     # Variables to store stats and results
-    autotuning_results = {d.file_basename: [] for d in diagrams}
-    nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
-    nb_error_to_plot = 5
+    autotuning_results = defaultdict(list)
 
-    # Start the autotuning testing
-    logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
-                f'with the "{procedure}" autotuning procedure')
-    with SectionTimer('autotuning simulation'), ProgressBarTuning(nb_iterations) as progress:
-        for i in range(settings.autotuning_nb_iteration):
-            for diagram in diagrams:
-                procedure.reset_procedure()
+    for procedure_name in settings.autotuning_procedures:
+        # Set up the autotuning procedure_name according to the settings
+        procedure = init_procedure(model, procedure_name)
 
-                # Start the procedure
-                procedure.setup_next_tuning(diagram)  # Give diagram and set starting coordinates randomly
-                logger.debug(f'Start tuning diagram {diagram.file_basename} '
-                             f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
-                result = procedure.run_tuning()
+        nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
+        nb_error_to_plot = 2
 
-                # Save result and log
-                autotuning_results[diagram.file_basename].append(result)
-                nb_error_to_plot = save_show_results(result, procedure, i == 0, nb_error_to_plot)
+        # Start the autotuning testing
+        logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
+                    f'with the "{procedure}" autotuning procedure')
+        with SectionTimer('autotuning simulation'), ProgressBarTuning(nb_iterations) as progress:
+            for i in range(settings.autotuning_nb_iteration):
+                for diagram in diagrams:
+                    procedure.reset_procedure()
 
-                progress.incr()
+                    # Start the procedure
+                    procedure.setup_next_tuning(diagram)  # Give diagram and set starting coordinates randomly
+                    logger.debug(f'Start tuning diagram {diagram.file_basename} '
+                                 f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
+                    result = procedure.run_tuning()
+
+                    # Save result and log
+                    autotuning_results[(procedure_name, diagram.file_basename)].append(result)
+                    nb_error_to_plot = save_show_results(result, procedure, i == 0, nb_error_to_plot)
+
+                    progress.incr()
 
     # Log and plot results
     save_show_final_results(autotuning_results)
 
 
-def init_procedure(model: Classifier) -> AutotuningProcedure:
+def init_procedure(model: Classifier, procedure_name: str) -> AutotuningProcedure:
     """
     Set up the autotuning procedure based on the current settings.
+    :param model: The model to use for line classification.
+    :param procedure_name: The name of the tuning procedure to use.
     :return: The procedure.
     """
     patch_size = (settings.patch_size_x, settings.patch_size_y)
@@ -85,7 +90,7 @@ def init_procedure(model: Classifier) -> AutotuningProcedure:
         model.eval()  # Turn off training features (eg. dropout)
 
     # Load procedure
-    procedure_name = settings.autotuning_procedure.lower()
+    procedure_name = procedure_name.lower()
     if procedure_name == 'random':
         return RandomBaseline((settings.patch_size_x, settings.patch_size_y))
     elif procedure_name == 'shifting':
@@ -99,7 +104,7 @@ def init_procedure(model: Classifier) -> AutotuningProcedure:
     elif procedure_name == 'full':
         return FullScan(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     else:
-        raise ValueError(f'Unknown autotuning procedure name "{settings.autotuning_procedure}".')
+        raise ValueError(f'Unknown autotuning procedure name "{procedure_name}".')
 
 
 @SectionTimer('save results', log_level='debug')
@@ -125,7 +130,7 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
 
     # Plot tuning steps for the first round and some error samples
     if is_first_tuning:
-        procedure.plot_step_history(autotuning_result.final_coord, success)
+        procedure.plot_step_history(autotuning_result.final_coord, success, plot_vanilla=False)
         procedure.plot_step_history_animation(autotuning_result.final_coord, success)
     elif nb_error_to_plot > 0 and not success:
         procedure.plot_step_history(autotuning_result.final_coord, success, plot_vanilla=False)
@@ -136,19 +141,19 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
 
 
 @SectionTimer('save results', log_level='debug')
-def save_show_final_results(autotuning_results: Dict[str, List[AutotuningResult]]) -> None:
+def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[AutotuningResult]]) -> None:
     """
     Show autotuning results in text output and plots.
 
     :param autotuning_results: The charge tuning result dictionary.
-    :param line_detection_results: The Line classification result dictionary
     """
     overall = Counter()
-    headers = ['Diagram', 'Steps', 'Model Success'] + list(map(str, ChargeRegime)) + ['Good', 'Bad', 'Tuning Success']
+    headers = ['Procedure'] if len(settings.autotuning_procedures) > 1 else []
+    headers += ['Diagram', 'Steps', 'Model Success'] + list(map(str, ChargeRegime)) + ['Good', 'Bad', 'Tuning Success']
     results_table = [headers]
 
     # Process counter of each diagram
-    for diagram_name, tuning_results in autotuning_results.items():
+    for (procedure_name, diagram_name), tuning_results in autotuning_results.items():
         # Count total final regimes
         regimes = Counter()
         for result in tuning_results:
@@ -169,8 +174,9 @@ def save_show_final_results(autotuning_results: Dict[str, List[AutotuningResult]
         nb_total = len(tuning_results)
         nb_bad_regime = nb_total - nb_good_regime
 
+        results_row = [procedure_name] if len(settings.autotuning_procedures) > 1 else []
         # 'Diagram', 'Steps', 'Model Success'
-        results_row = [diagram_name, nb_steps, model_success]
+        results_row += [diagram_name, nb_steps, model_success]
         # Charge Regimes
         results_row += [regimes[regime] for regime in ChargeRegime]
         # 'Good', 'Bad', 'Tuning Success'
@@ -183,7 +189,7 @@ def save_show_final_results(autotuning_results: Dict[str, List[AutotuningResult]
     nb_good_regime = overall[ChargeRegime.ELECTRON_1]
     nb_total = sum((overall.get(charge, 0) for charge in ChargeRegime))
     total_success_rate = nb_good_regime / nb_total if nb_total > 0 else 0
-    if len(autotuning_results) > 1:
+    if len(autotuning_results) > 1 and len(settings.autotuning_procedures) == 1:
         nb_bad_regime = nb_total - nb_good_regime
         nb_total_steps = overall['steps']
         nb_total_model_success = overall['good'] / overall['steps'] if overall['steps'] > 0 else 0
@@ -198,8 +204,8 @@ def save_show_final_results(autotuning_results: Dict[str, List[AutotuningResult]
     logger.info('Autotuning results:\n' +
                 tabulate(results_table, headers="firstrow", tablefmt='fancy_grid', floatfmt='.2%'))
 
-    # Save results in yaml file
-    save_results(tuning_results=autotuning_results, final_tuning_result=total_success_rate)
+    # Save flatten array results in yaml file
+    save_results(tuning_results=chain(*autotuning_results.values()), final_tuning_result=total_success_rate)
 
 
 class ProgressBarTuning(ProgressBar):

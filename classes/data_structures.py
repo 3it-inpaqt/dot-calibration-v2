@@ -102,6 +102,9 @@ class Direction:
 
 @dataclass(frozen=True)
 class AutotuningResult:
+    diagram_name: str
+    procedure_name: str
+    model_name: str
     nb_steps: int
     nb_classification_success: int
     charge_area: ChargeRegime

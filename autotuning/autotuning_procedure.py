@@ -422,7 +422,10 @@ class AutotuningProcedure:
 
         tuned_x, tuned_y = self._tune()
 
-        return AutotuningResult(nb_steps=self.get_nb_steps(),
+        return AutotuningResult(diagram_name=self.diagram.file_basename,
+                                procedure_name=str(self),
+                                model_name=str(self.model),
+                                nb_steps=self.get_nb_steps(),
                                 nb_classification_success=self.get_nb_line_detection_success(),
                                 charge_area=self.diagram.get_charge(tuned_x, tuned_y),
                                 final_coord=(tuned_x, tuned_y))
