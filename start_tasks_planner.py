@@ -105,7 +105,7 @@ if __name__ == '__main__':
     repeat = Planner('seed', range(3), runs_name='tmp')
 
     # Default settings for each dataset (for code factorisation)
-    datasets_planner = SequencePlanner([
+    datasets_planner_cross_valid = SequencePlanner([
         CombinatorPlanner([
             Planner('research_group', ['michel_pioro_ladriere']),
             Planner('pixel_size', [0.001]),
@@ -133,6 +133,17 @@ if __name__ == '__main__':
                     ['Jan12200s', 'Jan06019s', 'Jan07300s', 'Jan10100s', 'jan09_200ser', 'Jan07100s', 'Jan14300s',
                      'oct24100s', 'oct28000s']),
         ])
+    ])
+
+    # All datasets but no cross-validation (for baseline and quick tests)
+    datasets_planner = ParallelPlanner([
+        Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
+        Planner('pixel_size', [0.001, 0.0025]),
+        Planner('nb_epoch', [0, 0]),  # Nb epoch defined by nb_train_update
+        Planner('label_offset_x', [6, 7]),
+        Planner('label_offset_y', [6, 7]),
+        Planner('conv_layers_channel', [[12, 24], [6, 12]]),
+        Planner('test_diagram', ['', ''])
     ])
 
     # Default settings for each NN
@@ -204,8 +215,16 @@ if __name__ == '__main__':
             Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
         ]),
-        datasets_planner
+        datasets_planner_cross_valid
     ], runs_name='full_scan-{research_group}-{model_type}-{test_diagram}')
+
+    # Run tuning on all datasets and procedures
+    tune_oracle = CombinatorPlanner([
+        Planner('autotuning_nb_iteration', [50]),
+        Planner('autotuning_procedures', [['jump', 'shifting', 'jump_b', 'shifting_b', 'random']]),
+        Planner('autotuning_use_oracle', [True]),
+        datasets_planner
+    ], runs_name='tuning-oracle-{research_group}')
 
     # Train all networks with all datasets
     train_all_networks = CombinatorPlanner([
@@ -216,7 +235,7 @@ if __name__ == '__main__':
             Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
         ]),
-        datasets_planner,
+        datasets_planner_cross_valid,
         # Planner('seed', range(10))
     ], runs_name='line-{research_group}-{model_type}-{test_diagram}')
 
@@ -225,13 +244,13 @@ if __name__ == '__main__':
         Planner('autotuning_nb_iteration', [50]),
         Planner('autotuning_procedures', [['jump', 'shifting', 'jump_b', 'shifting_b']]),
         ParallelPlanner([
-            Planner('model_type', ['CNN', 'CNN', 'BCNN']),
-            Planner('hidden_layers_size', [cnns_hidden_size, cnns_hidden_size, cnns_hidden_size]),
-            Planner('learning_rate', [cnns_lr, cnns_lr, cnns_lr]),
-            Planner('nb_train_update', [1, cnn_update, bcnn_update]),
-            Planner('autotuning_use_oracle', [True, False, False]),
+            Planner('model_type', ['CNN', 'BCNN']),
+            Planner('hidden_layers_size', [cnns_hidden_size, cnns_hidden_size]),
+            Planner('learning_rate', [cnns_lr, cnns_lr]),
+            Planner('nb_train_update', [cnn_update, bcnn_update]),
+            Planner('autotuning_use_oracle', [False, False]),
         ]),
-        datasets_planner
-    ], runs_name='tuning-{research_group}-{model_type}-{autotuning_procedures}-{test_diagram}')
+        datasets_planner_cross_valid
+    ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
 
-    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=False)
+    run_tasks_planner(tune_oracle, skip_existing_runs=True, tuning_task=True)

@@ -1,6 +1,6 @@
 from collections import Counter, defaultdict
 from itertools import chain
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from tabulate import tabulate
 
@@ -25,15 +25,19 @@ from utils.timer import SectionTimer
 
 
 @SectionTimer('tuning task')
-def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
+def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None:
     """
     Run the autotuning simulation.
 
-    :param model: The classifier model used by the tuning procedure.
+    :param model: The classifier model used by the tuning procedure. If the model is None, the Oracle option should be
+        enabled.
     :param diagrams: The list of diagrams to run on the tuning procedure.
     """
     if len(diagrams) == 0:
         raise ValueError('No diagram provided to the tuning run.')
+
+    if settings.autotuning_use_oracle:
+        logger.warning('Oracle option enabled. The labels are used instead of a classification model. Baseline only.')
 
     # Automatically chooses the device according to the settings, and move diagram data to it.
     device = get_cuda_device()
@@ -75,10 +79,10 @@ def run_autotuning(model: Classifier, diagrams: List[Diagram]) -> None:
     save_show_final_results(autotuning_results)
 
 
-def init_procedure(model: Classifier, procedure_name: str) -> AutotuningProcedure:
+def init_procedure(model: Optional[Classifier], procedure_name: str) -> AutotuningProcedure:
     """
     Set up the autotuning procedure based on the current settings.
-    :param model: The model to use for line classification.
+    :param model: The model to use for line classification. If the model is None, the Oracle option should be enabled.
     :param procedure_name: The name of the tuning procedure to use.
     :return: The procedure.
     """
@@ -86,7 +90,7 @@ def init_procedure(model: Classifier, procedure_name: str) -> AutotuningProcedur
     label_offsets = (settings.label_offset_x, settings.label_offset_y)
 
     # Load model
-    if issubclass(type(model), ClassifierNN):
+    if model is not None and issubclass(type(model), ClassifierNN):
         model.eval()  # Turn off training features (eg. dropout)
 
     # Load procedure

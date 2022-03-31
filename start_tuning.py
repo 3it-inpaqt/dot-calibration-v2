@@ -17,7 +17,7 @@ def start_tuning_task() -> None:
     """
 
     # Start with line task: train model if necessary, then test it
-    model = start_line_task()
+    model = None if settings.autotuning_use_oracle else start_line_task()
 
     with SectionTimer('datasets loading', 'debug'):
         # Load diagrams from files (line and area)

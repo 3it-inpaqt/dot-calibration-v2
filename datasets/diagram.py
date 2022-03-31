@@ -393,6 +393,9 @@ class Diagram:
         The values are fetch via the normalization_values_path setting.
         :param diagrams: The diagrams to normalize.
         """
+        if settings.autotuning_use_oracle:
+            return  # No need to normalize if we use the oracle
+
         min_value, max_value = load_normalization()
 
         for diagram in diagrams:
