@@ -82,7 +82,7 @@ class Settings:
 
     # If True the diagrams will be plotted when they are loaded.
     # Always skipped if patches are loaded from cache.
-    plot_diagrams: bool = False
+    plot_diagrams: bool = True
 
     # If True the image are saved in a format adapted to latex format (vectorial and no title).
     image_latex_format: bool = False
@@ -246,6 +246,11 @@ class Settings:
     # If True the line classification model cheat by using the diagram labels (no neural network loaded).
     # Used for baselines.
     autotuning_use_oracle: bool = False
+
+    # If True, the tuning algorithm will try to detect the transition line slope. If not, will always use the prior
+    # slope knowledge.
+    # Feature only available on jump algorithm.
+    auto_detect_slope: bool = True
 
     # If the oracle is enabled, these numbers corrupt its precision.
     # 0.0 = all predictions are based on the ground truth (labels), means 100% precision

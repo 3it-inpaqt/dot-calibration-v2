@@ -3,7 +3,7 @@ Bunch of dataclasses and enumerations to structure information and simplify code
 """
 from dataclasses import dataclass
 from enum import Enum, unique
-from typing import Callable, Iterable, List, Tuple
+from typing import Callable, Iterable, List, Optional, Tuple
 
 from utils.settings import settings
 
@@ -117,3 +117,41 @@ class AutotuningResult:
     @property
     def success_rate(self):
         return self.nb_classification_success / self.nb_steps if self.nb_steps > 0 else 0
+
+
+@dataclass
+class SearchLineSlope:
+    scans_results: List[bool]
+    scans_positions: List[Tuple[int, int]]
+
+    def __init__(self):
+        self.scans_results = []
+        self.scans_positions = []
+
+    def is_valid_sequence(self) -> bool:
+        """
+        The detection is valid only if we found the sequence: "No Line" * m --> "Line" * n --> "No Line" * p.
+        Where n, m and p >= 1.
+        :return: True if the scans sequence is valid.
+        """
+        seq = []
+        for is_line in self.scans_results:
+            if len(seq) == 0 or seq[-1] != is_line:
+                seq.append(is_line)
+
+        return seq == [False, True, False]
+
+    def get_line_boundary(self, first: bool) -> Optional[Tuple[int, int]]:
+        """
+        Find line detection boundary in the scan list.
+
+        :param first: If set to True, return the first line in the list. If False, return the last one.
+        :return: The first or last line coordinates of the scan sequence. Or None if no line detected.
+        """
+        results_positions = list(zip(self.scans_results, self.scans_positions))
+        if first:
+            results_positions.reverse()
+        for is_line, position in results_positions:
+            if is_line:
+                return position
+        return None

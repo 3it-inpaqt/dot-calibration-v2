@@ -109,7 +109,8 @@ class AutotuningProcedure:
                 confidence = confidence.item()
 
         # Record the diagram scanning activity.
-        step_description = self._step_name + (f'\n    > {self._step_descr}' if len(self._step_descr) > 0 else '')
+        decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
+        step_description = self._step_name + decr
         self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
                                                    step_description))
 

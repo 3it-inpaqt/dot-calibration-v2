@@ -1,8 +1,8 @@
-from math import cos, pi, sin
+from math import atan2, cos, pi, sin
 from typing import List, Optional, Tuple
 
 from autotuning.autotuning_procedure import AutotuningProcedure
-from classes.data_structures import Direction
+from classes.data_structures import Direction, SearchLineSlope
 from utils.settings import settings
 
 
@@ -12,7 +12,7 @@ class JumpShifting(AutotuningProcedure):
     _max_steps_search_empty: int = 100
 
     # Line angle degree (0 = horizontal - 90 = vertical)
-    _line_direction: int = 90
+    _line_slope: float = None
     # List of distance between lines in pixel
     _line_distances: List[int] = None
     # Coordinate of the leftmost line found so far
@@ -20,7 +20,8 @@ class JumpShifting(AutotuningProcedure):
 
     def _tune(self) -> Tuple[int, int]:
         self._search_first_line()
-        self._line_direction = self._search_line_direction()
+        if settings.auto_detect_slope:
+            self._search_line_slope()
         self._search_empty()
         self._guess_one_electron()
 
@@ -65,25 +66,58 @@ class JumpShifting(AutotuningProcedure):
 
         return False
 
-    def _search_line_direction(self) -> int:
+    def _search_line_slope(self) -> None:
         """
-        Estimate the direction of the current line.
-
-        :return: The estimated direction in degree.
+        Estimate the direction of the current line and update the _line_slope attribut if the measurement looks valid.
         """
-        self._step_name = 'Search line direction'
+        self._step_name = '2. Search line slope'
 
-        # Hardcoded for now
-        if settings.research_group == 'michel_pioro_ladriere':
-            return 75
-        elif settings.research_group == 'louis_gaudreau':
-            return 45
+        start_x, start_y = self.x, self.y
+
+        # Step distance relative to the line distance to reduce the risk to reach another line
+        step_distance = round(self._default_step_y * self._get_avg_line_distance())
+        # Start angle base on prior knowledge
+        start_angle = round(self._line_slope)
+
+        # (Top search, Bottom search)
+        searches = (SearchLineSlope(), SearchLineSlope())
+
+        # Scan top and bottom with a specific angle range
+        # TODO could be smarter
+        for delta, search in zip((180, 0), searches):
+            for angle in range(start_angle - 25, start_angle + 25, 4):
+                self.move_to_coord(start_x, start_y)
+                self._move_relative_to_line(delta - angle, step_distance)
+                line_detected, _ = self.is_transition_line()  # No confidence validation here
+                search.scans_results.append(line_detected)
+                search.scans_positions.append(self.get_patch_center())
+
+        # Valid coherent results, if not, do not save slope
+        if all(search.is_valid_sequence() for search in searches):
+            line_coords_estimations = []  # For Top and Bottom
+            for search in searches:
+                # Get coordinates of first and last lines detected
+                x_1, y_1 = search.get_line_boundary(first=True)
+                x_2, y_2 = search.get_line_boundary(first=False)
+
+                line_coords_estimations.append((((x_1 + x_2) / 2), ((y_1 + y_2) / 2)))
+
+            x_top, y_top = line_coords_estimations[0]
+            x_bot, y_bot = line_coords_estimations[1]
+            # X and Y inverted because my angle setup is wierd
+            slope_estimation = atan2(x_top - x_bot, y_top - y_bot) * 180 / pi + 90
+
+            print(f'{self.diagram.file_basename} - Top: {x_top, y_top} - Bot: {x_bot, y_bot} - {slope_estimation = }')
+            self._line_slope = slope_estimation
+
+        # Reset to starting point
+        self.move_to_coord(start_x, start_y)
 
     def _search_empty(self) -> None:
         """
         Explore the diagram by scanning patch perpendicular to the estimated lines direction.
         """
-        self._step_name = '2. Search 0 e-'
+        self._step_name = f'{3 if settings.auto_detect_slope else 2}. Search 0 e-'
 
         # At the beginning of this function we should be on a line.
         # Since this is the first we met, this is the leftmost by default.
@@ -102,7 +136,7 @@ class JumpShifting(AutotuningProcedure):
         while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions):
             for direction in (d for d in directions if not d.is_stuck):
                 avg_line_distance = self._get_avg_line_distance()
-                self._step_descr = f'avg line dist: {avg_line_distance:.1f}'
+                self._step_descr = f'line slope: {self._line_slope:.0f}°\navg line dist: {avg_line_distance:.1f}'
                 nb_search_steps += 1
 
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
@@ -137,7 +171,7 @@ class JumpShifting(AutotuningProcedure):
 
         x, y = self._leftmost_line_coord
         self.move_to_coord(x, y)
-        self._move_right_perpendicular_to_line(self._default_step_x * (self._get_avg_line_distance() / 2 + 1))
+        self._move_right_perpendicular_to_line(round(self._default_step_x * (self._get_avg_line_distance() / 2 + 1)))
 
         # Enforce the boundary policy to make sure the final guess is in the diagram area
         self._enforce_boundary_policy(force=True)
@@ -160,7 +194,7 @@ class JumpShifting(AutotuningProcedure):
 
         return line_detected
 
-    def _move_relative_to_line(self, angle: int, step_size: Optional[int] = None) -> None:
+    def _move_relative_to_line(self, angle: float, step_size: Optional[int] = None) -> None:
         """
         Shift the current coordinates in a direction relative to the estimated lines directions.
 
@@ -186,7 +220,7 @@ class JumpShifting(AutotuningProcedure):
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        self._move_relative_to_line(270 - self._line_direction, step_size)
+        self._move_relative_to_line(270 - self._line_slope, step_size)
 
     def _move_right_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
         """
@@ -195,13 +229,13 @@ class JumpShifting(AutotuningProcedure):
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        self._move_relative_to_line(90 - self._line_direction, step_size)
+        self._move_relative_to_line(90 - self._line_slope, step_size)
 
     def _move_up_follow_line(self, step_size: Optional[int] = None) -> None:
-        self._move_relative_to_line(180 - self._line_direction, step_size)
+        self._move_relative_to_line(180 - self._line_slope, step_size)
 
     def _move_down_follow_line(self, step_size: Optional[int] = None) -> None:
-        self._move_relative_to_line(-self._line_direction, step_size)
+        self._move_relative_to_line(-self._line_slope, step_size)
 
     def _get_avg_line_distance(self) -> float:
         """ Get the mean line distance. """
@@ -209,6 +243,13 @@ class JumpShifting(AutotuningProcedure):
 
     def reset_procedure(self):
         super().reset_procedure()
-        self._line_direction = 90  # Prior assumption about line direction
-        self._line_distances = [5]  # Prior assumption about distance between lines
+
+        if settings.research_group == 'michel_pioro_ladriere':
+            self._line_slope = 75  # Prior assumption about line direction
+            self._line_distances = [5]  # Prior assumption about distance between lines
+
+        elif settings.research_group == 'louis_gaudreau':
+            self._line_slope = 45  # Prior assumption about line direction
+            self._line_distances = [3]  # Prior assumption about distance between lines
+
         self._leftmost_line_coord = None
