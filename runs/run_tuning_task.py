@@ -48,17 +48,17 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
     # Variables to store stats and results
     autotuning_results = defaultdict(list)
 
-    for procedure_name in settings.autotuning_procedures:
-        # Set up the autotuning procedure_name according to the settings
-        procedure = init_procedure(model, procedure_name)
+    # Start the autotuning testing
+    logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
+                f'with {len(settings.autotuning_procedures)} autotuning procedure(s)')
 
-        nb_iterations = settings.autotuning_nb_iteration * len(diagrams)
-        nb_error_to_plot = 2
+    nb_iterations = settings.autotuning_nb_iteration * len(diagrams) * len(settings.autotuning_procedures)
+    with SectionTimer('autotuning simulation'), ProgressBarTuning(nb_iterations) as progress:
+        for procedure_name in settings.autotuning_procedures:
+            # Set up the autotuning procedure_name according to the settings
+            procedure = init_procedure(model, procedure_name)
+            nb_error_to_plot = 2
 
-        # Start the autotuning testing
-        logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
-                    f'with the "{procedure}" autotuning procedure')
-        with SectionTimer('autotuning simulation'), ProgressBarTuning(nb_iterations) as progress:
             for i in range(settings.autotuning_nb_iteration):
                 for diagram in diagrams:
                     procedure.reset_procedure()
