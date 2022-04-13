@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import List, Union
 
 import matplotlib.pyplot as plt
@@ -30,47 +31,52 @@ def load_runs_clean(patterns: Union[str, List[str]]) -> pd.DataFrame:
 
 
 def compare_autotuning():
-    data = load_runs([
-        'tmp_1',
-        'tmp_2',
-        'tmp_3',
-        'tmp_4',
-        'tmp_5',
-    ])
+    data = load_runs_clean(['tuning-michel*'])
 
     # Compute accuracy and number of steps for each autotuning run
-    grouped_results = []
     target = str(ChargeRegime.ELECTRON_1)
+    good_charge = Counter()
+    total = Counter()
+    nb_steps = Counter()
     for _, row in data.iterrows():
-        results = row['results.tuning_results']
-        procedure = row['settings.autotuning_procedure']
-        use_oracle = row['settings.autotuning_use_oracle']
-        model = row['settings.model_type']
+        for tuning_result in row['results.tuning_results']:
+            # procedure_name contrains the model type too
+            result_id = (tuning_result['procedure_name'], tuning_result['diagram_name'])
+            total[result_id] += 1
+            if tuning_result['charge_area'] == target:
+                good_charge[result_id] += 1
 
-        if procedure == 'random':
-            name = 'random'
-        else:
-            name = f'{procedure}\n' + ('Oracle' if use_oracle else model)
+            nb_steps[result_id] += tuning_result['nb_steps']
 
-        for diagram, stats in results.items():
-            nb_good_regime = sum(1 for s in stats if s['charge_area'] == target)
-            nb_steps = sum(s['nb_steps'] for s in stats)
-            nb_tuning = len(stats)
-            grouped_results.append([diagram, name, nb_good_regime / nb_tuning, nb_steps / nb_tuning])
+    grouped_results = []  # Group by (diagram - procedure - model)
+    for procedure_name, diagram_name in total.keys():
+        success_rate = good_charge[(procedure_name, diagram_name)] / total[(procedure_name, diagram_name)]
+        mean_steps = nb_steps[(procedure_name, diagram_name)] / total[(procedure_name, diagram_name)]
+        procedure_name = procedure_name.replace(' (', '\n').replace(')', '').replace('JumpShifting', 'Jump') \
+            .replace('Bayes', ' B')
+        grouped_results.append([diagram_name, procedure_name, success_rate, mean_steps])
 
     # Convert to dataframe
     grouped_results = DataFrame(grouped_results, columns=['diagram', 'procedure_model', 'success', 'mean_steps'])
 
-    # Order and colors
+    # Order by success rate
     order = grouped_results.groupby(['procedure_model'])['success'].mean().reset_index().sort_values('success')
+
+    # Change color base on the model used
     color_map = {'random': 'lightgrey', '\nCNN': 'tab:blue', '\nBCNN': 'tab:purple', '\nOracle': 'grey'}
-    colors = [color for c_filter, color in color_map.items() for procedure in order['procedure_model']
-              if c_filter in procedure]
+    colors = []
+    for procedure_name in order['procedure_model']:
+        for c_filter, color in color_map.items():
+            if c_filter in procedure_name:
+                colors.append(color)
+                break
 
     # Plot accuracy
-    sns.barplot(x="procedure_model", y="success", data=grouped_results, order=order['procedure_model'],
-                palette=colors, ci='sd')
+    ax = sns.barplot(x="procedure_model", y="success", data=grouped_results, order=order['procedure_model'],
+                     palette=colors, ci=None)
     plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+    # Limit min / max value +/- 10%
+    ax.set(ylim=(max(order['success'].min() - 0.1, 0), min(order['success'].max() + 0.1, 1)))
     plt.ylabel('Success rate')
     plt.xlabel('Procedure and model')
     plt.title(f'Autotuning procedures success to reach {target} electron regime')
@@ -79,7 +85,7 @@ def compare_autotuning():
 
     # Plot steps
     sns.barplot(x="procedure_model", y="mean_steps", data=grouped_results, order=order['procedure_model'],
-                palette=colors, ci='sd')
+                palette=colors, ci=None)
     plt.ylabel('Average steps')
     plt.xlabel('Procedure and model')
     plt.title(f'Autotuning procedures number of steps')
@@ -273,4 +279,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    compare_autotuning_stats()
+    compare_autotuning()
