@@ -366,7 +366,7 @@ class AutotuningProcedure:
         """
         d = self.diagram
         values = d.values.cpu()
-        name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}'
+        name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
 
         if plot_vanilla:
             # diagram
