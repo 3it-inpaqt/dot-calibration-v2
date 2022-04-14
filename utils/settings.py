@@ -260,7 +260,8 @@ class Settings:
     autotuning_oracle_line_random: float = 0
     autotuning_oracle_no_line_random: float = 0
 
-    # Number of iteration per diagram for the autotuning test
+    # Number of iteration per diagram for the autotuning test.
+    # For the 'full' procedure this number is override to 1.
     autotuning_nb_iteration: int = 50
 
     def is_named_run(self) -> bool:

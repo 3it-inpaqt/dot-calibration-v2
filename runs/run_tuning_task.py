@@ -49,17 +49,20 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
     autotuning_results = defaultdict(list)
 
     # Start the autotuning testing
-    logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} times '
+    logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} time(s) '
                 f'with {len(settings.autotuning_procedures)} autotuning procedure(s)')
 
-    nb_iterations = settings.autotuning_nb_iteration * len(diagrams) * len(settings.autotuning_procedures)
+    # Only 1 iteration for the 'full' procedure
+    nb_iterations = sum(1 if p == 'full' else settings.autotuning_nb_iteration for p in settings.autotuning_procedures)
+    nb_iterations *= len(diagrams)
     with SectionTimer('autotuning simulation'), ProgressBarTuning(nb_iterations) as progress:
         for procedure_name in settings.autotuning_procedures:
             # Set up the autotuning procedure_name according to the settings
             procedure = init_procedure(model, procedure_name)
             nb_error_to_plot = 2
 
-            for i in range(settings.autotuning_nb_iteration):
+            nb_iteration = 1 if procedure_name == 'full' else settings.autotuning_nb_iteration
+            for i in range(nb_iteration):
                 for diagram in diagrams:
                     procedure.reset_procedure()
 
@@ -125,6 +128,7 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
     """
 
     success = autotuning_result.is_success_tuning
+    is_full_scan = isinstance(procedure, FullScan)
 
     # Log information
     logger.debug(f'End tuning {procedure.diagram.file_basename} in {autotuning_result.nb_steps} steps '
@@ -136,7 +140,7 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
     if is_first_tuning:
         procedure.plot_step_history(autotuning_result.final_coord, success, plot_vanilla=False)
         procedure.plot_step_history_animation(autotuning_result.final_coord, success)
-    elif nb_error_to_plot > 0 and not success:
+    elif nb_error_to_plot > 0 and not success and not is_full_scan:
         procedure.plot_step_history(autotuning_result.final_coord, success, plot_vanilla=False)
         procedure.plot_step_history_animation(autotuning_result.final_coord, success)
         nb_error_to_plot -= 1

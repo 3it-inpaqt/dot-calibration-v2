@@ -34,7 +34,8 @@ def plot_diagram(x_i, y_i,
                  final_coord: Tuple[int, int] = None,
                  save_in_buffer: bool = False,
                  text_stats: bool = False,
-                 show_title: Optional[bool] = None) -> Optional[Union[Path, io.BytesIO]]:
+                 show_title: Optional[bool] = None,
+                 show_crosses: bool = True) -> Optional[Union[Path, io.BytesIO]]:
     """
     Plot the interpolated image.
 
@@ -57,6 +58,7 @@ def plot_diagram(x_i, y_i,
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
     :param text_stats: If True, add statistics information in the plot.
     :param show_title: If True plot figure title. If omitted, show title only if not latex format.
+    :param show_crosses: If True plot the crosses representing the start and the end of the tuning if possible.
     :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
      instead of the path.
     """
@@ -116,6 +118,7 @@ def plot_diagram(x_i, y_i,
                 edge_color = 'b' if line_detected else 'r'
                 face_color = 'none'
                 alpha = 1
+                legend = True
 
             patch = patches.Rectangle((x_i[x + settings.label_offset_x], y_i[y + settings.label_offset_y]),
                                       patch_size_x_v,
@@ -128,10 +131,11 @@ def plot_diagram(x_i, y_i,
             plt.gca().add_patch(patch)
 
         # Marker for first point
-        first_x, first_y = scan_history[0].coordinates
-        plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
-                    color='skyblue', marker='X', s=200, label='Start')
-        legend = True
+        if show_crosses:
+            first_x, first_y = scan_history[0].coordinates
+            plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
+                        color='skyblue', marker='X', s=200, label='Start')
+            legend = True
 
         if history_uncertainty:
             # Setup the colorbar
@@ -143,7 +147,7 @@ def plot_diagram(x_i, y_i,
             cbar.set_ticklabels(['Line\nLow uncertainty', 'High uncertainty', 'No Line\nLow uncertainty'])
 
     # Marker for tuning final guess
-    if final_coord is not None:
+    if show_crosses and final_coord is not None:
         last_x, last_y = final_coord
         # Get marker position (and avoid going out)
         last_x_i = min(last_x, len(x_i) - 1)
