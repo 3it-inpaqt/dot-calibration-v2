@@ -1,7 +1,7 @@
-from autotuning.shifting import Shifting
+from autotuning.shift import Shift
 
 
-class ShiftingBayes(Shifting):
+class ShiftUncertainty(Shift):
     """
     Autotuning procedure adapted from https://doi.org/10.1088/2632-2153/ac34db
     But using confidence to validate a line instead of following it

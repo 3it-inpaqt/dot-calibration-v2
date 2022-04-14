@@ -6,7 +6,7 @@ from classes.data_structures import Direction, SearchLineSlope
 from utils.settings import settings
 
 
-class JumpShifting(AutotuningProcedure):
+class Jump(AutotuningProcedure):
     # Number of exploration steps before to give up each phase
     _max_steps_exploration: int = 600
     _max_steps_search_empty: int = 100

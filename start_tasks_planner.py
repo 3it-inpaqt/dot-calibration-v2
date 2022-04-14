@@ -221,7 +221,7 @@ if __name__ == '__main__':
     # Run tuning on all datasets and procedures
     tune_oracle = CombinatorPlanner([
         Planner('autotuning_nb_iteration', [50]),
-        Planner('autotuning_procedures', [['jump', 'shifting', 'jump_b', 'shifting_b', 'random']]),
+        Planner('autotuning_procedures', [['jump', 'shift', 'jump_u', 'shift_u', 'random']]),
         Planner('autotuning_use_oracle', [True]),
         datasets_planner
     ], runs_name='tuning-oracle-{research_group}')
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     # Run tuning on all datasets and procedures
     tune_all_diagrams = CombinatorPlanner([
         Planner('autotuning_nb_iteration', [50]),
-        Planner('autotuning_procedures', [['jump', 'shifting', 'jump_b', 'shifting_b']]),
+        Planner('autotuning_procedures', [['jump', 'shift', 'jump_u', 'shift_u']]),
         ParallelPlanner([
             Planner('model_type', ['CNN', 'BCNN']),
             Planner('hidden_layers_size', [cnns_hidden_size, cnns_hidden_size]),

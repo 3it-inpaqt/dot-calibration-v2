@@ -3,7 +3,7 @@ from typing import Tuple
 from autotuning.autotuning_procedure import AutotuningProcedure
 
 
-class Shifting(AutotuningProcedure):
+class Shift(AutotuningProcedure):
     """ Autotuning procedure from https://doi.org/10.1088/2632-2153/ac34db """
 
     _search_line_step_limit: int = 100

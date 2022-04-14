@@ -1,7 +1,10 @@
-from autotuning.jump_shifting import Direction, JumpShifting
+from autotuning.jump import Direction, Jump
 
 
-class JumpShiftingBayes(JumpShifting):
+class JumpUncertainty(Jump):
+    """
+    Similar to Jump procedure but take the uncertainty into account.
+    """
     # Number of exploration steps before to give up the line checking
     _max_steps_checking_line: int = 6
 

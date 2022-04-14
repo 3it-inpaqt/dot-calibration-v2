@@ -6,11 +6,11 @@ from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from autotuning.full_scan import FullScan
-from autotuning.jump_shifting import JumpShifting
-from autotuning.jump_shifting_bayes import JumpShiftingBayes
+from autotuning.jump import Jump
+from autotuning.jump_uncertainty import JumpUncertainty
 from autotuning.random_baseline import RandomBaseline
-from autotuning.shifting import Shifting
-from autotuning.shifting_bayes import ShiftingBayes
+from autotuning.shift import Shift
+from autotuning.shift_uncertainty import ShiftUncertainty
 from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
 from classes.data_structures import AutotuningResult
@@ -97,14 +97,14 @@ def init_procedure(model: Optional[Classifier], procedure_name: str) -> Autotuni
     procedure_name = procedure_name.lower()
     if procedure_name == 'random':
         return RandomBaseline((settings.patch_size_x, settings.patch_size_y))
-    elif procedure_name == 'shifting':
-        return Shifting(model, patch_size, label_offsets, settings.autotuning_use_oracle)
-    elif procedure_name == 'shifting_b':
-        return ShiftingBayes(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'shift':
+        return Shift(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'shift_u':
+        return ShiftUncertainty(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'jump':
-        return JumpShifting(model, patch_size, label_offsets, settings.autotuning_use_oracle)
-    elif procedure_name == 'jump_b':
-        return JumpShiftingBayes(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+        return Jump(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'jump_u':
+        return JumpUncertainty(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'full':
         return FullScan(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     else:

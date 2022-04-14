@@ -52,8 +52,7 @@ def compare_autotuning():
     for procedure_name, diagram_name in total.keys():
         success_rate = good_charge[(procedure_name, diagram_name)] / total[(procedure_name, diagram_name)]
         mean_steps = nb_steps[(procedure_name, diagram_name)] / total[(procedure_name, diagram_name)]
-        procedure_name = procedure_name.replace(' (', '\n').replace(')', '').replace('JumpShifting', 'Jump') \
-            .replace('Bayes', ' B')
+        procedure_name = procedure_name.replace(' (', '\n').replace(')', '').replace('Uncertainty', ' Unc.')
         grouped_results.append([diagram_name, procedure_name, success_rate, mean_steps])
 
     # Convert to dataframe
