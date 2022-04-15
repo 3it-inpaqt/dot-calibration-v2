@@ -82,15 +82,44 @@ class Jump(AutotuningProcedure):
         # (Top search, Bottom search)
         searches = (SearchLineSlope(), SearchLineSlope())
 
+        max_angle_search = 65  # Max search angle on both side of the prior knowledge
+        search_step = 8
         # Scan top and bottom with a specific angle range
-        # TODO could be smarter
-        for delta, search in zip((180, 0), searches):
-            for angle in range(start_angle - 25, start_angle + 25, 4):
+        for side, search in zip((180, 0), searches):
+            init_line = False
+            init_no_line = False
+            delta = 0
+            while abs(delta) < max_angle_search:
                 self.move_to_coord(start_x, start_y)
-                self._move_relative_to_line(delta - angle, step_distance)
+                self._move_relative_to_line(side - start_angle + delta, step_distance)
+                self._step_descr = f'delta: {delta}°\ninit line: {init_line}\ninit no line: {init_no_line}'
                 line_detected, _ = self.is_transition_line()  # No confidence validation here
-                search.scans_results.append(line_detected)
-                search.scans_positions.append(self.get_patch_center())
+
+                if delta >= 0:
+                    search.scans_results.append(line_detected)
+                    search.scans_positions.append(self.get_patch_center())
+                else:
+                    search.scans_results.appendleft(line_detected)
+                    search.scans_positions.appendleft(self.get_patch_center())
+
+                # Stop when we found a line then no line twice
+                if init_no_line and init_line and not line_detected:
+                    break  # We are on the other side of the line
+
+                if line_detected and not init_line:
+                    init_line = True
+                elif not line_detected and not init_no_line:
+                    init_no_line = True
+                    if init_line:
+                        delta = -delta  # Change the orientation if we found a line then no line
+
+                if init_line and init_no_line:
+                    # Stop alternate, iterate delta depending on the direction
+                    delta += search_step if delta >= 0 else -search_step
+                else:
+                    if delta >= 0:
+                        delta += search_step  # Increment delta on one direction only because alternate
+                    delta = -delta  # Alternate directions as long as we didn't find one line and one no line
 
         # Valid coherent results, if not, do not save slope
         if all(search.is_valid_sequence() for search in searches):
@@ -107,7 +136,6 @@ class Jump(AutotuningProcedure):
             # X and Y inverted because my angle setup is wierd
             slope_estimation = atan2(x_top - x_bot, y_top - y_bot) * 180 / pi + 90
 
-            print(f'{self.diagram.file_basename} - Top: {x_top, y_top} - Bot: {x_bot, y_bot} - {slope_estimation = }')
             self._line_slope = slope_estimation
 
         # Reset to starting point

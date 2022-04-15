@@ -1,9 +1,10 @@
 """
 Bunch of dataclasses and enumerations to structure information and simplify code.
 """
+from collections import deque
 from dataclasses import dataclass
 from enum import Enum, unique
-from typing import Callable, Iterable, List, Optional, Tuple
+from typing import Callable, Deque, Iterable, List, Optional, Tuple
 
 from utils.settings import settings
 
@@ -121,12 +122,12 @@ class AutotuningResult:
 
 @dataclass
 class SearchLineSlope:
-    scans_results: List[bool]
-    scans_positions: List[Tuple[int, int]]
+    scans_results: Deque[bool]
+    scans_positions: Deque[Tuple[int, int]]
 
     def __init__(self):
-        self.scans_results = []
-        self.scans_positions = []
+        self.scans_results = deque()
+        self.scans_positions = deque()
 
     def is_valid_sequence(self) -> bool:
         """
