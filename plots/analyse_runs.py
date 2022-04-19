@@ -40,6 +40,9 @@ def compare_autotuning():
     nb_steps = Counter()
     for _, row in data.iterrows():
         for tuning_result in row['results.tuning_results']:
+            # Exclude full scan
+            if tuning_result['procedure_name'].startswith('FullScan'):
+                continue
             # procedure_name contrains the model type too
             result_id = (tuning_result['procedure_name'], tuning_result['diagram_name'])
             total[result_id] += 1
