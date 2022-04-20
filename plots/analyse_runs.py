@@ -138,27 +138,24 @@ def compare_autotuning_stats():
 
 
 def compare_models():
-    data = load_runs('ref-01*')
+    data = load_runs_clean(['tuning-louis*', 'tuning-michel*'])
 
-    # Rename col for auto plot labels
     data.rename(columns={'settings.research_group': 'Datasets',
                          'settings.model_type': 'Model'}, inplace=True)
 
-    for metric in ['recall', 'precision', 'accuracy', 'f1']:
-        metric_col = metric.capitalize()
-        data[metric_col] = data['results.final_classification_results'].map(lambda a: a[metric])
-
+    for metric in ['Recall', 'Precision', 'Accuracy', 'F1']:
         order = ['FF', 'CNN', 'BCNN']
-        ax = sns.barplot(x="Model", y=metric_col, data=data, hue='Datasets', ci='sd', order=order)
+        metric_mean = data.groupby(['Datasets', 'Model'])[metric].mean()
+        ax = sns.barplot(x="Model", y=metric, data=data, hue='Datasets', ci='sd', order=order)
 
         # Limit min / max value +/- 10%
-        ax.set(ylim=(max(data[metric_col].min() - 0.1, 0), min(data[metric_col].max() + 0.1, 1)))
+        ax.set(ylim=(max(metric_mean.min() - 0.1, 0), min(metric_mean.max() + 0.1, 1)))
         plt.gca().yaxis.set_major_formatter(PercentFormatter(1, decimals=0))
         # Write values in bars
         for ctr in ax.containers:
             ax.bar_label(ctr, padding=-25, labels=[f'{x:.1%}' for x in ctr.datavalues], fontsize=14, color='w')
 
-        plt.title(f'Trained models {metric_col} comparison')
+        plt.title(f'Trained models {metric} comparison')
         # Put the legend out of the figure (middle bottom)
         plt.legend(bbox_to_anchor=(0.5, -0.2), loc='center', ncol=2)
         plt.tight_layout()
@@ -281,4 +278,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    compare_autotuning()
+    compare_models()
