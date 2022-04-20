@@ -190,7 +190,7 @@ class SequencePlanner(BasePlanner):
     To organise planners by sequential order.
     When the current planner is over the next one on the list will start.
     The total length of this sequence will be the sum of each sub-planners.
-    Global settings are changed in place, but at the end of the iteration every settings are rollback to their initial
+    Global settings are changed in place, but at the end of the iteration every setting are rollback to their initial
     values.
     """
 
@@ -201,7 +201,7 @@ class SequencePlanner(BasePlanner):
 
         :param planners: The list of sub-planners to iterate, it can be any subclass of BasePlanner.
         :param runs_name: The string template to use to generate each run name. Allow specifying any setting field with
-            default f-string syntaxe. If multiple run have the same name, add increment. If this parameter is None, the
+            default f-string syntax. If multiple run have the same name, add increment. If this parameter is None, the
             name will be generated according to the settings name, which is very descriptive but could be quite long.
             The special key "i" refer to the current run index.
             Eg:

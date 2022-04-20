@@ -244,11 +244,11 @@ if __name__ == '__main__':
         Planner('autotuning_nb_iteration', [50]),
         Planner('autotuning_procedures', [['full', 'jump', 'shift', 'jump_u', 'shift_u']]),
         ParallelPlanner([
-            Planner('model_type', ['CNN', 'BCNN']),
-            Planner('hidden_layers_size', [cnns_hidden_size, cnns_hidden_size]),
-            Planner('learning_rate', [cnns_lr, cnns_lr]),
-            Planner('nb_train_update', [cnn_update, bcnn_update]),
-            Planner('autotuning_use_oracle', [False, False]),
+            Planner('model_type', ['FF', 'CNN', 'BCNN']),
+            Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
+            Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
+            Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
+            Planner('autotuning_use_oracle', [False, False, False]),
         ]),
         datasets_planner_cross_valid
     ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
