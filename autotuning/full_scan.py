@@ -56,3 +56,7 @@ class FullScan(AutotuningProcedure):
         plot_diagram(d.x_axes, d.y_axes, None, name + ' uncertainty labels', 'nearest',
                      d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=self._scan_history,
                      show_offset=False, history_uncertainty=True, show_crosses=False)
+        # step with error color and uncertainty
+        plot_diagram(d.x_axes, d.y_axes, None, name + ' error', 'nearest', d.x_axes[1] - d.x_axes[0],
+                     transition_lines=d.transition_lines, scan_history=self._scan_history, show_offset=False,
+                     scan_errors=True, history_uncertainty=True, show_crosses=False)

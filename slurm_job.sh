@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=rrg-rgmelko-ab
 #SBATCH --gres=gpu:v100:1
-#SBATCH --cpus-per-task=8
+#SBATCH --cpus-per-task=4
 #SBATCH --mem=8G
-#SBATCH --time=02:00:00
+#SBATCH --time=10:00:00
 #SBATCH --job-name=dot-calibration-v2-runs-planner
 #SBATCH --output=out/slurm-%j.out
 module load geos/3.9.1 python/3.8.10

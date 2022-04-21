@@ -380,6 +380,10 @@ class AutotuningProcedure:
         plot_diagram(d.x_axes, d.y_axes, None, name + ' uncertainty', 'nearest',
                      d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=self._scan_history,
                      final_coord=final_coord, show_offset=False, history_uncertainty=True)
+        # step with error color and uncertainty
+        plot_diagram(d.x_axes, d.y_axes, None, name + ' error', 'nearest', d.x_axes[1] - d.x_axes[0],
+                     transition_lines=d.transition_lines, scan_history=self._scan_history, show_offset=False,
+                     scan_errors=True, history_uncertainty=True, show_crosses=False)
 
     def plot_step_history_animation(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
         """

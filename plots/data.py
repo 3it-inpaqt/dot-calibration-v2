@@ -17,8 +17,11 @@ from torch.utils.data import DataLoader, Dataset
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
 
+LINE_COLOR = 'blue'
+NO_LINE_COLOR = 'red'
+GOOD_COLOR = 'green'
+ERROR_COLOR = 'red'
 
-# TODO factorise plotting code
 
 def plot_diagram(x_i, y_i,
                  pixels: Optional,
@@ -29,6 +32,7 @@ def plot_diagram(x_i, y_i,
                  transition_lines: Iterable[LineString] = None,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True,
                  scan_history: List["StepHistoryEntry"] = None,
+                 scan_errors: bool = False,
                  history_uncertainty: bool = False,
                  scale_bar: bool = False,
                  final_coord: Tuple[int, int] = None,
@@ -50,6 +54,8 @@ def plot_diagram(x_i, y_i,
     :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
     :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0).
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
+    :param scan_errors: If True and scan_history defined, plot the step error on the diagram. If False plot the class
+     inference instead.
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
      the uncertainty.
     :param scale_bar: If True and pixels provided, plot the pixel color scale at the right of the diagram. If the data
@@ -102,20 +108,28 @@ def plot_diagram(x_i, y_i,
 
         for scan_entry in scan_history:
             line_detected = scan_entry.model_classification
+            correct_class = scan_entry.model_classification == scan_entry.ground_truth
             x, y = scan_entry.coordinates
 
-            # If history uncertainty, plot full square with transparency based on the confidence
+            if scan_errors:
+                # Green for correct class / Red for bad class
+                color = GOOD_COLOR if correct_class else ERROR_COLOR
+            else:
+                # Blue for Line inference / Red for No Line inference
+                color = LINE_COLOR if line_detected else NO_LINE_COLOR
+
             if history_uncertainty:
+                # Plot full square with transparency based on the confidence
                 edge_color = 'none'
-                face_color = 'b' if line_detected else 'r'
+                face_color = color
                 alpha = scan_entry.model_confidence
                 label = None
-            # If no history uncertainty, plot empty square with color based on "line"/"no line"
             else:
+                # Plot empty square with color based on "line"/"no line"
                 label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
                 first_patch_label.add(line_detected)
 
-                edge_color = 'b' if line_detected else 'r'
+                edge_color = color
                 face_color = 'none'
                 alpha = 1
                 legend = True
@@ -138,13 +152,20 @@ def plot_diagram(x_i, y_i,
             legend = True
 
         if history_uncertainty:
-            # Setup the colorbar
-            cmap = LinearSegmentedColormap.from_list('', ['blue', 'white', 'red'])
+            # Set up the colorbar
+            if scan_errors:
+                cmap = LinearSegmentedColormap.from_list('', [GOOD_COLOR, 'white', ERROR_COLOR])
+            else:
+                cmap = LinearSegmentedColormap.from_list('', [LINE_COLOR, 'white', ERROR_COLOR])
             norm = Normalize(vmin=-1, vmax=1)
             cbar = plt.colorbar(ScalarMappable(cmap=cmap, norm=norm), shrink=0.8, aspect=15)
             cbar.outline.set_edgecolor('0.15')
             cbar.set_ticks([-1, 0, 1])
-            cbar.set_ticklabels(['Line\nLow uncertainty', 'High uncertainty', 'No Line\nLow uncertainty'])
+            if scan_errors:
+                cbar.set_ticklabels(['Correct class\nLow uncertainty', 'High uncertainty',
+                                     'Error class\nLow uncertainty'])
+            else:
+                cbar.set_ticklabels(['Line\nLow uncertainty', 'High uncertainty', 'No Line\nLow uncertainty'])
 
     # Marker for tuning final guess
     if show_crosses and final_coord is not None:
