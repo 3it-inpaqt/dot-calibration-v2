@@ -99,9 +99,9 @@ class AutotuningProcedure:
             with torch.no_grad():
                 # Cut the patch area and send it to the model for inference
                 patch = self.diagram.get_patch((self.x, self.y), self.patch_size)
-                # Reshape as valid input for the model (batch size, chanel, patch x, patch y)
+                # Reshape as valid input for the model (batch size, patch x, patch y)
                 size_x, size_y = self.patch_size
-                patch = patch.view((1, 1, size_x, size_y))
+                patch = patch.view((1, size_x, size_y))
                 # Send to the model for inference
                 prediction, confidence = self.model.infer(patch, settings.bayesian_nb_sample_test)
                 # Extract data from pytorch tensor

@@ -49,6 +49,8 @@ class FeedForward(ClassifierNN):
         :param x: One input of the dataset
         :return: The output of the network
         """
+        # Flatten input but not the batch
+        x = x.flatten(start_dim=1)
 
         # Run fully connected layers
         for fc in self.fc_layers[:-1]:
@@ -96,11 +98,3 @@ class FeedForward(ClassifierNN):
         confidences = torch.abs(0.5 - outputs) * 2
         predictions = torch.round(outputs).bool()  # Round to 0 or 1
         return predictions, confidences.cpu()
-
-    @staticmethod
-    def get_transforms():
-        """
-        Define the data pre-processing to apply on the datasets before to use this neural network.
-        """
-        # TODO replace by flatten layer https://stackoverflow.com/a/60117675/2666094
-        return [lambda x: torch.flatten(x)]  # Flatten the image

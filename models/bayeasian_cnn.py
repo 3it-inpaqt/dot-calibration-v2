@@ -58,6 +58,8 @@ class BCNN(ClassifierBayesNN):
         :param x: One input of the dataset
         :return: The output of the network
         """
+        # Add channel dimension
+        x = x.unsqueeze(dim=1)
 
         # Run convolution layers
         for conv in self.conv_layers:
@@ -98,13 +100,6 @@ class BCNN(ClassifierBayesNN):
         self._optimizer.step()
 
         return loss.item()
-
-    @staticmethod
-    def get_transforms():
-        """
-        Define the data pre-processing to apply on the datasets before to use this neural network.
-        """
-        return [lambda x: x.view(1, x.shape[0], -1)]  # Add the channel dimension
 
     def plot_parameters_sample(self, title: str, file_name: str, n: int = 9) -> None:
 

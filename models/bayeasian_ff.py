@@ -49,6 +49,8 @@ class BFF(ClassifierBayesNN):
         :param x: One input of the dataset
         :return: The output of the network
         """
+        # Flatten input but not the batch
+        x = x.flatten(start_dim=1)
 
         # Run fully connected layers
         for fc in self.fc_layers[:-1]:
@@ -82,10 +84,3 @@ class BFF(ClassifierBayesNN):
         self._optimizer.step()
 
         return loss.item()
-
-    @staticmethod
-    def get_transforms():
-        """
-        Define the data pre-processing to apply on the datasets before to use this neural network.
-        """
-        return [lambda x: torch.flatten(x)]  # Flatten the image

@@ -57,6 +57,8 @@ class CNN(ClassifierNN):
         :param x: One input of the dataset
         :return: The output of the network
         """
+        # Add channel dimension
+        x = x.unsqueeze(dim=1)
 
         # Run convolution layers
         for conv in self.conv_layers:
@@ -113,10 +115,3 @@ class CNN(ClassifierNN):
         confidences = torch.abs(0.5 - outputs) * 2
         predictions = torch.round(outputs).bool()  # Round to 0 or 1
         return predictions, confidences.cpu()
-
-    @staticmethod
-    def get_transforms():
-        """
-        Define the data pre-processing to apply on the datasets before to use this neural network.
-        """
-        return [lambda x: x.view(1, x.shape[0], -1)]  # Add the channel dimension

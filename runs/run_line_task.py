@@ -31,7 +31,7 @@ def preparation() -> None:
 
     # Settings are automatically loaded with the first import
 
-    # Setup console logger but wait to create the directory before to setup the file output
+    # Setup console logger but wait to create the directory before to set up the file output
     logger.set_console_level(settings.logger_console_level)
     logger.set_formatter(settings.console_color)
 
@@ -179,11 +179,6 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
 
     # Run data augmentations methods on train if this setting is enabled
     train_data_augmentation(train_dataset, test_dataset, validation_dataset)
-
-    # Define transformation methods based on the network (for data pre-processing)
-    train_dataset.add_transform(network.get_transforms())
-    test_dataset.add_transform(network.get_transforms())
-    validation_dataset.add_transform(network.get_transforms())
 
     # Automatically chooses the device according to the settings
     device = get_cuda_device()
