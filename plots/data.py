@@ -4,6 +4,7 @@ from math import ceil, sqrt
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -33,6 +34,7 @@ def plot_diagram(x_i, y_i,
                  focus_area: Optional[Tuple] = None, show_offset: bool = True,
                  scan_history: List["StepHistoryEntry"] = None,
                  scan_errors: bool = False,
+                 fog_of_war: bool = False,
                  history_uncertainty: bool = False,
                  scale_bar: bool = False,
                  final_coord: Tuple[int, int] = None,
@@ -56,6 +58,7 @@ def plot_diagram(x_i, y_i,
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
     :param scan_errors: If True and scan_history defined, plot the step error on the diagram. If False plot the class
      inference instead.
+    :param fog_of_war: If True and scan_history defined, hide the section of the diagram that was never scanned.
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
      the uncertainty.
     :param scale_bar: If True and pixels provided, plot the pixel color scale at the right of the diagram. If the data
@@ -80,7 +83,18 @@ def plot_diagram(x_i, y_i,
             plt.imshow(np.zeros((len(x_i), len(y_i))), cmap=LinearSegmentedColormap.from_list('', ['white', 'white']),
                        extent=boundaries)
         else:
-            plt.imshow(pixels, interpolation='nearest', cmap='copper', extent=boundaries)
+            if fog_of_war and scan_history is not None and len(scan_history) > 0:
+                # Mask area not scanned
+                mask = np.full_like(pixels, True)
+                for scan in scan_history:
+                    x, y = scan.coordinates
+                    y = len(y_i) - y  # Origine to bottom left
+                    mask[y - settings.patch_size_y: y, x:x + settings.patch_size_x] = False
+                pixels = np.ma.masked_array(pixels, mask)
+
+            cmap = matplotlib.cm.copper
+            cmap.set_bad(color='lightgrey')
+            plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries)
             if scale_bar:
                 plt.colorbar(shrink=0.85, label='Current (A)')
 
@@ -184,7 +198,7 @@ def plot_diagram(x_i, y_i,
         rect = patches.Rectangle((settings.label_offset_x - 0.5, settings.label_offset_y - 0.5),
                                  focus_x + settings.patch_size_x - 2 * settings.label_offset_x,
                                  focus_y + settings.patch_size_y - 2 * settings.label_offset_y,
-                                 linewidth=1, edgecolor='tab:blue', facecolor='none')
+                                 linewidth=2, edgecolor='fuchsia', facecolor='none')
 
         # Add the patch to the Axes
         plt.gca().add_patch(rect)
@@ -290,7 +304,8 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             # Generate image
             buffer = plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                                   d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
-                                  show_offset=False, save_in_buffer=True, text_stats=True, show_title=False)
+                                  show_offset=False, save_in_buffer=True, text_stats=True, show_title=False,
+                                  fog_of_war=True)
             all_frames.append(buffer)
 
             # GIF frames
@@ -304,6 +319,10 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                 durations_video.append(base_fps * rate_video)
 
         end_frames = [
+            # Show full diagram with tuning final coordinate and fog of war
+            plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
+                         d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
+                         show_offset=False, save_in_buffer=True, text_stats=True, show_title=False, fog_of_war=True),
             # Show full diagram with tuning final coordinate
             plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
                          d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
@@ -323,8 +342,8 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
         all_frames.extend(end_frames)
         frames_gif.extend(end_frames)
         frames_video.extend(end_frames)
-        durations_gif.extend([base_fps * 10, base_fps * 20, base_fps * 50])
-        durations_video.extend([base_fps * 10, base_fps * 20, base_fps * 50])
+        durations_gif.extend([base_fps * 10, base_fps * 10, base_fps * 20, base_fps * 50])
+        durations_video.extend([base_fps * 10, base_fps * 10, base_fps * 20, base_fps * 50])
 
         save_gif(frames_gif, image_name, duration=durations_gif)
         save_video(frames_video, image_name, duration=durations_video)
@@ -378,7 +397,7 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
                 rect = patches.Rectangle((settings.label_offset_x - 0.5, settings.label_offset_y - 0.5),
                                          settings.patch_size_x - 2 * settings.label_offset_x,
                                          settings.patch_size_y - 2 * settings.label_offset_y,
-                                         linewidth=1, edgecolor='tab:blue', facecolor='none')
+                                         linewidth=2, edgecolor='fuchsia', facecolor='none')
 
                 # Add the offset rectangle to the axes
                 axs[i, j].add_patch(rect)
@@ -426,7 +445,7 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
             rect = patches.Rectangle((settings.label_offset_x - 0.5, settings.label_offset_y - 0.5),
                                      settings.patch_size_x - 2 * settings.label_offset_x,
                                      settings.patch_size_y - 2 * settings.label_offset_y,
-                                     linewidth=1, edgecolor='tab:blue', facecolor='none')
+                                     linewidth=2, edgecolor='fuchsia', facecolor='none')
 
             # Add the offset rectangle to the axes
             ax.add_patch(rect)
