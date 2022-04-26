@@ -1,3 +1,4 @@
+from multiprocessing import Pool
 from random import randrange
 from typing import List, Optional, Tuple
 
@@ -7,6 +8,7 @@ from classes.classifier import Classifier
 from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
 from datasets.diagram import Diagram
 from plots.data import plot_diagram, plot_diagram_step_animation
+from runs.run_line_task import get_cuda_device
 from utils.settings import settings
 
 
@@ -57,6 +59,7 @@ class AutotuningProcedure:
 
         # Performance statistic (See StepHistoryEntry dataclass)
         self._scan_history: List[StepHistoryEntry] = []
+        self._batch_pending: List[Tuple[int, int]] = []
 
         # Initialise procedure parameters (could be useful for child classes)
         self.reset_procedure()
@@ -72,10 +75,11 @@ class AutotuningProcedure:
         self.x = None
         self.y = None
         self._scan_history.clear()
+        self._batch_pending.clear()
         self._step_name = 'Not started'
         self._step_descr: str = ''
 
-    def is_transition_line(self) -> (bool, float):
+    def is_transition_line(self) -> Tuple[bool, float]:
         """
         Try to detect a line in a sub-area of the diagram using the current model or the oracle.
 
@@ -115,6 +119,58 @@ class AutotuningProcedure:
                                                    step_description))
 
         return prediction, confidence
+
+    def add_to_inference_batch(self) -> None:
+        """
+        Add current coordinate to the pending inference. Useful to speed up processing with batch inference.
+        Nothing is processed until "is_transition_line_batch" is called.
+        """
+
+        # Check coordinates according to the current policy.
+        # They could be changed to fit inside the diagram if necessary
+        self._enforce_boundary_policy()
+
+        # Add to batch pending for grouped inference
+        self._batch_pending.append((self.x, self.y))
+
+    def is_transition_line_batch(self) -> List[Tuple[bool, float]]:
+        """
+        Try to detect a line in a batch of diagram sub-area using the current model or the oracle.
+        Build batch using coordinates in _batch_pending.
+        :return: A list of results with confidence. Empty list if no inference pending.
+        """
+
+        if len(self._batch_pending) == 0:
+            return []
+
+        # Fetch data and ground truth
+        ground_truths = []
+        size_x, size_y = self.patch_size
+        patches = torch.zeros((len(self._batch_pending), size_x, size_y), device=get_cuda_device())
+        for i, (x, y) in enumerate(self._batch_pending):
+            ground_truths.append(self.diagram.is_line_in_patch((x, y), self.patch_size, self.label_offsets))
+            patches[i] = self.diagram.get_patch((x, y), self.patch_size)
+
+        if self.is_oracle_enable:
+            # Oracle use ground truth with full confidence
+            predictions = ground_truths
+            confidences = [1] * len(ground_truths)
+        else:
+            with torch.no_grad():
+                # Send to the model for inference
+                predictions, confidences = self.model.infer(patches, settings.bayesian_nb_sample_test)
+                # Extract data from GPU and convert to list
+                predictions = predictions.tolist()
+                confidences = confidences.tolist()
+
+        # Record the diagram scanning activity.
+        decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
+        step_description = self._step_name + decr
+        for (x, y), pred, conf, truth in zip(self._batch_pending, predictions, confidences, ground_truths):
+            self._scan_history.append(StepHistoryEntry((x, y), pred, conf, truth, step_description))
+
+        self._batch_pending.clear()  # Empty pending
+        return list(zip(predictions, confidences))
 
     def get_patch_center(self) -> Tuple[int, int]:
         """
@@ -356,34 +412,47 @@ class AutotuningProcedure:
         """ Return the number of successful line detection """
         return len([e for e in self._scan_history if e.model_classification == e.ground_truth])
 
-    def plot_step_history(self, final_coord: Tuple[int, int], success_tuning: bool, plot_vanilla: bool = True) -> None:
+    def nb_pending(self) -> int:
+        """ Return the number of patch inference pending. """
+        return len(self._batch_pending)
+
+    def plot_step_history(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
         """
         Plot the diagram with the tuning steps of the current procedure.
 
         :param final_coord: The final coordinate of the tuning procedure
         :param success_tuning: Result of the tuning (True = Success)
-        :param plot_vanilla: If True, also plot the diagram with no label and steps
         """
         d = self.diagram
         values = d.values.cpu()
         name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
 
-        if plot_vanilla:
-            # diagram
-            plot_diagram(d.x_axes, d.y_axes, values, f'{d.file_basename}', 'nearest', d.x_axes[1] - d.x_axes[0])
+        # Parallel plotting for speed with automatic number of process (probably = to number of core)
+        with Pool() as pool:
+            # diagram + label + step with classification color
+            pool.apply_async(plot_diagram,
+                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values, 'image_name': name,
+                                   'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                   'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
+                                   'final_coord': final_coord, 'show_offset': False, 'history_uncertainty': False})
+            # label + step with classification color and uncertainty
+            pool.apply_async(plot_diagram,
+                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
+                                   'image_name': name + ' uncertainty', 'interpolation_method': 'nearest',
+                                   'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
+                                   'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
+                                   'history_uncertainty': True})
+            # step with error color and uncertainty
+            pool.apply_async(plot_diagram,
+                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None, 'image_name': name + ' error',
+                                   'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                   'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
+                                   'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
+                                   'history_uncertainty': True})
 
-        # diagram + label + step with classification color
-        plot_diagram(d.x_axes, d.y_axes, values, name, 'nearest', d.x_axes[1] - d.x_axes[0],
-                     transition_lines=d.transition_lines, scan_history=self._scan_history, final_coord=final_coord,
-                     show_offset=False, history_uncertainty=False)
-        # label + step with classification color and uncertainty
-        plot_diagram(d.x_axes, d.y_axes, None, name + ' uncertainty', 'nearest',
-                     d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=self._scan_history,
-                     final_coord=final_coord, show_offset=False, history_uncertainty=True)
-        # step with error color and uncertainty
-        plot_diagram(d.x_axes, d.y_axes, None, name + ' error', 'nearest', d.x_axes[1] - d.x_axes[0],
-                     transition_lines=d.transition_lines, scan_history=self._scan_history, show_offset=False,
-                     scan_errors=True, history_uncertainty=True, show_crosses=False)
+            # Wait for the processes to finish
+            pool.close()
+            pool.join()
 
     def plot_step_history_animation(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
         """
