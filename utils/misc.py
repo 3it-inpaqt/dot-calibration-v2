@@ -1,16 +1,16 @@
 import os
 from copy import copy
 from dataclasses import asdict, is_dataclass
+from math import ceil
 from typing import Any, Dict, Iterable, List, Tuple, Union
 
 import torch
 from torch import nn
 
-from utils.logger import logger
 from utils.settings import settings
 
 
-def get_nb_loader_workers(device: torch.device) -> int:
+def get_nb_loader_workers(device: torch.device = None) -> int:
     """
     Estimate the number based on: the device > the user settings > hardware setup
 
@@ -19,7 +19,7 @@ def get_nb_loader_workers(device: torch.device) -> int:
     """
 
     # Use the pyTorch data loader
-    if device.type == 'cuda':
+    if device and device.type == 'cuda':
         # CUDA doesn't support multithreading for data loading
         nb_workers = 0
     elif settings.nb_loader_workers:
@@ -33,7 +33,7 @@ def get_nb_loader_workers(device: torch.device) -> int:
         except Exception:
             nb_workers = os.cpu_count()
 
-    logger.debug(f'Data loader using {nb_workers} workers')
+        nb_workers = ceil(nb_workers / 2)  # The optimal number seems to be half of the cores
 
     return nb_workers
 

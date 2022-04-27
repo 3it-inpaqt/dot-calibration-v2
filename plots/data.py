@@ -1,6 +1,8 @@
 import io
 from copy import copy
+from functools import partial
 from math import ceil, sqrt
+from multiprocessing import Pool
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
@@ -15,6 +17,7 @@ from matplotlib.legend_handler import HandlerBase
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
+from utils.misc import get_nb_loader_workers
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
 
@@ -281,76 +284,84 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
     :param final_coord: The final tuning coordinates
     """
 
-    values = d.values.cpu()
-
     if settings.is_named_run() and (settings.save_gif or settings.save_video):
-
+        values = d.values.cpu()
         # Animation speed => Time for an image (ms)
         base_fps = 100
         # Ratio of image to skip for the animation frames (1 means nothing skipped, 4 means 1 keep for 3 skip)
         rate_gif = 4
         rate_video = 1
-        # List of image bytes for the animation
-        all_frames = []
-        frames_gif = []
-        frames_video = []
-        # List of duration for each image (ms)
-        durations_gif = []
-        durations_video = []  # List of duration for each image (ms)
+        # Define frames to compute
+        gif_frames_ids = list(range(0, len(scan_history), rate_gif)) if settings.save_gif else []
+        video_frames_ids = list(range(0, len(scan_history), rate_video)) if settings.save_video else []
+        frame_ids = list(dict.fromkeys(gif_frames_ids + video_frames_ids))  # Remove duplicate and keep order
 
-        # Use minimal ratio for image generation
-        image_rate = min(rate_gif, rate_video) if settings.save_video else rate_gif
-        for scan_i in range(0, len(scan_history), image_rate):
-            # TODO: Possible multi-thread optimization here
-            # Generate image
-            buffer = plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
-                                  d.x_axes[1] - d.x_axes[0], transition_lines=None, scan_history=scan_history[0:scan_i],
-                                  show_offset=False, save_in_buffer=True, text_stats=True, show_title=False,
-                                  fog_of_war=True)
-            all_frames.append(buffer)
+        with Pool(get_nb_loader_workers()) as pool:
+            # Generate images in parallel for speed. Use partial to set constants arguments.
+            # Main animation frames
+            async_result_main = pool.map_async(
+                partial(plot_diagram, d.x_axes, d.y_axes, values, d.file_basename, 'nearest', d.x_axes[1] - d.x_axes[0],
+                        None, None, None, False, save_in_buffer=True, text_stats=True, show_title=False,
+                        fog_of_war=True), (scan_history[0:i] for i in frame_ids))
 
-            # GIF frames
-            if scan_i % rate_gif == 0:
-                frames_gif.append(buffer)
-                durations_gif.append(base_fps * rate_gif)
+            # Final frames
+            async_result_end = [
+                # Show full diagram with tuning final coordinate and fog of war
+                pool.apply_async(plot_diagram,
+                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
+                                       'image_name': d.file_basename,
+                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                       'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
+                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False,
+                                       'fog_of_war': True}),
+                # Show full diagram with tuning final coordinate
+                pool.apply_async(plot_diagram,
+                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
+                                       'image_name': d.file_basename,
+                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                       'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
+                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False}),
+                # Show full diagram with tuning final coordinate + line labels
+                pool.apply_async(plot_diagram,
+                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
+                                       'image_name': d.file_basename,
+                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                       'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
+                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False,
+                                       'transition_lines': d.transition_lines}),
+                # Show full diagram with tuning final coordinate + line & regime labels
+                pool.apply_async(plot_diagram,
+                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
+                                       'image_name': d.file_basename,
+                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                       'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
+                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False,
+                                       'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas}),
+            ]
 
-            # Video frames
-            if scan_i % rate_video == 0:
-                frames_video.append(buffer)
-                durations_video.append(base_fps * rate_video)
+            # Wait for the processes to finish and get result
+            pool.close()
+            pool.join()
+            main_frames = async_result_main.get()
+            end_frames = [res.get() for res in async_result_end]
 
-        end_frames = [
-            # Show full diagram with tuning final coordinate and fog of war
-            plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
-                         d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
-                         show_offset=False, save_in_buffer=True, text_stats=True, show_title=False, fog_of_war=True),
-            # Show full diagram with tuning final coordinate
-            plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
-                         d.x_axes[1] - d.x_axes[0], scan_history=scan_history, final_coord=final_coord,
-                         show_offset=False, save_in_buffer=True, text_stats=True, show_title=False),
-            # Show full diagram with tuning final coordinate + line labels
-            plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
-                         d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, scan_history=scan_history,
-                         final_coord=final_coord, show_offset=False, save_in_buffer=True, text_stats=True,
-                         show_title=False),
-            # Show full diagram with tuning final coordinate + line & regime labels
-            plot_diagram(d.x_axes, d.y_axes, values, d.file_basename, 'nearest',
-                         d.x_axes[1] - d.x_axes[0], transition_lines=d.transition_lines, charge_regions=d.charge_areas,
-                         scan_history=scan_history, final_coord=final_coord, show_offset=False, save_in_buffer=True,
-                         text_stats=True, show_title=False)
-        ]
+        end_durations = [base_fps * 10, base_fps * 10, base_fps * 20, base_fps * 70]
+        if settings.save_gif:
+            # List of image bytes for the animation
+            frames_gif = [main_frames[frame_ids.index(f_id)] for f_id in gif_frames_ids] + end_frames
+            # List of duration for each image (ms)
+            durations_gif = [base_fps * rate_gif] * len(gif_frames_ids) + end_durations
+            save_gif(frames_gif, image_name, duration=durations_gif)
 
-        all_frames.extend(end_frames)
-        frames_gif.extend(end_frames)
-        frames_video.extend(end_frames)
-        durations_gif.extend([base_fps * 10, base_fps * 10, base_fps * 20, base_fps * 50])
-        durations_video.extend([base_fps * 10, base_fps * 10, base_fps * 20, base_fps * 50])
-
-        save_gif(frames_gif, image_name, duration=durations_gif)
-        save_video(frames_video, image_name, duration=durations_video)
+        if settings.save_video:
+            # List of image bytes for the animation
+            frames_video = [main_frames[frame_ids.index(f_id)] for f_id in video_frames_ids] + end_frames
+            # List of duration for each image (ms)
+            durations_video = [base_fps * rate_video] * len(video_frames_ids) + end_durations
+            save_video(frames_video, image_name, duration=durations_video)
 
         # Close buffers
-        for frame in all_frames:
+        for frame in main_frames + end_frames:
             frame.close()
 
 

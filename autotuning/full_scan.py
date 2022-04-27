@@ -3,6 +3,7 @@ from typing import Tuple
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from plots.data import plot_diagram
+from utils.misc import get_nb_loader_workers
 from utils.settings import settings
 
 
@@ -43,8 +44,8 @@ class FullScan(AutotuningProcedure):
         values = d.values.cpu()
         name = f'{self.diagram.file_basename} steps\n{self}'
 
-        # Parallel plotting for speed with automatic number of process (probably = to number of core)
-        with Pool() as pool:
+        # Parallel plotting for speed.
+        with Pool(get_nb_loader_workers()) as pool:
             # diagram + step with classification color
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values, 'image_name': name,
