@@ -8,7 +8,7 @@ from utils.settings import settings
 
 class Jump(AutotuningProcedure):
     # Number of exploration steps before to give up each phase
-    _max_steps_exploration: int = 600
+    _max_steps_exploration: int = 1000
     _max_steps_search_empty: int = 100
 
     # Line angle degree (0 = horizontal - 90 = vertical)
