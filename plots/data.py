@@ -177,10 +177,16 @@ def plot_diagram(x_i, y_i,
                 plt.gca().add_patch(patch)
 
         # Marker for first point
-        if show_crosses:
+        if show_crosses and (fading_history == 0 or len(scan_history) < fading_history * 2):
             first_x, first_y = scan_history[0].coordinates
+            if fading_history == 0:
+                alpha = 1
+            else:
+                # Fading after the first scans if fading_history is enabled
+                i = len(scan_history) - 2
+                alpha = 1 if i < fading_history else (2 * fading_history - i) / (fading_history + 1)
             plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
-                        color='skyblue', marker='X', s=200, label='Start')
+                        color='skyblue', marker='X', s=200, label='Start', alpha=alpha)
             legend = True
 
         if history_uncertainty:
@@ -205,8 +211,8 @@ def plot_diagram(x_i, y_i,
         # Get marker position (and avoid going out)
         last_x_i = min(last_x, len(x_i) - 1)
         last_y_i = min(last_y, len(y_i) - 1)
-        plt.scatter(x=x_i[last_x_i], y=y_i[last_y_i],
-                    color='fuchsia', marker='x', s=200, label='End')
+        plt.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='w', marker='x', s=210, linewidths=2)  # Make white borders
+        plt.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='fuchsia', marker='x', s=200, label='End')
         legend = True
 
     if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
