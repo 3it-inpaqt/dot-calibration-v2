@@ -252,6 +252,10 @@ class Settings:
     # Feature only available on jump algorithm.
     auto_detect_slope: bool = True
 
+    # If True the Jump algorithm will validate the leftmost line at different Y-position to avoid mistake in the case of
+    # fading lines.
+    validate_left_line: bool = True
+
     # If the oracle is enabled, these numbers corrupt its precision.
     # 0.0 = all predictions are based on the ground truth (labels), means 100% precision
     # 0.5 = half of the predictions are random, means 75% precision for binary classification.

@@ -335,11 +335,23 @@ class AutotuningProcedure:
         """
         return self.is_max_up() and self.is_max_left()
 
+    def is_max_up_or_left(self):
+        """
+        :return: True if the current coordinates have reach the top or the left of the diagram. False if not.
+        """
+        return self.is_max_up() or self.is_max_left()
+
     def is_max_up_right(self):
         """
         :return: True if the current coordinates have reach the top right corner of the diagram. False if not.
         """
         return self.is_max_up() and self.is_max_right()
+
+    def is_max_up_or_right(self):
+        """
+        :return: True if the current coordinates have reach the top or the right of the diagram. False if not.
+        """
+        return self.is_max_up() or self.is_max_right()
 
     def is_max_down_left(self):
         """
@@ -347,11 +359,23 @@ class AutotuningProcedure:
         """
         return self.is_max_down() and self.is_max_left()
 
+    def is_max_down_or_left(self):
+        """
+        :return: True if the current coordinates have reach the bottom or the left the diagram. False if not.
+        """
+        return self.is_max_down() or self.is_max_left()
+
     def is_max_down_right(self):
         """
         :return: True if the current coordinates have reach the bottom right corner of the diagram. False if not.
         """
         return self.is_max_down() and self.is_max_right()
+
+    def is_max_down_or_right(self):
+        """
+        :return: True if the current coordinates have reach the bottom or the right the diagram. False if not.
+        """
+        return self.is_max_down() or self.is_max_right()
 
     def _enforce_boundary_policy(self, force: bool = False) -> bool:
         """
