@@ -39,6 +39,7 @@ def plot_diagram(x_i, y_i,
                  scan_history: List["StepHistoryEntry"] = None,
                  scan_errors: bool = False,
                  fog_of_war: bool = False,
+                 fading_history: int = 0,
                  history_uncertainty: bool = False,
                  scale_bar: bool = False,
                  final_coord: Tuple[int, int] = None,
@@ -63,6 +64,8 @@ def plot_diagram(x_i, y_i,
     :param scan_errors: If True and scan_history defined, plot the step error on the diagram. If False plot the class
      inference instead.
     :param fog_of_war: If True and scan_history defined, hide the section of the diagram that was never scanned.
+    :param fading_history: The number of scan inference the plot, the latest first. The number set will be plotted with
+     solid color and the same number will fad progressively. Not compatible with history_uncertainty.
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
      the uncertainty.
     :param scale_bar: If True and pixels provided, plot the pixel color scale at the right of the diagram. If the data
@@ -100,7 +103,13 @@ def plot_diagram(x_i, y_i,
             cmap.set_bad(color='lightgrey')
             plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries)
             if scale_bar:
-                plt.colorbar(shrink=0.85, label='Current (A)')
+                if settings.research_group == 'michel_pioro_ladriere':
+                    measuring = r'$\mathregular{I_{SET}}$'
+                elif settings.research_group == 'louis_gaudreau':
+                    measuring = r'$\mathregular{I_{QPC}}$'
+                else:
+                    measuring = 'I'
+                plt.colorbar(shrink=0.85, label=f'{measuring} (A)')
 
     charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
@@ -124,7 +133,7 @@ def plot_diagram(x_i, y_i,
         patch_size_x_v = (settings.patch_size_x - settings.label_offset_x * 2) * pixel_size
         patch_size_y_v = (settings.patch_size_y - settings.label_offset_y * 2) * pixel_size
 
-        for scan_entry in scan_history:
+        for i, scan_entry in enumerate(reversed(scan_history)):
             line_detected = scan_entry.model_classification
             correct_class = scan_entry.model_classification == scan_entry.ground_truth
             x, y = scan_entry.coordinates
@@ -136,31 +145,36 @@ def plot_diagram(x_i, y_i,
                 # Blue for Line inference / Red for No Line inference
                 color = LINE_COLOR if line_detected else NO_LINE_COLOR
 
-            if history_uncertainty:
-                # Plot full square with transparency based on the confidence
-                edge_color = 'none'
-                face_color = color
-                alpha = scan_entry.model_confidence
-                label = None
-            else:
-                # Plot empty square with color based on "line"/"no line"
-                label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
-                first_patch_label.add(line_detected)
+            if history_uncertainty or fading_history == 0 or i < fading_history * 2:  # Condition to plot patches
+                if history_uncertainty:
+                    # Plot full square with transparency based on the confidence
+                    edge_color = 'none'
+                    face_color = color
+                    alpha = scan_entry.model_confidence
+                    label = None
+                elif fading_history == 0 or i < fading_history * 2:
+                    # Plot empty square with color based on "line"/"no line"
+                    label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
+                    first_patch_label.add(line_detected)
 
-                edge_color = color
-                face_color = 'none'
-                alpha = 1
-                legend = True
+                    edge_color = color
+                    face_color = 'none'
+                    if fading_history == 0:
+                        alpha = 1
+                    else:
+                        # History fading for fancy animation
+                        alpha = 1 if i < fading_history else (2 * fading_history - i) / (fading_history + 1)
+                    legend = True
 
-            patch = patches.Rectangle((x_i[x + settings.label_offset_x], y_i[y + settings.label_offset_y]),
-                                      patch_size_x_v,
-                                      patch_size_y_v,
-                                      linewidth=1,
-                                      edgecolor=edge_color,
-                                      label=label,
-                                      facecolor=face_color,
-                                      alpha=alpha)
-            plt.gca().add_patch(patch)
+                patch = patches.Rectangle((x_i[x + settings.label_offset_x], y_i[y + settings.label_offset_y]),
+                                          patch_size_x_v,
+                                          patch_size_y_v,
+                                          linewidth=1,
+                                          edgecolor=edge_color,
+                                          label=label,
+                                          facecolor=face_color,
+                                          alpha=alpha)
+                plt.gca().add_patch(patch)
 
         # Marker for first point
         if show_crosses:
@@ -249,9 +263,9 @@ def plot_diagram(x_i, y_i,
     if show_title:
         plt.title(f'{image_name}\ninterpolated ({interpolation_method}) - pixel size {round(pixel_size, 10) * 1_000}mV')
 
-    plt.xlabel('Gate 1 (V)')
+    plt.xlabel('G1 (V)')
     plt.xticks(rotation=30)
-    plt.ylabel('Gate 2 (V)')
+    plt.ylabel('G2 (V)')
 
     if legend:
         handles, labels = plt.gca().get_legend_handles_labels()
@@ -302,11 +316,18 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             async_result_main = pool.map_async(
                 partial(plot_diagram, d.x_axes, d.y_axes, values, d.file_basename, 'nearest', d.x_axes[1] - d.x_axes[0],
                         None, None, None, False, save_in_buffer=True, text_stats=True, show_title=False,
-                        fog_of_war=True), (scan_history[0:i] for i in frame_ids))
+                        fog_of_war=True, fading_history=8), (scan_history[0:i] for i in frame_ids))
 
             # Final frames
             async_result_end = [
-                # Show full diagram with tuning final coordinate and fog of war
+                # Show diagram with all inference and fog of war
+                pool.apply_async(plot_diagram,
+                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
+                                       'image_name': d.file_basename, 'interpolation_method': 'nearest',
+                                       'pixel_size': d.x_axes[1] - d.x_axes[0], 'scan_history': scan_history,
+                                       'show_offset': False, 'save_in_buffer': True, 'text_stats': True,
+                                       'show_title': False, 'fog_of_war': True}),
+                # Show diagram with tuning final coordinate and fog of war
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
                                        'image_name': d.file_basename,
@@ -345,7 +366,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             main_frames = async_result_main.get()
             end_frames = [res.get() for res in async_result_end]
 
-        end_durations = [base_fps * 10, base_fps * 10, base_fps * 20, base_fps * 70]
+        end_durations = [base_fps * 20, base_fps * 20, base_fps * 20, base_fps * 40, base_fps * 60]
         if settings.save_gif:
             # List of image bytes for the animation
             frames_gif = [main_frames[frame_ids.index(f_id)] for f_id in gif_frames_ids] + end_frames
