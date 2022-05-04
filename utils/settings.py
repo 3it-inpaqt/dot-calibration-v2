@@ -215,6 +215,9 @@ class Settings:
     # Should be in: 'std', 'norm_std', 'entropy', 'norm_entropy'
     bayesian_confidence_metric: str = 'norm_std'
 
+    # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
+    bayesian_confidence_threshold: float = 0.90
+
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
 

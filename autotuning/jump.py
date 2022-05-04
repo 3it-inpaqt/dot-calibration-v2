@@ -14,7 +14,7 @@ class Jump(AutotuningProcedure):
     _validate_left_line_max_try: int = 5
 
     _nb_line_found: int = 0
-    # Line angle degree (0 = horizontal | 90 = vertical | 45 = slope -1 | 143 = slope 1)
+    # Line angle degree (0 = horizontal | 90 = vertical | 45 = slope -1 | 135 = slope 1)
     _line_slope: float = None
     # List of distance between lines in pixel
     _line_distances: List[int] = None
@@ -173,7 +173,7 @@ class Jump(AutotuningProcedure):
         left = Direction(last_x=self.x, last_y=self.y, move=self._move_left_perpendicular_to_line,
                          check_stuck=self.is_max_down_left)
         right = Direction(last_x=self.x, last_y=self.y, move=self._move_right_perpendicular_to_line,
-                          check_stuck=self.is_max_right)
+                          check_stuck=self.is_max_up_right)
         directions = (left, right)
         left.no_line_count = 0
         right.no_line_count = 0
@@ -205,8 +205,10 @@ class Jump(AutotuningProcedure):
                 # direction
                 else:
                     direction.no_line_count += 1
-                    if direction.no_line_count > 3 * avg_line_distance:  # TODO could use x2 mean + x2 std
-                        direction.is_stuck = True
+                    # Stop if we found more than 1 line and we found no line in 3x the average line distance
+                    # TODO could also use the line distance std
+                    if self._nb_line_found > 1 and direction.no_line_count > 3 * avg_line_distance:
+                        return
 
     def validate_left_line(self) -> None:
         """
@@ -235,7 +237,7 @@ class Jump(AutotuningProcedure):
                 for direction in (d for d in (up, down) if not d.is_stuck):
                     self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
                     # Step distance relative to the line distance
-                    direction.move(round(self._default_step_y * line_step_distance * 3))
+                    direction.move(round(self._default_step_y * line_step_distance * 2))
                     direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                     direction.is_stuck = direction.check_stuck()
                     if direction.is_stuck:

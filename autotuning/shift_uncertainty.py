@@ -1,4 +1,5 @@
 from autotuning.shift import Shift
+from utils.settings import settings
 
 
 class ShiftUncertainty(Shift):
@@ -6,10 +7,6 @@ class ShiftUncertainty(Shift):
     Autotuning procedure adapted from https://doi.org/10.1088/2632-2153/ac34db
     But using confidence to validate a line instead of following it
     """
-
-    # Number estimated by grid search with Michel diagrams and BCNN
-    # 0.50 => 71% | 0.75 => 82% | 0.80 => 81% | 0.85 => 87% | 0.90 => 87% | 0.95 => 87%
-    _confidence_valid: float = 0.90
 
     def _search_zero_electron(self) -> bool:
         """
@@ -29,7 +26,7 @@ class ShiftUncertainty(Shift):
 
             # If the model is confident about the prediction, update the number of no line in a row
             # If not, ignore this step and continue
-            if confidence > self._confidence_valid:
+            if confidence > settings.bayesian_confidence_threshold:
                 if line_detected:
                     no_line_in_a_row = 0
                 else:
@@ -58,7 +55,7 @@ class ShiftUncertainty(Shift):
         while max_to_confirm > 0 and not self.is_max_up():
             max_to_confirm -= 1
 
-            if confidence > self._confidence_valid:
+            if confidence > settings.bayesian_confidence_threshold:
                 # Enough confidence to confirm or not
                 return line_detected
 

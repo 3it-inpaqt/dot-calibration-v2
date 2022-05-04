@@ -1,4 +1,5 @@
 from autotuning.jump import Direction, Jump
+from utils.settings import settings
 
 
 class JumpUncertainty(Jump):
@@ -7,9 +8,6 @@ class JumpUncertainty(Jump):
     """
     # Number of exploration steps before to give up the line checking
     _max_steps_checking_line: int = 6
-
-    # Threshold to consider the model inference good enough
-    _confidence_valid: float = 0.90
 
     def _is_confirmed_line(self) -> bool:
         """
@@ -23,14 +21,14 @@ class JumpUncertainty(Jump):
         # Infer with the model at the current position
         line_detected, confidence = self.is_transition_line()
 
-        if confidence < self._confidence_valid:
+        if confidence < settings.bayesian_confidence_threshold:
             # Confidence too low, need checking
             x, y = self.x, self.y
             line_detected = self._checking_line(line_detected, confidence)
             self.move_to_coord(x, y)  # Back to the position we were before checking
 
         # If this is the leftmost line detected so far, save it
-        if line_detected and (self._leftmost_line_coord is None or self.x < self._leftmost_line_coord[0]):
+        if line_detected and (self._leftmost_line_coord is None or self._is_left_relative_to_line()):
             self._leftmost_line_coord = self.x, self.y
 
         return line_detected
@@ -64,7 +62,7 @@ class JumpUncertainty(Jump):
 
                 line_detected, confidence = self.is_transition_line()
 
-                if confidence > self._confidence_valid:
+                if confidence > settings.bayesian_confidence_threshold:
                     # Enough confidence to confirm or not
                     self._step_descr = ''
                     return line_detected
