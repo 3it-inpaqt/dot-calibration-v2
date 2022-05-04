@@ -93,7 +93,7 @@ class AutotuningProcedure:
         self._enforce_boundary_policy()
 
         # Fetch ground truth from labels
-        ground_truth = self.diagram.is_line_in_patch((self.x, self.y), self.patch_size, self.label_offsets)
+        ground_truth, soft_truth_larger, soft_truth_smaller = self.get_ground_truths(self.x, self.y)
 
         result: Tuple[bool, float]
         if self.is_oracle_enable:
@@ -117,7 +117,7 @@ class AutotuningProcedure:
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
         self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
-                                                   step_description))
+                                                   soft_truth_larger, soft_truth_smaller, step_description))
 
         return prediction, confidence
 
@@ -144,17 +144,17 @@ class AutotuningProcedure:
         if len(self._batch_pending) == 0:
             return []
 
-        # Fetch data and ground truth
+        # Fetch data and ground truths (ground_truth, soft_truth_larger, soft_truth_smaller)
         ground_truths = []
         size_x, size_y = self.patch_size
         patches = torch.zeros((len(self._batch_pending), size_x, size_y), device=get_cuda_device())
         for i, (x, y) in enumerate(self._batch_pending):
-            ground_truths.append(self.diagram.is_line_in_patch((x, y), self.patch_size, self.label_offsets))
+            ground_truths.append(self.get_ground_truths(x, y))
             patches[i] = self.diagram.get_patch((x, y), self.patch_size)
 
         if self.is_oracle_enable:
             # Oracle use ground truth with full confidence
-            predictions = ground_truths
+            predictions = next(zip(*ground_truths))  # Get the ground truth section only (first item of each sublist)
             confidences = [1] * len(ground_truths)
         else:
             with torch.no_grad():
@@ -167,8 +167,10 @@ class AutotuningProcedure:
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
-        for (x, y), pred, conf, truth in zip(self._batch_pending, predictions, confidences, ground_truths):
-            self._scan_history.append(StepHistoryEntry((x, y), pred, conf, truth, step_description))
+        for (x, y), pred, conf, (truth, truth_larger, truth_smaller) in \
+                zip(self._batch_pending, predictions, confidences, ground_truths):
+            self._scan_history.append(
+                StepHistoryEntry((x, y), pred, conf, truth, truth_larger, truth_smaller, step_description))
 
         self._batch_pending.clear()  # Empty pending
         return list(zip(predictions, confidences))
@@ -437,6 +439,28 @@ class AutotuningProcedure:
         """ Return the number of successful line detection """
         return len([e for e in self._scan_history if e.model_classification == e.ground_truth])
 
+    def get_ground_truths(self, x, y) -> (bool, bool, bool):
+        """
+        Get the ground truths of a specific position on the current diagram according to the labels.
+        Come in 3 flavors: the real ground truth and 2 the "near" ground truths for detect soft errors.
+
+        :param x: The x coordinate of the position to check.
+        :param y: The y coordinate of the position to check.
+        :return: The ground truth, the ground truth with a larger active area (smaller offset), the ground truth with a
+         smaller active area (larger offset).
+        """
+        # Fetch ground truth from labels
+        ground_truth = self.diagram.is_line_in_patch((x, y), self.patch_size, self.label_offsets)
+
+        # Also fetch soft truth to detect error of type "almost good" when the line is near to the active area
+        # +2 and -2 pixel to the offset, with limit to 0 and patch size - 2.
+        soft_offsets_smaller = tuple(max(off - 2, 0) for off in self.label_offsets)
+        soft_offsets_larger = tuple(min(off + 2, s - 2) for s, off in zip(self.patch_size, self.label_offsets))
+        soft_truth_larger = self.diagram.is_line_in_patch((x, y), self.patch_size, soft_offsets_smaller)
+        soft_truth_smaller = self.diagram.is_line_in_patch((x, y), self.patch_size, soft_offsets_larger)
+
+        return ground_truth, soft_truth_larger, soft_truth_smaller
+
     def nb_pending(self) -> int:
         """ Return the number of patch inference pending. """
         return len(self._batch_pending)
@@ -467,13 +491,20 @@ class AutotuningProcedure:
                                    'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
                                    'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
                                    'history_uncertainty': True})
-            # step with error color and uncertainty
+            # step with error and soft error color
             pool.apply_async(plot_diagram,
-                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None, 'image_name': name + ' error',
+                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None, 'image_name': name + ' errors',
                                    'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
                                    'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
                                    'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
-                                   'history_uncertainty': True})
+                                   'history_uncertainty': False})
+            # step with error color and uncertainty
+            pool.apply_async(plot_diagram,
+                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
+                                   'image_name': name + ' errors uncertainty', 'interpolation_method': 'nearest',
+                                   'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
+                                   'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
+                                   'scan_errors': True, 'history_uncertainty': True})
 
             # Wait for the processes to finish
             pool.close()

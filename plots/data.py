@@ -25,6 +25,7 @@ LINE_COLOR = 'blue'
 NO_LINE_COLOR = 'red'
 GOOD_COLOR = 'green'
 ERROR_COLOR = 'red'
+SOFT_ERROR_COLOR = 'blueviolet'
 
 
 def plot_diagram(x_i, y_i,
@@ -62,7 +63,7 @@ def plot_diagram(x_i, y_i,
     :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0).
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
     :param scan_errors: If True and scan_history defined, plot the step error on the diagram. If False plot the class
-     inference instead.
+     inference instead. Soft errors are shown only if uncertainty is disabled.
     :param fog_of_war: If True and scan_history defined, hide the section of the diagram that was never scanned.
     :param fading_history: The number of scan inference the plot, the latest first. The number set will be plotted with
      solid color and the same number will fad progressively. Not compatible with history_uncertainty.
@@ -135,36 +136,51 @@ def plot_diagram(x_i, y_i,
 
         for i, scan_entry in enumerate(reversed(scan_history)):
             line_detected = scan_entry.model_classification
-            correct_class = scan_entry.model_classification == scan_entry.ground_truth
             x, y = scan_entry.coordinates
+            alpha = 1
 
             if scan_errors:
-                # Green for correct class / Red for bad class
-                color = GOOD_COLOR if correct_class else ERROR_COLOR
+                # Patch color depending on the classification success
+                if scan_entry.is_classification_correct():
+                    color = GOOD_COLOR
+                    label = 'Good'
+                elif not history_uncertainty and scan_entry.is_classification_almost_correct():
+                    # Soft error is not compatible with uncertainty
+                    color = SOFT_ERROR_COLOR
+                    label = 'Soft Error'
+                else:
+                    color = ERROR_COLOR
+                    label = 'Error'
             else:
-                # Blue for Line inference / Red for No Line inference
+                # Patch color depending on the inferred class
                 color = LINE_COLOR if line_detected else NO_LINE_COLOR
+                label = f'Infer {QDSDLines.classes[line_detected]}'
+
+            # Add label only if it is the first time we plot a patch with this label
+            if label in first_patch_label:
+                label = None
+            else:
+                first_patch_label.add(label)
 
             if history_uncertainty or fading_history == 0 or i < fading_history * 2:  # Condition to plot patches
                 if history_uncertainty:
-                    # Plot full square with transparency based on the confidence
-                    edge_color = 'none'
-                    face_color = color
+                    # Transparency based on the confidence
                     alpha = scan_entry.model_confidence
-                    label = None
+                    label = None  # No label since we have the scale bar
                 elif fading_history == 0 or i < fading_history * 2:
-                    # Plot empty square with color based on "line"/"no line"
-                    label = None if line_detected in first_patch_label else f'Infer {QDSDLines.classes[line_detected]}'
-                    first_patch_label.add(line_detected)
-
-                    edge_color = color
-                    face_color = 'none'
-                    if fading_history == 0:
-                        alpha = 1
-                    else:
+                    if fading_history != 0:
                         # History fading for fancy animation
                         alpha = 1 if i < fading_history else (2 * fading_history - i) / (fading_history + 1)
                     legend = True
+
+                if pixels is None:
+                    # Full patch if white background
+                    face_color = color
+                    edge_color = 'none'
+                else:
+                    # Empty patch if diagram background
+                    face_color = 'none'
+                    edge_color = color
 
                 patch = patches.Rectangle((x_i[x + settings.label_offset_x], y_i[y + settings.label_offset_y]),
                                           patch_size_x_v,
@@ -249,7 +265,12 @@ def plot_diagram(x_i, y_i,
             else:
                 no_line_success = None
 
-            last_correct = scan_history[-1].is_classification_correct()
+            if scan_history[-1].is_classification_correct():
+                class_error = 'good'
+            elif scan_history[-1].is_classification_almost_correct():
+                class_error = 'soft error'
+            else:
+                class_error = 'error'
             last_class = QDSDLines.classes[scan_history[-1].model_classification]
 
             text += f'Nb step: {len(scan_history): >3n} (acc: {accuracy: >4.0%})\n'
@@ -258,7 +279,7 @@ def plot_diagram(x_i, y_i,
             text += f'{QDSDLines.classes[False].capitalize(): <7}: {nb_no_line: >3n}'
             text += '\n' if no_line_success is None else f' (acc: {no_line_success:>4.0%})\n\n'
             text += f'Last scan:\n'
-            text += f'  - Pred: {last_class.capitalize(): <7} {"(good) " if last_correct else "(wrong)"}\n'
+            text += f'  - Pred: {last_class.capitalize(): <7} ({class_error})\n'
             text += f'  - Conf: {scan_history[-1].model_confidence: >4.0%}\n\n'
             text += f'Tuning step:\n'
             text += f'  {scan_history[-1].description}'

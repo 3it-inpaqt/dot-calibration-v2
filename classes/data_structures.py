@@ -77,14 +77,24 @@ class ClassificationMetrics(ClassMetrics):
 @dataclass(frozen=True)
 class StepHistoryEntry:
     coordinates: Tuple[int, int]
-    model_classification: bool
+    model_classification: bool  # True = Line / False = No line
     model_confidence: bool
     ground_truth: bool
+    soft_truth_larger: bool  # Ground truth if the active area was larger (smaller offset)
+    soft_truth_smaller: bool  # Ground truth if the active area was smaller (larger offset)
     description: str
 
     def is_classification_correct(self) -> bool:
-        """ Return True only if model_classification is the same as the ground_truth. """
+        """ :return: True only if model_classification is the same as the ground_truth. """
         return self.model_classification == self.ground_truth
+
+    def is_classification_almost_correct(self) -> bool:
+        """
+        :return: True if model_classification is a line and a line is near the active area or model_classification is a
+         line and all lines are almost outside the active area.
+        """
+        return (self.model_classification and self.soft_truth_larger) or \
+               (not self.model_classification and not self.soft_truth_smaller)
 
 
 @dataclass

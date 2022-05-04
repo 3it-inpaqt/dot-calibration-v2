@@ -244,8 +244,8 @@ class Jump(AutotuningProcedure):
                     # Skip half line distance left
                     self._move_left_perpendicular_to_line(ceil(self._default_step_x * line_step_distance / 2))
 
-                    # Go left for 1.5x the line distance (total 2x the line distance)
-                    for i in range(ceil(line_step_distance * 1.5)):
+                    # Go left for 2x the line distance (total 2.5x the line distance)
+                    for i in range(ceil(line_step_distance * 2)):
                         # If new line found and this is the new leftmost one, start again the checking loop
                         if self._is_confirmed_line() and start_point != self._leftmost_line_coord:
                             self._nb_line_found += 1

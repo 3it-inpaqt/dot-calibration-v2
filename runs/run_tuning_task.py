@@ -37,7 +37,8 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
         raise ValueError('No diagram provided to the tuning run.')
 
     if settings.autotuning_use_oracle:
-        logger.warning('Oracle option enabled. The labels are used instead of a classification model. Baseline only.')
+        logger.warning('Oracle option enabled. The labels are used instead of a classification model. '
+                       'For baseline only.')
 
     # Automatically chooses the device according to the settings, and move diagram data to it.
     device = get_cuda_device()
@@ -59,7 +60,7 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
         for procedure_name in settings.autotuning_procedures:
             # Set up the autotuning procedure_name according to the settings
             procedure = init_procedure(model, procedure_name)
-            nb_error_to_plot = 2
+            nb_error_to_plot = 5
 
             nb_iteration = 1 if procedure_name == 'full' else settings.autotuning_nb_iteration
             for i in range(nb_iteration):
