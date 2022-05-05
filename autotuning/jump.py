@@ -183,7 +183,7 @@ class Jump(AutotuningProcedure):
                 avg_line_distance = self._get_avg_line_step_distance()
                 self._step_descr = f'line slope: {self._line_slope:.0f}°\navg line dist: {avg_line_distance:.1f}\n' \
                                    f'nb line found: {self._nb_line_found}\n' \
-                                   f'leftmost line: {self._leftmost_line_coord or "None"}'
+                                   f'leftmost line: {self._get_leftmost_line_coord_str()}'
                 nb_search_steps += 1
 
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
@@ -257,7 +257,7 @@ class Jump(AutotuningProcedure):
                             self._step_descr = f'line slope: {self._line_slope:.0f}°\n' \
                                                f'avg line dist: {line_step_distance:.1f}\n' \
                                                f'nb line found: {self._nb_line_found}\n' \
-                                               f'leftmost line: {self._leftmost_line_coord or "None"}'
+                                               f'leftmost line: {self._get_leftmost_line_coord_str()}'
                             break
                         self._move_left_perpendicular_to_line()
                         if self.is_max_left() or self.is_max_down():
@@ -373,6 +373,19 @@ class Jump(AutotuningProcedure):
     def _get_avg_line_step_distance(self) -> float:
         """ Get the mean line distance in number of steps. """
         return sum(self._line_distances) / len(self._line_distances)
+
+    def _get_leftmost_line_coord_str(self) -> str:
+        """
+        :return: Leftmost coordinates with volt conversion.
+        """
+        if self._leftmost_line_coord is None:
+            return 'None'
+
+        x, y = self._leftmost_line_coord
+        x_volt = self.diagram.x_axes[x]
+        y_volt = self.diagram.y_axes[y]
+
+        return f'{x_volt:.2f}V,{y_volt:.2f}V'
 
     def reset_procedure(self):
         super().reset_procedure()
