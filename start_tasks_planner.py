@@ -114,6 +114,7 @@ if __name__ == '__main__':
             Planner('label_offset_y', [6]),
             Planner('conv_layers_channel', [[12, 24]]),
             Planner('test_ratio', [0]),
+            Planner('validate_left_line', [False]),
             # List diagrams for cross-validation
             Planner('test_diagram',
                     ['1779Dev2-20161127_443', '1779Dev2-20161127_442', '1779Dev2-20161127_145', '1779Dev2-20161127_970',
@@ -128,6 +129,7 @@ if __name__ == '__main__':
             Planner('label_offset_y', [7]),
             Planner('conv_layers_channel', [[6, 12]]),
             Planner('test_ratio', [0]),
+            Planner('validate_left_line', [True]),
             # List diagrams for cross-validation
             Planner('test_diagram',
                     ['Jan12200s', 'Jan06019s', 'Jan07300s', 'Jan10100s', 'jan09_200ser', 'Jan07100s', 'Jan14300s',
@@ -143,6 +145,7 @@ if __name__ == '__main__':
         Planner('label_offset_x', [6, 7]),
         Planner('label_offset_y', [6, 7]),
         Planner('conv_layers_channel', [[12, 24], [6, 12]]),
+        Planner('validate_left_line', [False, True]),
         Planner('test_diagram', ['', ''])
     ])
 
