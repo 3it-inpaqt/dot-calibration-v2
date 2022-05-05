@@ -205,10 +205,11 @@ class Jump(AutotuningProcedure):
                 # direction
                 else:
                     direction.no_line_count += 1
-                    # Stop if we found more than 1 line and we found no line in 3x the average line distance
+                    # Stop to explore this direction if we found more than 1 line and we found no line in 3x the average
+                    # line distance in this direction.
                     # TODO could also use the line distance std
                     if self._nb_line_found > 1 and direction.no_line_count > 3 * avg_line_distance:
-                        return
+                        direction.is_stuck = True
 
     def validate_left_line(self) -> None:
         """
