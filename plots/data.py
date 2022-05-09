@@ -124,7 +124,7 @@ def plot_diagram(x_i, y_i,
     if transition_lines is not None:
         for i, line in enumerate(transition_lines):
             line_x, line_y = line.coords.xy
-            plt.plot(line_x, line_y, color='lime', label='Line label' if i == 0 else None)
+            plt.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
             legend = True
 
     if scan_history is not None and len(scan_history) > 0:

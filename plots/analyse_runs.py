@@ -73,7 +73,7 @@ def compare_autotuning():
                 colors.append(color)
                 break
 
-    # Plot accuracy
+    # Plot success rate
     ax = sns.barplot(x="procedure_model", y="success", data=grouped_results, order=order['procedure_model'],
                      palette=colors, ci=None)
     plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
@@ -91,6 +91,65 @@ def compare_autotuning():
     plt.ylabel('Average steps')
     plt.xlabel('Procedure and model')
     plt.title(f'Autotuning procedures number of steps')
+    plt.tight_layout()
+    plt.show(block=False)
+
+
+def compare_autotuning_alt():
+    data = load_runs_clean(['tuning-*'])
+
+    # Compute accuracy and number of steps for each autotuning run
+    target = str(ChargeRegime.ELECTRON_1)
+    good_charge = Counter()
+    total = Counter()
+    nb_steps = Counter()
+    for _, row in data.iterrows():
+        for tuning_result in row['results.tuning_results']:
+            # Only plot Jump procedure
+            if not tuning_result['procedure_name'].startswith('Jump'):
+                continue
+
+            # name: Model + "Uncertainty"
+            procedure_name = tuning_result['model_name'].replace('FeedForward', 'FF')
+            procedure_name += '\nUncertainty' if tuning_result['procedure_name'].startswith('JumpUncertainty') else ''
+            result_id = (procedure_name, tuning_result['diagram_name'], row['settings.research_group'])
+
+            total[result_id] += 1
+            if tuning_result['charge_area'] == target:
+                good_charge[result_id] += 1
+
+            nb_steps[result_id] += tuning_result['nb_steps']
+
+    grouped_results = []  # Group by (diagram - procedure - model)
+    for result_id in total.keys():
+        procedure_name, diagram_name, research_group = result_id
+        success_rate = good_charge[result_id] / total[result_id]
+        mean_steps = nb_steps[result_id] / total[result_id]
+        grouped_results.append([diagram_name, procedure_name, research_group, success_rate, mean_steps])
+
+    # Convert to dataframe
+    grouped_results = DataFrame(grouped_results, columns=['diagram', 'procedure_model', 'Datasets', 'success',
+                                                          'mean_steps'])
+
+    order = ['FF', 'FF\nUncertainty', 'CNN', 'CNN\nUncertainty', 'BCNN', 'BCNN\nUncertainty']
+    # Plot success rate
+    sns.barplot(x="procedure_model", y="success", data=grouped_results, ci=None, hue='Datasets', order=order)
+    plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+    plt.ylabel('Success rate')
+    plt.xlabel('Procedure and model')
+    plt.title(f'Autotuning procedures success to reach {target} electron regime')
+    # Put the legend out of the figure (middle bottom)
+    plt.legend(bbox_to_anchor=(0.5, -0.3), loc='center', ncol=2)
+    plt.tight_layout()
+    plt.show(block=False)
+
+    # Plot steps
+    sns.barplot(x="procedure_model", y="mean_steps", data=grouped_results, ci=None, hue='Datasets', order=order)
+    plt.ylabel('Average steps')
+    plt.xlabel('Procedure and model')
+    plt.title(f'Autotuning procedures number of steps')
+    # Put the legend out of the figure (middle bottom)
+    plt.legend(bbox_to_anchor=(0.5, -0.3), loc='center', ncol=2)
     plt.tight_layout()
     plt.show(block=False)
 
