@@ -336,6 +336,8 @@ class Jump(AutotuningProcedure):
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
 
+        init_x, init_y = self.x, self.y
+
         # Compute distance
         distance_x = step_size if step_size is not None else self._default_step_x
         distance_y = step_size if step_size is not None else self._default_step_y
@@ -345,6 +347,18 @@ class Jump(AutotuningProcedure):
 
         self.x = round(self.x + (distance_x * cos(angle)))
         self.y = round(self.y + (distance_y * sin(angle)))
+
+        # Enforce boundary now to avoid very small steps in some cases
+        if self.is_max_left() or self.is_max_right():
+            if angle < pi:
+                self.y = init_y + distance_y  # Go up
+            else:
+                self.y = init_y - distance_y  # Go down
+        elif self.is_max_up() or self.is_max_down():
+            if angle < pi / 2 or angle > (3 * pi) / 2:
+                self.x = init_x + distance_x  # Go right
+            else:
+                self.x = init_x - distance_x  # Go left
 
     def _move_left_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
         """
