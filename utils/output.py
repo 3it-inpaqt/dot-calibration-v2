@@ -429,7 +429,8 @@ def load_run_files(dir_path: Path) -> dict:
     for key, file in OUT_FILES.items():
         if (dir_path / file).is_file():
             with open(dir_path / file) as f:
-                content = yaml.load(f, Loader=yaml.FullLoader)
+                # Fast loader, but require C installed. Could be replaced by 'yaml.FullLoader"
+                content = yaml.load(f, Loader=yaml.CLoader)
                 # For each value of each file
                 for label, value in content.items():
                     data[key + '.' + label] = value
