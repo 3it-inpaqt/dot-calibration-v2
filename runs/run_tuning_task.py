@@ -68,8 +68,7 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
                     procedure.reset_procedure()
 
                     # Start the procedure
-                    procedure.setup_next_tuning(diagram,
-                                                (50, 130))  # Give diagram and set starting coordinates randomly
+                    procedure.setup_next_tuning(diagram)  # Give diagram and set starting coordinates randomly
                     logger.debug(f'Start tuning diagram {diagram.file_basename} '
                                  f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
                     result = procedure.run_tuning()

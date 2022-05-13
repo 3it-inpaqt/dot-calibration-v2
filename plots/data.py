@@ -47,7 +47,9 @@ def plot_diagram(x_i, y_i,
                  save_in_buffer: bool = False,
                  text_stats: bool = False,
                  show_title: Optional[bool] = None,
-                 show_crosses: bool = True) -> Optional[Union[Path, io.BytesIO]]:
+                 show_crosses: bool = True,
+                 vmin: float = None,
+                 vmax: float = None) -> Optional[Union[Path, io.BytesIO]]:
     """
     Plot the interpolated image.
 
@@ -76,6 +78,10 @@ def plot_diagram(x_i, y_i,
     :param text_stats: If True, add statistics information in the plot.
     :param show_title: If True plot figure title. If omitted, show title only if not latex format.
     :param show_crosses: If True plot the crosses representing the start and the end of the tuning if possible.
+    :param vmin: Minimal pixel value for color scaling. Set to keep consistant color between plots. If None, the scaling
+     is computed by matplotlib based on pixel currently visible.
+     :param vmax: Maximal pixel value for color scaling. Set to keep consistant color between plots. If None, the
+      scaling is computed by matplotlib based on pixel currently visible.
     :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
      instead of the path.
     """
@@ -102,7 +108,7 @@ def plot_diagram(x_i, y_i,
 
             cmap = matplotlib.cm.copper
             cmap.set_bad(color='lightgrey')
-            plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries)
+            plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
             if scale_bar:
                 if settings.research_group == 'michel_pioro_ladriere':
                     measuring = r'$\mathregular{I_{SET}}$'
@@ -326,7 +332,10 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
     """
 
     if settings.is_named_run() and (settings.save_gif or settings.save_video):
-        values = d.values.cpu()
+        values = d.values.detach().cpu()
+        # Compute min / max here because numpy doesn't like to do this on multi thread
+        vmin = values.min()
+        vmax = values.max()
         # Animation speed => Time for an image (ms)
         base_fps = 100
         # Ratio of image to skip for the animation frames (1 means nothing skipped, 4 means 1 keep for 3 skip)
@@ -343,7 +352,9 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             async_result_main = pool.map_async(
                 partial(plot_diagram, d.x_axes, d.y_axes, values, d.file_basename, 'nearest', d.x_axes[1] - d.x_axes[0],
                         None, None, None, False, save_in_buffer=True, text_stats=True, show_title=False,
-                        fog_of_war=True, fading_history=8), (scan_history[0:i] for i in frame_ids))
+                        fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax),
+                (scan_history[0:i] for i in frame_ids)
+            )
 
             # Final frames
             async_result_end = [
@@ -353,7 +364,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                                        'image_name': d.file_basename, 'interpolation_method': 'nearest',
                                        'pixel_size': d.x_axes[1] - d.x_axes[0], 'scan_history': scan_history,
                                        'show_offset': False, 'save_in_buffer': True, 'text_stats': True,
-                                       'show_title': False, 'fog_of_war': True}),
+                                       'show_title': False, 'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
                 # Show diagram with tuning final coordinate and fog of war
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
@@ -361,14 +372,15 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                                        'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
                                        'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
                                        'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'fog_of_war': True}),
+                                       'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
                 # Show full diagram with tuning final coordinate
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
                                        'image_name': d.file_basename,
                                        'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
                                        'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False}),
+                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False, 'vmin': vmin,
+                                       'vmax': vmax}),
                 # Show full diagram with tuning final coordinate + line labels
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
@@ -376,7 +388,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                                        'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
                                        'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
                                        'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'transition_lines': d.transition_lines}),
+                                       'transition_lines': d.transition_lines, 'vmin': vmin, 'vmax': vmax}),
                 # Show full diagram with tuning final coordinate + line & regime labels
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
@@ -384,7 +396,8 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                                        'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
                                        'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
                                        'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas}),
+                                       'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
+                                       'vmin': vmin, 'vmax': vmax}),
             ]
 
             # Wait for the processes to finish and get result
