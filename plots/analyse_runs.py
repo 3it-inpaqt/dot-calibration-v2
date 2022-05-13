@@ -333,8 +333,85 @@ def batch_size_analyse():
     plt.show(block=False)
 
 
+def results_table():
+    data = load_runs_clean(['tuning-*'])
+
+    # Make a dataframe with a line per tuning result
+    tuning_table = []
+    target = str(ChargeRegime.ELECTRON_1)
+    for _, row in data.iterrows():
+        for tuning_result in row['results.tuning_results']:
+            # Only consider Jump procedure
+            if not tuning_result['procedure_name'].startswith('Jump'):
+                continue
+
+            tuning_table.append([
+                row['settings.research_group'],  # Dataset
+                row['settings.model_type'],  # Model
+                row['Accuracy'],  # Model accuracy
+                'Uncertainty' in tuning_result['procedure_name'],  # Use uncertainty
+                tuning_result['diagram_name'],  # Diagram
+                tuning_result['nb_steps'],  # Nb scan
+                tuning_result['nb_classification_success'],  # Nb good inference
+                tuning_result['charge_area'] == target  # Autotuning success
+            ])
+
+    # Convert to dataframe for convenance
+    tuning_table = pd.DataFrame(tuning_table,
+                                columns=['dataset', 'model', 'model_test_acc', 'use_uncertainty', 'diagram', 'nb_scan',
+                                         'nb_good_inference', 'tuning_success'])
+
+    # Result grouped by tuning method and diagram
+    result_by_diagram = tuning_table.groupby(['dataset', 'model', 'use_uncertainty', 'diagram']).agg(
+        model_test_acc=('model_test_acc', 'mean'),  # The accuracy should be the same for each diagram (same model)
+        nb_scan=('nb_scan', 'sum'),
+        mean_scan=('nb_scan', 'mean'),
+        nb_good=('nb_good_inference', 'sum'),
+        tuning_success=('tuning_success', lambda x: x.sum() / x.count()),
+    )
+    result_by_diagram['model_tuning_acc'] = result_by_diagram['nb_good'] / result_by_diagram['nb_scan']
+
+    # Result grouped by tuning method (and variability by diagrams)
+    result_by_method = result_by_diagram.groupby(['dataset', 'model', 'use_uncertainty']).agg({
+        'mean_scan': ['mean', 'std'],  # Number of scan during the tuning
+        'model_test_acc': ['mean', 'std'],  # Model accuracy on test set
+        'model_tuning_acc': ['mean', 'std'],  # Model accuracy during the tuning procedure
+        'tuning_success': ['mean', 'std']  # Tuning procedure that successfully found the 1 electron regime
+    })
+
+    # Sorting row
+    result_by_method.sort_values(by=['dataset', 'model', 'use_uncertainty'], ascending=[False, True, False],
+                                 inplace=True)
+
+    # Show all
+    print(result_by_method)
+
+    # Remove the 'group by' index and compact rename columns
+    result_by_method.reset_index(inplace=True)
+    result_by_method.columns = [f'{i}|{j}' if j != '' else f'{i}' for i, j in result_by_method.columns]
+
+    # Convert boolean values
+    result_by_method['use_uncertainty'] = result_by_method['use_uncertainty'].map({True: 'Yes', False: 'No'})
+
+    # Filter and rename columns
+    result_by_method = result_by_method[['dataset', 'model', 'model_test_acc|mean', 'use_uncertainty', 'mean_scan|mean',
+                                         'tuning_success|mean', 'tuning_success|std']]
+    result_by_method.columns = ['Dataset', 'Model', 'Model test accuracy', 'Tuning with uncertainty', 'Average steps',
+                                'Tuning success', 'Tuning success diagrams STD']
+
+    # Show latex version for paper
+    print('\n\n----------------------------------------------------\n\n')
+    print(tabulate(result_by_method, headers='keys', tablefmt='latex', showindex=False,
+                   floatfmt=(None, None, '.1%', None, '.0f', '.1%', '.1%')))
+    # Show the same in pretty table
+    print('\n\n----------------------------------------------------\n\n')
+    result_by_method.columns = [col.replace('\n', r'\\') for col in result_by_method.columns]
+    print(tabulate(result_by_method, headers='keys', tablefmt='fancy_grid', showindex=False,
+                   floatfmt=(None, None, '.1%', None, '.0f', '.1%', '.1%')))
+
+
 if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    compare_models()
+    results_table()
