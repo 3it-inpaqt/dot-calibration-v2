@@ -22,9 +22,9 @@ from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
 
 LINE_COLOR = 'blue'
-NO_LINE_COLOR = 'red'
+NO_LINE_COLOR = 'tab:red'
 GOOD_COLOR = 'green'
-ERROR_COLOR = 'red'
+ERROR_COLOR = 'tab:red'
 SOFT_ERROR_COLOR = 'blueviolet'
 
 
@@ -51,7 +51,7 @@ def plot_diagram(x_i, y_i,
                  vmin: float = None,
                  vmax: float = None) -> Optional[Union[Path, io.BytesIO]]:
     """
-    Plot the interpolated image.
+    Plot the interpolated image. This function is a multi-tool nightmare.
 
     :param x_i: The x coordinates of the pixels (post interpolation).
     :param y_i: The y coordinates of the pixels (post interpolation).
@@ -221,11 +221,34 @@ def plot_diagram(x_i, y_i,
             cbar = plt.colorbar(ScalarMappable(cmap=cmap, norm=norm), shrink=0.8, aspect=15)
             cbar.outline.set_edgecolor('0.15')
             cbar.set_ticks([-1, 0, 1])
-            if scan_errors:
-                cbar.set_ticklabels(['Correct class\nLow uncertainty', 'High uncertainty',
-                                     'Error class\nLow uncertainty'])
+
+            # Bayesian uncertainty
+            if settings.model_type.upper() in ['BCNN', 'BFF']:
+                metric_map = {  # This plot is not compatible with not normalized uncertainty
+                    'norm_std': 'Normalized STD',
+                    'norm_entropy': 'Normalized entropy'
+                }
+                uncertainty_label = metric_map[settings.bayesian_confidence_metric]
+                min_uncertainty_correct = min_uncertainty_line = min_uncertainty_no_line = 0
+                max_uncertainty = 1
+
+            # Ad hoc uncertainty
             else:
-                cbar.set_ticklabels(['Line\nLow uncertainty', 'High uncertainty', 'No Line\nLow uncertainty'])
+                uncertainty_label = 'Model output'
+                min_uncertainty_line = 1
+                min_uncertainty_no_line = 0
+                min_uncertainty_correct = f'{min_uncertainty_line} or {min_uncertainty_no_line}'
+                max_uncertainty = 0.5
+
+            if scan_errors:
+                cbar.set_ticklabels(
+                    [f'Correct class\n{uncertainty_label}: {min_uncertainty_correct}\n(Low uncertainty)',
+                     f'{uncertainty_label}: {max_uncertainty}\n(High uncertainty)',
+                     f'Error class\n{uncertainty_label}: {min_uncertainty_correct}\n(Low uncertainty)'])
+            else:
+                cbar.set_ticklabels([f'Line\n{uncertainty_label}: {min_uncertainty_line}\n(Low uncertainty)',
+                                     f'{uncertainty_label}: {max_uncertainty}\n(High uncertainty)',
+                                     f'No Line\n{uncertainty_label}: {min_uncertainty_no_line}\n(Low uncertainty)'])
 
     # Marker for tuning final guess
     if show_crosses and final_coord is not None:
