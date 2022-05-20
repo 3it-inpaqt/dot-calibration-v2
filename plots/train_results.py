@@ -174,13 +174,13 @@ def plot_confidence(confidence_per_case: List[List[List[float]]]) -> None:
                        'is_correct': [True] * len(good_pred_confidence) + [False] * len(bad_pred_confidence)})
 
     palette = {True: "tab:green", False: "tab:red"}
-    sns.displot(df, x='confidence', hue='is_correct', kind='kde', fill=True, palette=palette, legend=False,
-                common_norm=False, common_grid=True)
+    sns.displot(df, x='confidence', hue='is_correct', kind='hist', palette=palette, legend=False, multiple="layer",
+                element="step")
 
-    plt.ylabel('Density')
+    plt.ylabel('Count')
     plt.xlabel('Classification confidence')
-    plt.axis([0, 1, None, None])
     plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+    plt.yscale('log')
     plt.legend(labels=['Good classification', 'Bad classification'], loc='upper left')
     plt.title(f'Classification confidence\nfor {len(df):n} test patches')
 
