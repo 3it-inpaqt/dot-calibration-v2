@@ -333,6 +333,41 @@ def batch_size_analyse():
     plt.show(block=False)
 
 
+def uncertainty_analysis():
+    data = load_runs_clean(['uncertainty-*-BCNN'])
+
+    # Rename col for auto plot labels
+    data.rename(columns={'results.final_tuning_result': 'Tuning success',
+                         'settings.bayesian_confidence_threshold': 'Confidence Threshold'},
+                inplace=True)
+
+    def avg_steps(results):
+        nb_steps = []
+        for tuning_result in results:
+            nb_steps.append(tuning_result['nb_steps'])
+        return sum(nb_steps) / len(nb_steps)
+
+    data['Average steps'] = data['results.tuning_results'].apply(avg_steps)
+
+    # Tuning success (left axes)
+    ax1 = sns.lineplot(data=data, x='Confidence Threshold', y='Tuning success', color='tab:blue')
+    plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    ax1.set_ylabel('Tuning success', color='tab:blue', fontweight='bold')
+
+    # Average steps (right axes)
+    ax2 = plt.twinx()
+    ax2.grid(False)
+    sns.lineplot(data=data, x='Confidence Threshold', y='Average steps', ax=ax2, color='tab:orange')
+    plt.gca().xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+    ax2.tick_params(axis='y', labelcolor='tab:orange')
+    ax2.set_ylabel('Average steps', color='tab:orange', fontweight='bold')
+
+    plt.title(f'Evolution of the tuning success in function of\n classification confidence threshold')
+    plt.tight_layout()
+    plt.show(block=False)
+
+
 def results_table():
     data = load_runs_clean(['tuning-*'])
 
@@ -414,4 +449,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    results_table()
+    uncertainty_analysis()

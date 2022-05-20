@@ -1,5 +1,7 @@
 from itertools import chain
 
+import numpy as np
+
 from runs.run_line_task import clean_up, fix_seed
 from start_lines import start_line_task
 from start_tuning import start_tuning_task
@@ -205,6 +207,10 @@ if __name__ == '__main__':
         Planner('batch_size', list(chain(range(25, 150, 25), range(150, 500, 50), range(500, 2000, 100))))
     ], runs_name='train_batch_size-{research_group}-{model_type}-{batch_size}')
 
+    # Study effect of uncertainty threshold on tuning
+    uncertainty_grid_search = Planner('bayesian_confidence_threshold', np.arange(0.9, 1.005, 0.005),
+                                      runs_name='uncertainty-{bayesian_confidence_threshold:.3f}-{model_type}')
+
     # Make full scan plots
     full_scan_all = CombinatorPlanner([
         Planner('autotuning_procedures', [['full']]),
@@ -256,4 +262,4 @@ if __name__ == '__main__':
         datasets_planner_cross_valid
     ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
 
-    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=True)
+    run_tasks_planner(uncertainty_grid_search, skip_existing_runs=True, tuning_task=True)
