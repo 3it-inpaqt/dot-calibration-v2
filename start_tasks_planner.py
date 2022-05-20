@@ -156,9 +156,9 @@ if __name__ == '__main__':
     cnns_hidden_size = [100, 50]
     ffs_lr = 0.0005
     cnns_lr = 0.001
-    ff_update = 30_000
+    ff_update = 25_000
     cnn_update = 20_000
-    bcnn_update = 25_000
+    bcnn_update = 20_000
 
     # Patch size study
     size_range = range(8, 28)
