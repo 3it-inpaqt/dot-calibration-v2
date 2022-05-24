@@ -47,7 +47,10 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     nb_classes = len(test_dataset.classes)
 
     metrics: Optional[ClassificationMetrics] = None
+    # All prediction count
     nb_labels_predictions = np.zeros((nb_classes, nb_classes), dtype=int)
+    # Prediction under the confidence threshold count
+    nb_labels_unknown_predictions = np.zeros((nb_classes, nb_classes), dtype=int)
     nb_samples_per_case = 16
     if final:
         samples_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
@@ -71,15 +74,18 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             predicted, confidences = network.infer(inputs, nb_sample)
 
             # Process each item of the batch to gather stats
-            for j, (label, pred) in enumerate(zip(labels, predicted)):
-                # Count the number of prediction for each labels
+            for patch, label, pred, conf in zip(inputs, labels, predicted, confidences):
+                # Count the number of prediction for each label
                 nb_labels_predictions[label][pred] += 1
+                if conf < settings.confidence_threshold:  # Also count predictions considered as unknown
+                    nb_labels_unknown_predictions[label][pred] += 1
+
                 if final:
                     # Save confidence per class
-                    confidence_per_case[label][pred].append(confidences[j].item())
+                    confidence_per_case[label][pred].append(conf.item())
                     # Save samples for later plots
                     if len(samples_per_case[label][pred]) < nb_samples_per_case:
-                        samples_per_case[label][pred].append((inputs[j].cpu(), confidences[j]))
+                        samples_per_case[label][pred].append((patch.cpu(), conf))
 
             metrics = classification_metrics(nb_labels_predictions)
             progress.update(**{'acc': metrics.accuracy, settings.main_metric: metrics.main})
@@ -92,6 +98,8 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
 
         save_results(final_classification_results=metrics)
         plot_confusion_matrix(nb_labels_predictions, metrics, class_names=test_dataset.classes)
+        plot_confusion_matrix(nb_labels_predictions, metrics, nb_labels_unknown_predictions,
+                              class_names=test_dataset.classes, plot_name='confusion_matrix_unknown')
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
         plot_confidence(confidence_per_case)
 

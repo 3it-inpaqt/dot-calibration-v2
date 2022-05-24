@@ -1,3 +1,4 @@
+from copy import copy
 from typing import List, Tuple
 
 import matplotlib.pyplot as plt
@@ -90,17 +91,33 @@ def plot_train_progress(loss_evolution: List[float],
         save_plot('train_progress')
 
 
-def plot_confusion_matrix(nb_labels_predictions: np.ndarray, metrics: ClassificationMetrics,
+def plot_confusion_matrix(nb_labels_predictions: np.ndarray,
+                          metrics: ClassificationMetrics,
+                          nb_labels_unknown_predictions: np.ndarray = None,
                           class_names: List[str] = None,
-                          annotations: bool = True) -> None:
+                          annotations: bool = True,
+                          plot_name: str = 'confusion_matrix') -> None:
     """
     Plot the confusion matrix for a set a predictions.
 
     :param nb_labels_predictions: The count of prediction for each label.
+    :param nb_labels_unknown_predictions: The count of prediction for each label where the confidence is under the
+        threshold.
     :param metrics: The classification results metrics.
-    :param class_names: The list of readable classes names
-    :param annotations: If true the recall will be written in every cell
+    :param class_names: The list of readable classes names.
+    :param annotations: If true the recall will be written in every cell.
+    :param plot_name: The name of the plot file name.
     """
+
+    labels_classes = copy(class_names) if class_names else list(range(len(nb_labels_predictions)))
+    pred_classes = copy(class_names) if class_names else list(range(len(nb_labels_predictions)))
+
+    if nb_labels_unknown_predictions is not None:
+        # Remove the unknown prediction from to matrix count
+        nb_labels_predictions = nb_labels_predictions - nb_labels_unknown_predictions
+        # Stack the sum of unknown prediction at the right of the matrix
+        nb_labels_predictions = np.c_[nb_labels_predictions, nb_labels_unknown_predictions.sum(axis=1)]
+        pred_classes.append('unknown')
 
     rate_labels_predictions = nb_labels_predictions / nb_labels_predictions.sum(axis=1).reshape((-1, 1))
 
@@ -110,8 +127,8 @@ def plot_confusion_matrix(nb_labels_predictions: np.ndarray, metrics: Classifica
                 square=True,
                 fmt='.1%',
                 cmap='Blues',
-                xticklabels=class_names if class_names else 'auto',
-                yticklabels=class_names if class_names else 'auto',
+                xticklabels=pred_classes,
+                yticklabels=labels_classes,
                 annot=annotations,
                 cbar=(not annotations))
     plt.title(f'Confusion matrix of {len(nb_labels_predictions)} classes\n'
@@ -119,7 +136,7 @@ def plot_confusion_matrix(nb_labels_predictions: np.ndarray, metrics: Classifica
               f'recall {metrics.recall:.2%} | F1 {metrics.f1:.2%}')
     plt.xlabel('Predictions')
     plt.ylabel('Labels')
-    save_plot('confusion_matrix')
+    save_plot(plot_name)
 
 
 def plot_classification_sample(samples_per_case: List[List[List[Tuple[List, float]]]], class_names: List[str],
