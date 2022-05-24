@@ -177,8 +177,8 @@ def plot_confidence(confidence_per_case: List[List[List[float]]]) -> None:
     sns.displot(df, x='confidence', hue='is_correct', kind='hist', palette=palette, legend=False, multiple="layer",
                 element="step")
 
-    if settings.bayesian_confidence_threshold:
-        plt.axvline(x=settings.bayesian_confidence_threshold, color='tab:purple', linestyle=':')
+    if settings.confidence_threshold:
+        plt.axvline(x=settings.confidence_threshold, color='tab:purple', linestyle=':')
 
     plt.ylabel('Count')
     plt.xlabel('Classification confidence')

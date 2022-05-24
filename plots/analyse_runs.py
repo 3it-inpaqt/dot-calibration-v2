@@ -338,7 +338,7 @@ def uncertainty_analysis():
 
     # Rename col for auto plot labels
     data.rename(columns={'results.final_tuning_result': 'Tuning success',
-                         'settings.bayesian_confidence_threshold': 'Confidence Threshold'},
+                         'settings.confidence_threshold': 'Confidence Threshold'},
                 inplace=True)
 
     def avg_steps(results):

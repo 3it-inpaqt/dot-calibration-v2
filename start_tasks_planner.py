@@ -208,8 +208,8 @@ if __name__ == '__main__':
     ], runs_name='train_batch_size-{research_group}-{model_type}-{batch_size}')
 
     # Study effect of uncertainty threshold on tuning
-    uncertainty_grid_search = Planner('bayesian_confidence_threshold', np.arange(0.9, 1.005, 0.005),
-                                      runs_name='uncertainty-{bayesian_confidence_threshold:.3f}-{model_type}')
+    uncertainty_grid_search = Planner('confidence_threshold', np.arange(0.9, 1.005, 0.005),
+                                      runs_name='uncertainty-{confidence_threshold:.3f}-{model_type}')
 
     # Make full scan plots
     full_scan_all = CombinatorPlanner([

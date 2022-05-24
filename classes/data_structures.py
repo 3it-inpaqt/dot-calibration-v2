@@ -96,6 +96,10 @@ class StepHistoryEntry:
         return (self.model_classification and self.soft_truth_larger) or \
                (not self.model_classification and not self.soft_truth_smaller)
 
+    def is_under_confidence_threshold(self) -> bool:
+        """ :return: True if the model classification confidence is threshold. """
+        return self.model_confidence < settings.confidence_threshold
+
 
 @dataclass
 class Direction:

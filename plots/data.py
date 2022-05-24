@@ -26,6 +26,8 @@ NO_LINE_COLOR = 'tab:red'
 GOOD_COLOR = 'green'
 ERROR_COLOR = 'tab:red'
 SOFT_ERROR_COLOR = 'blueviolet'
+UNKNOWN_COLOR = 'dimgray'
+NOT_SCANNED_COLOR = 'lightgrey'
 
 
 def plot_diagram(x_i, y_i,
@@ -107,7 +109,7 @@ def plot_diagram(x_i, y_i,
                 pixels = np.ma.masked_array(pixels, mask)
 
             cmap = matplotlib.cm.copper
-            cmap.set_bad(color='lightgrey')
+            cmap.set_bad(color=NOT_SCANNED_COLOR)
             plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
             if scale_bar:
                 if settings.research_group == 'michel_pioro_ladriere':
@@ -147,7 +149,11 @@ def plot_diagram(x_i, y_i,
 
             if scan_errors:
                 # Patch color depending on the classification success
-                if scan_entry.is_classification_correct():
+                if not history_uncertainty and scan_entry.is_under_confidence_threshold():
+                    # If the uncertainty is not shown with alpha, we show it by a gray patch
+                    color = UNKNOWN_COLOR
+                    label = 'Unknown'
+                elif scan_entry.is_classification_correct():
                     color = GOOD_COLOR
                     label = 'Good'
                 elif not history_uncertainty and scan_entry.is_classification_almost_correct():

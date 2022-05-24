@@ -26,7 +26,7 @@ class ShiftUncertainty(Shift):
 
             # If the model is confident about the prediction, update the number of no line in a row
             # If not, ignore this step and continue
-            if confidence > settings.bayesian_confidence_threshold:
+            if confidence > settings.confidence_threshold:
                 if line_detected:
                     no_line_in_a_row = 0
                 else:
@@ -55,7 +55,7 @@ class ShiftUncertainty(Shift):
         while max_to_confirm > 0 and not self.is_max_up():
             max_to_confirm -= 1
 
-            if confidence > settings.bayesian_confidence_threshold:
+            if confidence > settings.confidence_threshold:
                 # Enough confidence to confirm or not
                 return line_detected
 

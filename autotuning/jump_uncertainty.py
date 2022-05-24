@@ -21,7 +21,7 @@ class JumpUncertainty(Jump):
         # Infer with the model at the current position
         line_detected, confidence = self.is_transition_line()
 
-        if confidence < settings.bayesian_confidence_threshold:
+        if confidence < settings.confidence_threshold:
             # Confidence too low, need checking
             x, y = self.x, self.y
             line_detected = self._checking_line(line_detected, confidence)
@@ -62,7 +62,7 @@ class JumpUncertainty(Jump):
 
                 line_detected, confidence = self.is_transition_line()
 
-                if confidence > settings.bayesian_confidence_threshold:
+                if confidence > settings.confidence_threshold:
                     # Enough confidence to confirm or not
                     self._step_descr = ''
                     return line_detected
