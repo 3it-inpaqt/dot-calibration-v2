@@ -9,6 +9,7 @@ import seaborn as sns
 from matplotlib.ticker import FuncFormatter
 
 from classes.data_structures import ClassificationMetrics
+from datasets.qdsd import QDSDLines
 from plots.data import plot_samples
 from utils.output import save_plot
 from utils.settings import settings
@@ -205,3 +206,25 @@ def plot_confidence(confidence_per_case: List[List[List[float]]]) -> None:
     plt.title(f'Classification confidence\nfor {len(df):n} test patches')
 
     save_plot('confidence_distribution')
+
+
+def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sample_size: int) -> None:
+    """
+    Plot the evolution of performance score depending on the confidence threshold.
+
+    :param thresholds: The thresholds tested
+    :param scores_history: The score for each threshold and each classes
+    :param sample_size: The size of the dataset used to compute the scores
+    """
+    scores_history = list(zip(*scores_history))  # Group by class
+
+    for i in range(len(scores_history)):
+        plt.plot(thresholds, scores_history[i], label=QDSDLines.classes[i])
+
+    plt.ylabel('Score (lower is better)')
+    plt.xlabel('Confidence threshold')
+    plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+    plt.legend()
+    plt.title(f'Evolution of performance score\ndepending on the confidence threshold ({sample_size} sample)')
+
+    save_plot('threshold_tuning')

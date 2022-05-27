@@ -16,6 +16,7 @@ from models.cnn import CNN
 from models.feed_forward import FeedForward
 from models.gap_baseline import GapBaseline
 from models.std_baseline import StdBaseline
+from plots.train_results import plot_confidence_threshold_tuning
 from runs.test import test
 from runs.train import train
 from utils.logger import logger
@@ -137,8 +138,8 @@ def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, v
         save_results(train_dataset_augmentation=0)
 
 
-def tune_confidence_thresholds(network, validation_dataset, device) -> List[float]:
-    nb_classes = len(validation_dataset.classes)
+def tune_confidence_thresholds(network, dataset, device) -> List[float]:
+    nb_classes = len(dataset.classes)
 
     # We simply use the confidence threshold if defined in settings
     if settings.confidence_threshold >= 0:
@@ -146,7 +147,7 @@ def tune_confidence_thresholds(network, validation_dataset, device) -> List[floa
 
     # Give a reference of the confidence list to fill it during the test
     confidence_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
-    test(network, validation_dataset, device, test_name='tune_thresholds', confidence_per_case=confidence_per_case)
+    test(network, dataset, device, test_name='tune_thresholds', confidence_per_case=confidence_per_case)
 
     # Recreate the confusion matrix based on the confidence list length
     nb_per_case = np.array([[len(conf) for conf in pred] for pred in confidence_per_case])
@@ -154,15 +155,18 @@ def tune_confidence_thresholds(network, validation_dataset, device) -> List[floa
     max_size = nb_per_case.max()
     confidence_per_case = np.array([[c + [np.nan] * (max_size - len(c)) for c in pred] for pred in confidence_per_case])
 
-    tau = 0.25
+    thresholds = [t / 400 for t in range(400)]
+    scores_history = []
+
     best_scores = [max_size] * nb_classes
     best_thresholds = [0.9] * nb_classes
-    for threshold in (t / 100 for t in range(1, 100)):
+    for threshold in thresholds:
         nb_unknown = (confidence_per_case < threshold).sum(axis=2)
         nb_known = nb_per_case - nb_unknown
         nb_error = nb_known.sum(axis=0) - nb_known.diagonal()
         nb_unknown = nb_unknown.sum(axis=0)
-        scores = nb_error + (nb_unknown * tau)
+        scores = nb_error + (nb_unknown * settings.auto_confidence_threshold_tau)
+        scores_history.append(scores)
 
         # Update best threshold per predicted class
         for i in range(nb_classes):
@@ -171,6 +175,7 @@ def tune_confidence_thresholds(network, validation_dataset, device) -> List[floa
                 best_scores[i] = scores[i]
 
     logger.info('Best confidence thresholds: ' + ', '.join(f'{t:.1%}' for t in best_thresholds))
+    plot_confidence_threshold_tuning(thresholds, scores_history, len(dataset))
     return best_thresholds
 
 
@@ -241,7 +246,7 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     train(network, train_dataset, validation_dataset, device)
 
     # Tune confidence thresholds
-    thresholds = tune_confidence_thresholds(network, validation_dataset, device)
+    thresholds = tune_confidence_thresholds(network, train_dataset, device)
     save_results(confidence_thresholds=thresholds)
 
     # Start normal test

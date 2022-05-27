@@ -202,6 +202,15 @@ class Settings:
     # Required checkpoints_per_epoch > 0 and checkpoint_validation = True
     early_stopping: bool = True
 
+    # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
+    # Negative threshold means automatic value selection using tau.
+    confidence_threshold: float = 0.90
+
+    # Relative importance of model error compare to model uncertainty for automatic confidence threshold tuning.
+    # Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
+    # Used only if the confidence threshold is not defined (<0)
+    auto_confidence_threshold_tau: float = 0.2
+
     # The number of sample used to compute the loss of bayesian networks.
     bayesian_nb_sample_train: int = 3
 
@@ -214,9 +223,6 @@ class Settings:
     # The metric to use to compute the model inference confidence.
     # Should be in: 'std', 'norm_std', 'entropy', 'norm_entropy'
     bayesian_confidence_metric: str = 'norm_std'
-
-    # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
-    confidence_threshold: float = 0.90
 
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
