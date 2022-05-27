@@ -1,6 +1,7 @@
 import gc
 import os
 import random
+from typing import List
 
 import numpy as np
 import torch
@@ -136,6 +137,43 @@ def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, v
         save_results(train_dataset_augmentation=0)
 
 
+def tune_confidence_thresholds(network, validation_dataset, device) -> List[float]:
+    nb_classes = len(validation_dataset.classes)
+
+    # We simply use the confidence threshold if defined in settings
+    if settings.confidence_threshold >= 0:
+        return [settings.confidence_threshold] * nb_classes
+
+    # Give a reference of the confidence list to fill it during the test
+    confidence_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
+    test(network, validation_dataset, device, test_name='tune_thresholds', confidence_per_case=confidence_per_case)
+
+    # Recreate the confusion matrix based on the confidence list length
+    nb_per_case = np.array([[len(conf) for conf in pred] for pred in confidence_per_case])
+    # Add NaN padding to confidence list to have a regular 3d array
+    max_size = nb_per_case.max()
+    confidence_per_case = np.array([[c + [np.nan] * (max_size - len(c)) for c in pred] for pred in confidence_per_case])
+
+    tau = 0.25
+    best_scores = [max_size] * nb_classes
+    best_thresholds = [0.9] * nb_classes
+    for threshold in (t / 100 for t in range(1, 100)):
+        nb_unknown = (confidence_per_case < threshold).sum(axis=2)
+        nb_known = nb_per_case - nb_unknown
+        nb_error = nb_known.sum(axis=0) - nb_known.diagonal()
+        nb_unknown = nb_unknown.sum(axis=0)
+        scores = nb_error + (nb_unknown * tau)
+
+        # Update best threshold per predicted class
+        for i in range(nb_classes):
+            if scores[i] < best_scores[i]:
+                best_thresholds[i] = threshold
+                best_scores[i] = scores[i]
+
+    logger.info('Best confidence thresholds: ' + ', '.join(f'{t:.1%}' for t in best_thresholds))
+    return best_thresholds
+
+
 def init_model() -> ClassifierNN:
     """
     Initialise a model based on the current settings.
@@ -201,6 +239,10 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
 
     # Start the training
     train(network, train_dataset, validation_dataset, device)
+
+    # Tune confidence thresholds
+    thresholds = tune_confidence_thresholds(network, validation_dataset, device)
+    save_results(confidence_thresholds=thresholds)
 
     # Start normal test
     test(network, test_dataset, device, final=True)

@@ -1,5 +1,5 @@
 from math import ceil
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -18,7 +18,7 @@ from utils.timer import SectionTimer
 
 
 def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
-         limit: int = 0) -> ClassificationMetrics:
+         limit: int = 0, confidence_per_case: List[List[List]] = None) -> ClassificationMetrics:
     """
     Start testing the network on a dataset.
 
@@ -54,9 +54,10 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     nb_samples_per_case = 16
     if final:
         samples_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
-        confidence_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
+        if confidence_per_case is None:
+            confidence_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
     else:
-        samples_per_case = confidence_per_case = None
+        samples_per_case = None
 
     # Disable gradient for performances
     with torch.no_grad(), SectionTimer(f'network testing{test_name}', 'info' if final else 'debug'), \
@@ -69,7 +70,10 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
                 break
 
             # Number of inference (will have no effect if the model is not Bayesian)
-            nb_sample = settings.bayesian_nb_sample_test if final else settings.bayesian_nb_sample_valid
+            if confidence_per_case is None:
+                nb_sample = settings.bayesian_nb_sample_valid
+            else:
+                nb_sample = settings.bayesian_nb_sample_test
             # Forward
             predicted, confidences = network.infer(inputs, nb_sample)
 
@@ -80,9 +84,10 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
                 if conf < settings.confidence_threshold:  # Also count predictions considered as unknown
                     nb_labels_unknown_predictions[label][pred] += 1
 
-                if final:
+                if confidence_per_case is not None:
                     # Save confidence per class
                     confidence_per_case[label][pred].append(conf.item())
+                if final:
                     # Save samples for later plots
                     if len(samples_per_case[label][pred]) < nb_samples_per_case:
                         samples_per_case[label][pred].append((patch.cpu(), conf))
