@@ -172,7 +172,7 @@ def plot_classification_sample(samples_per_case: List[List[List[Tuple[List, floa
                              confidences=confidences)
 
 
-def plot_confidence(confidence_per_case: List[List[List[float]]]) -> None:
+def plot_confidence(confidence_per_case: List[List[List[float]]], unknown_thresholds: List[float]) -> None:
     """
     Plot the confidence density based on validity of the classification.
 
@@ -198,14 +198,16 @@ def plot_confidence(confidence_per_case: List[List[List[float]]]) -> None:
     sns.displot(df, x='confidence', hue='is_correct', kind='hist', palette=palette, legend=False, multiple="layer",
                 element="step")
 
-    if settings.confidence_threshold:
-        plt.axvline(x=settings.confidence_threshold, color='tab:purple', linestyle=':')
+    colors = ['tab:purple', 'tab:olive']
+    for cls, threshold, color in zip(QDSDLines.classes, unknown_thresholds, colors):
+        plt.axvline(x=threshold, color=color, linestyle=':')
 
     plt.ylabel('Count')
     plt.xlabel('Classification confidence')
     plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
     plt.yscale('log')
-    plt.legend(labels=['Good classification', 'Bad classification', 'Confidence threshold'], loc='upper left')
+    plt.legend(labels=['Good classification', 'Bad classification'] +
+                      [f'Confidence threshold {cls}' for cls in QDSDLines.classes], loc='upper left')
     plt.title(f'Classification confidence\nfor {len(df):n} test patches')
 
     save_plot('confidence_distribution')

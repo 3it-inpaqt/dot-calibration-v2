@@ -261,7 +261,7 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     save_results(confidence_thresholds=thresholds)
 
     # Start normal test
-    test(network, test_dataset, device, final=True, unknown_threshold=thresholds)
+    test(network, test_dataset, device, final=True, unknown_thresholds=thresholds)
 
     # Arrived to the end successfully (no error)
     save_results(success_run=True)

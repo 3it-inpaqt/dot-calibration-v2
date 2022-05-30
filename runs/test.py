@@ -18,7 +18,7 @@ from utils.timer import SectionTimer
 
 
 def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
-         limit: int = 0, confidence_per_case: List[List[List]] = None, unknown_threshold: List[float] = None) \
+         limit: int = 0, confidence_per_case: List[List[List]] = None, unknown_thresholds: List[float] = None) \
         -> ClassificationMetrics:
     """
     Start testing the network on a dataset.
@@ -30,7 +30,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     :param final: If true this is the final test, will show in log info and save results in file.
     :param limit: Limit of item from the dataset to evaluate during this testing (0 to run process the whole dataset).
     :param confidence_per_case: If set the confidence results will be saved in this list.
-    :param unknown_threshold: If set the number of unknown inference will be counted based on this confidence threshold.
+    :param unknown_thresholds: If set the number of unknown inference will be counted based on this confidence threshold.
     :return: The different classification result metrics.
     """
 
@@ -52,7 +52,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     metrics: Optional[ClassificationMetrics] = None
     # All prediction count
     nb_labels_predictions = np.zeros((nb_classes, nb_classes), dtype=int)
-    if unknown_threshold:
+    if unknown_thresholds:
         # Prediction under the confidence threshold count
         nb_labels_unknown_predictions = np.zeros((nb_classes, nb_classes), dtype=int)
     nb_samples_per_case = 16
@@ -86,7 +86,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
                 # Count the number of prediction for each label
                 nb_labels_predictions[label][pred] += 1
 
-                if unknown_threshold and conf < unknown_threshold[pred]:
+                if unknown_thresholds and conf < unknown_thresholds[pred]:
                     # Also count predictions considered as unknown
                     nb_labels_unknown_predictions[label][pred] += 1
 
@@ -110,9 +110,9 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
         save_results(final_classification_results=metrics)
         plot_confusion_matrix(nb_labels_predictions, metrics, class_names=test_dataset.classes)
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
-        plot_confidence(confidence_per_case)
+        plot_confidence(confidence_per_case, unknown_thresholds)
 
-        if unknown_threshold:
+        if unknown_thresholds:
             unknown_rate = nb_labels_unknown_predictions.sum() / nb_labels_predictions.sum()
             known_metrics = classification_metrics(nb_labels_predictions - nb_labels_unknown_predictions)
             logger.info(f'Test overall with confidence threshold {known_metrics}'
@@ -120,7 +120,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             logger.info(f'Test {settings.main_metric} per classes:\n\t' +
                         "\n\t".join(
                             [
-                                f'{test_dataset.classes[i]}: {m.main:05.2%} (conf. thr.: {unknown_threshold[i]:.2%})'
+                                f'{test_dataset.classes[i]}: {m.main:05.2%} (conf. thr.: {unknown_thresholds[i]:.2%})'
                                 for i, m in enumerate(known_metrics)
                             ]))
             plot_confusion_matrix(nb_labels_predictions, known_metrics, nb_labels_unknown_predictions,
