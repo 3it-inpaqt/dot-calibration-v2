@@ -139,6 +139,17 @@ def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, v
 
 
 def tune_confidence_thresholds(network, dataset, device) -> List[float]:
+    """
+    Search the best threshold for each class inferred by the network according to the confidence distribution in a
+    dataset. The thresholds are selected by minimizing a score that represent a tradeoff between error and number of
+    unknown classification.
+    If the setting "confidence_threshold" is defined, return this value for every threshold.
+
+    :param network: The neural network used for the classification and the confidence.
+    :param dataset: The dataset used for confidence distribution and accuracy testing.
+    :param device: The pytorch device.
+    :return: A list of threshold (1 by class).
+    """
     nb_classes = len(dataset.classes)
 
     # We simply use the confidence threshold if defined in settings
@@ -250,7 +261,7 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     save_results(confidence_thresholds=thresholds)
 
     # Start normal test
-    test(network, test_dataset, device, final=True)
+    test(network, test_dataset, device, final=True, unknown_threshold=thresholds)
 
     # Arrived to the end successfully (no error)
     save_results(success_run=True)

@@ -114,6 +114,7 @@ def plot_confusion_matrix(nb_labels_predictions: np.ndarray,
     pred_classes = copy(class_names) if class_names else list(range(len(nb_labels_predictions)))
 
     if nb_labels_unknown_predictions is not None:
+        unknown_rate_str = f'{nb_labels_unknown_predictions.sum() / nb_labels_predictions.sum():.2%}'
         # Remove the unknown prediction from to matrix count
         nb_labels_predictions = nb_labels_predictions - nb_labels_unknown_predictions
         # Stack the sum of unknown prediction at the right of the matrix
@@ -132,9 +133,11 @@ def plot_confusion_matrix(nb_labels_predictions: np.ndarray,
                 yticklabels=labels_classes,
                 annot=annotations,
                 cbar=(not annotations))
-    plt.title(f'Confusion matrix of {len(nb_labels_predictions)} classes\n'
+    classes_str = f'{len(nb_labels_predictions)} classes{"" if nb_labels_unknown_predictions is None else " + unknown"}'
+    plt.title(f'Confusion matrix of {classes_str}\n'
               f'accuracy {metrics.accuracy:.2%} | precision {metrics.precision:.2%}\n'
-              f'recall {metrics.recall:.2%} | F1 {metrics.f1:.2%}')
+              f'recall {metrics.recall:.2%} | F1 {metrics.f1:.2%}'
+              f'{"" if nb_labels_unknown_predictions is None else " | unknown " + unknown_rate_str}')
     plt.xlabel('Predictions')
     plt.ylabel('Labels')
     save_plot(plot_name)
