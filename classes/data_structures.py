@@ -78,7 +78,7 @@ class ClassificationMetrics(ClassMetrics):
 class StepHistoryEntry:
     coordinates: Tuple[int, int]
     model_classification: bool  # True = Line / False = No line
-    model_confidence: bool
+    model_confidence: float
     ground_truth: bool
     soft_truth_larger: bool  # Ground truth if the active area was larger (smaller offset)
     soft_truth_smaller: bool  # Ground truth if the active area was smaller (larger offset)
@@ -96,9 +96,16 @@ class StepHistoryEntry:
         return (self.model_classification and self.soft_truth_larger) or \
                (not self.model_classification and not self.soft_truth_smaller)
 
-    def is_under_confidence_threshold(self) -> bool:
-        """ :return: True if the model classification confidence is threshold. """
-        return self.model_confidence < settings.confidence_threshold
+    def is_under_confidence_threshold(self, confidence_thresholds: List[float]) -> bool:
+        """
+        :return: True if the confidence threshold is defined and the model classification confidence is under the
+         threshold.
+         """
+
+        if confidence_thresholds:
+            return self.model_confidence < confidence_thresholds[self.model_classification]
+
+        return False  # No confidence thresholds defined
 
 
 @dataclass

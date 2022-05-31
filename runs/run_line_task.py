@@ -257,11 +257,11 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     train(network, train_dataset, validation_dataset, device)
 
     # Tune confidence thresholds
-    thresholds = tune_confidence_thresholds(network, train_dataset, device)
-    save_results(confidence_thresholds=thresholds)
+    network.confidence_thresholds = tune_confidence_thresholds(network, train_dataset, device)
+    save_results(confidence_thresholds=network.confidence_thresholds)
 
     # Start normal test
-    test(network, test_dataset, device, final=True, unknown_thresholds=thresholds)
+    test(network, test_dataset, device, final=True)
 
     # Arrived to the end successfully (no error)
     save_results(success_run=True)

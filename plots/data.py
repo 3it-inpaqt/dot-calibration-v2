@@ -41,6 +41,7 @@ def plot_diagram(x_i, y_i,
                  show_offset: bool = True,
                  scan_history: List["StepHistoryEntry"] = None,
                  scan_errors: bool = False,
+                 confidence_thresholds: List[float] = None,
                  fog_of_war: bool = False,
                  fading_history: int = 0,
                  history_uncertainty: bool = False,
@@ -68,6 +69,8 @@ def plot_diagram(x_i, y_i,
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
     :param scan_errors: If True and scan_history defined, plot the step error on the diagram. If False plot the class
      inference instead. Soft errors are shown only if uncertainty is disabled.
+    :param confidence_thresholds: The model confidence threshold values for each class. Only necessary if scan_errors
+     and not history_uncertainty enabled (yes, this is very specific).
     :param fog_of_war: If True and scan_history defined, hide the section of the diagram that was never scanned.
     :param fading_history: The number of scan inference the plot, the latest first. The number set will be plotted with
      solid color and the same number will fad progressively. Not compatible with history_uncertainty.
@@ -149,7 +152,7 @@ def plot_diagram(x_i, y_i,
 
             if scan_errors:
                 # Patch color depending on the classification success
-                if not history_uncertainty and scan_entry.is_under_confidence_threshold():
+                if not history_uncertainty and scan_entry.is_under_confidence_threshold(confidence_thresholds):
                     # If the uncertainty is not shown with alpha, we show it by a gray patch
                     color = UNKNOWN_COLOR
                     label = 'Unknown'

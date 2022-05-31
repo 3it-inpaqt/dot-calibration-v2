@@ -497,6 +497,7 @@ class AutotuningProcedure:
                                    'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
                                    'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
                                    'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
+                                   'confidence_thresholds': self.model.confidence_thresholds,
                                    'history_uncertainty': False})
             # step with error color and uncertainty
             pool.apply_async(plot_diagram,
