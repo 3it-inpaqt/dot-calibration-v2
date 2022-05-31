@@ -111,18 +111,22 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
         plot_confidence(confidence_per_case, network.confidence_thresholds)
 
+        # Final test results but with confidence threshold
         if network.confidence_thresholds:
-            unknown_rate = nb_labels_unknown_predictions.sum() / nb_labels_predictions.sum()
-            known_metrics = classification_metrics(nb_labels_predictions - nb_labels_unknown_predictions)
-            logger.info(f'Test overall with confidence threshold {known_metrics}'
-                        f' (accuracy: {known_metrics.accuracy:.2%} - unknown: {unknown_rate:.2%})')
-            logger.info(f'Test {settings.main_metric} per classes:\n\t' +
+            threshold_metrics = classification_metrics(nb_labels_predictions - nb_labels_unknown_predictions)
+            unknown_rate = (nb_labels_unknown_predictions.sum() / nb_labels_predictions.sum()).item()
+            save_results(threshold_classification_results=threshold_metrics)
+            save_results(unknown_threshold_rate=unknown_rate)
+
+            logger.info(f'Test overall with confidence threshold {threshold_metrics}'
+                        f' (accuracy: {threshold_metrics.accuracy:.2%} - unknown: {unknown_rate:.2%})')
+            logger.info(f'Test {settings.main_metric} per classes with confidence threshold:\n\t' +
                         "\n\t".join([
                             f'{test_dataset.classes[i]}: {m.main:05.2%} '
-                            f'(conf. thr.: {network.confidence_thresholds[i]:.2%})'
-                            for i, m in enumerate(known_metrics)
+                            f'(CT: {network.confidence_thresholds[i]:.2%})'
+                            for i, m in enumerate(threshold_metrics)
                         ]))
-            plot_confusion_matrix(nb_labels_predictions, known_metrics, nb_labels_unknown_predictions,
+            plot_confusion_matrix(nb_labels_predictions, threshold_metrics, nb_labels_unknown_predictions,
                                   class_names=test_dataset.classes, plot_name='confusion_matrix_unknown')
 
     return metrics
