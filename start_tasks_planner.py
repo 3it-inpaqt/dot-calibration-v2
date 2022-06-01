@@ -251,7 +251,7 @@ if __name__ == '__main__':
     # Run tuning on all datasets and procedures
     tune_all_diagrams = CombinatorPlanner([
         Planner('autotuning_nb_iteration', [50]),
-        Planner('autotuning_procedures', [['full', 'jump', 'shift', 'jump_u', 'shift_u']]),
+        Planner('autotuning_procedures', [['full', 'jump', 'jump_u']]),
         ParallelPlanner([
             Planner('model_type', ['FF', 'CNN', 'BCNN']),
             Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
@@ -262,4 +262,4 @@ if __name__ == '__main__':
         datasets_planner_cross_valid
     ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
 
-    run_tasks_planner(uncertainty_grid_search, skip_existing_runs=True, tuning_task=True)
+    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=True)

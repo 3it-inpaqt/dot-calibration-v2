@@ -125,8 +125,8 @@ class Settings:
     # If test_ratio != 0, this value should be empty string.
     test_diagram: str = ''
 
-    # The percentage of data kept for testing only
-    validation_ratio: float = 0.1
+    # The percentage of data kept for validation only
+    validation_ratio: float = 0.2
 
     # If True, data augmentation methods will be applied to increase the size of the train dataset.
     train_data_augmentation: bool = True

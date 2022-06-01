@@ -257,7 +257,7 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     train(network, train_dataset, validation_dataset, device)
 
     # Tune confidence thresholds
-    network.confidence_thresholds = tune_confidence_thresholds(network, train_dataset, device)
+    network.confidence_thresholds = tune_confidence_thresholds(network, validation_dataset, device)
     save_results(confidence_thresholds=network.confidence_thresholds)
 
     # Start normal test
