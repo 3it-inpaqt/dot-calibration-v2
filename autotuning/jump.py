@@ -10,8 +10,8 @@ class Jump(AutotuningProcedure):
     # Exploration limits
     _max_steps_exploration: int = 1000  # Nb of step
     _max_steps_search_empty: int = 100  # Nb of step
-    _max_line_explore_right: int = 5
-    _validate_left_line_max_try: int = 5
+    _max_line_explore_right: int = 5  # Nb detected lines
+    _max_steps_validate_left_line: int = 250  # Nb steps
 
     _nb_line_found: int = 0
     # Line angle degree (0 = horizontal | 90 = vertical | 45 = slope -1 | 135 = slope 1)
@@ -224,12 +224,11 @@ class Jump(AutotuningProcedure):
         up = Direction(last_x=0, last_y=0, move=self._move_up_follow_line, check_stuck=self.is_max_up_or_left)
         down = Direction(last_x=0, last_y=0, move=self._move_down_follow_line, check_stuck=self.is_max_down_or_right)
 
+        nb_steps = 0
         new_line_found = True
         start_point = self._leftmost_line_coord
-        nb_try = 0
-        while new_line_found and nb_try <= self._validate_left_line_max_try:
+        while new_line_found:
             new_line_found = False
-            nb_try += 1
             # Both direction start at the leftmost point
             up.last_x, up.last_y = start_point
             down.last_x, down.last_y = start_point
@@ -249,6 +248,7 @@ class Jump(AutotuningProcedure):
 
                     # Go left for 2x the line distance (total 2.5x the line distance)
                     for i in range(ceil(line_step_distance * 2)):
+                        nb_steps += 1
                         # If new line found and this is the new leftmost one, start again the checking loop
                         if self._is_confirmed_line() and start_point != self._leftmost_line_coord:
                             self._nb_line_found += 1
@@ -262,6 +262,9 @@ class Jump(AutotuningProcedure):
                         self._move_left_perpendicular_to_line()
                         if self.is_max_left() or self.is_max_down():
                             break  # Nothing else to see here
+
+                    if nb_steps > self._max_steps_validate_left_line:
+                        return  # Hard break to avoid infinite search in case of bad slope detection (>90°)
 
                     if new_line_found:
                         break
