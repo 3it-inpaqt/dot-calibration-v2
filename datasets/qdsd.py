@@ -184,7 +184,8 @@ class QDSDLines(Dataset):
                 # Save in cache for later runs
                 save_data_cache(cache_path, patches)
 
-        nb_patches = len(patches) + len(test_patches)
+        # In case of test set defined by a diagram name the valid ratio should be counted based on train size only
+        nb_patches = len(patches) + len(test_patches) if use_test_ratio else len(patches)
 
         # Shuffle patches before to split them into different the datasets
         shuffle(patches)
