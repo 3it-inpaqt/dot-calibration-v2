@@ -211,7 +211,8 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
 
     # Print
     logger.info('Autotuning results:\n' +
-                tabulate(results_table, headers="firstrow", tablefmt='fancy_grid', floatfmt='.2%'))
+                tabulate(results_table, headers='firstrow', tablefmt='fancy_grid' if settings.console_color else 'grid',
+                         floatfmt='.2%'))
 
     # Save flatten array results in yaml file
     save_results(tuning_results=chain(*autotuning_results.values()), final_tuning_result=total_success_rate)
