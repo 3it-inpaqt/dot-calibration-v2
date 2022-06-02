@@ -64,7 +64,7 @@ def classification_metrics(confusion_matrix: np.ndarray) -> ClassificationMetric
 
     return ClassificationMetrics(
         nb=int(nb_labels),
-        accuracy=float(nb_good_class / nb_labels),
+        accuracy=float(nb_good_class / nb_labels) if nb_labels > 0 else 0,
         precision=float(classes_precision.mean()),
         recall=float(classes_recall.mean()),
         f1=float(classes_f1.mean()),
