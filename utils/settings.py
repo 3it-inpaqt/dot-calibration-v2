@@ -125,7 +125,7 @@ class Settings:
     # If test_ratio != 0, this value should be empty string.
     test_diagram: str = ''
 
-    # The percentage of data kept for validation only
+    # The percentage of data kept for validation only. 0 to disable validation.
     validation_ratio: float = 0.2
 
     # If True, data augmentation methods will be applied to increase the size of the train dataset.
@@ -239,6 +239,7 @@ class Settings:
     checkpoint_train_size: int = 640
 
     # If the inference metrics of the validation dataset should be computed, or not, during checkpoint.
+    # The validation ratio have to be higher than 0.
     checkpoint_validation: bool = True
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at each checkpoint.

@@ -1,7 +1,7 @@
 import gc
 import os
 import random
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -111,7 +111,8 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
                 f'\n\tgap: {gap_metrics.main:.2%}')
 
 
-def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, validation_dataset: QDSDLines) -> None:
+def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines,
+                            validation_dataset: Optional[QDSDLines]) -> None:
     """
     Run data augmentations methods on train if this setting is enabled.
 
@@ -124,18 +125,23 @@ def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines, v
         train_dataset.data_augmentation()
         train_size_aug = len(train_dataset)
         aug_rate = (train_size_aug / train_size) - 1
-        logger.info(f'Datasets size:'
-                    f'\n\ttrain {train_size:n} (ratio: {train_dataset.get_class_ratio():.2f}) '
-                    f'--> augmented to {train_size_aug:n} ({aug_rate:+.0%})'
-                    f'\n\ttest {len(test_dataset):n} (ratio: {test_dataset.get_class_ratio():.2f})'
-                    f'\n\tvalidation {len(validation_dataset):n} (ratio: {validation_dataset.get_class_ratio():.2f})')
+
+        info = f'Datasets size:' \
+               f'\n\ttrain {train_size:n} (ratio: {train_dataset.get_class_ratio():.2f}) ' \
+               f'--> augmented to {train_size_aug:n} ({aug_rate:+.0%})' \
+               f'\n\ttest {len(test_dataset):n} (ratio: {test_dataset.get_class_ratio():.2f})'
+        if validation_dataset:
+            info += f'\n\tvalidation {len(validation_dataset):n} (ratio: {validation_dataset.get_class_ratio():.2f})'
+
         save_results(train_dataset_augmentation=train_size_aug - train_size)
     else:
-        logger.info(f'Datasets size:'
-                    f'\n\ttrain {len(train_dataset):n}'
-                    f'\n\ttest {len(test_dataset):n}'
-                    f'\n\tvalidation {len(validation_dataset):n}')
+        info = f'Datasets size:\n\ttrain {len(train_dataset):n}\n\ttest {len(test_dataset):n}'
+        if validation_dataset:
+            info += f'\n\tvalidation {len(validation_dataset):n}'
+
         save_results(train_dataset_augmentation=0)
+
+    logger.info(info)
 
 
 def tune_confidence_thresholds(network, dataset, device) -> List[float]:
@@ -220,15 +226,15 @@ def get_cuda_device() -> torch.device:
 
 
 @SectionTimer('line task')
-def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Dataset, network: ClassifierNN) \
-        -> None:
+def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Optional[Dataset],
+                   network: ClassifierNN) -> None:
     """
     Run the training and the testing of the network.
 
-    :param train_dataset: The training dataset
-    :param test_dataset: The testing dataset
-    :param validation_dataset: The validation dataset
-    :param network: The neural network to train
+    :param train_dataset: The training dataset.
+    :param test_dataset: The testing dataset.
+    :param validation_dataset: The validation dataset. Don't use validation if None.
+    :param network: The neural network to train.
     """
 
     # Run data augmentations methods on train if this setting is enabled
@@ -243,7 +249,8 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     network.to(device)
     train_dataset.to(device)
     test_dataset.to(device)
-    validation_dataset.to(device)
+    if validation_dataset:
+        validation_dataset.to(device)
 
     # Save network stats and show if debug enable
     logger.info(f'Neural network type: {type(network).__name__}')
@@ -257,7 +264,8 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     train(network, train_dataset, validation_dataset, device)
 
     # Tune confidence thresholds
-    network.confidence_thresholds = tune_confidence_thresholds(network, validation_dataset, device)
+    network.confidence_thresholds = tune_confidence_thresholds(
+        network, validation_dataset if validation_dataset else train_dataset, device)
     save_results(confidence_thresholds=network.confidence_thresholds)
 
     # Start normal test

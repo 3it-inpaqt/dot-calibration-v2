@@ -1,6 +1,6 @@
 from pathlib import Path
 from random import shuffle
-from typing import Callable, Iterable, List, Tuple, Union
+from typing import Callable, Iterable, List, Optional, Tuple, Union
 
 import torch
 from torch.utils.data import Dataset
@@ -129,7 +129,7 @@ class QDSDLines(Dataset):
                              patch_size: Tuple[int, int] = (10, 10),
                              overlap: Tuple[int, int] = (0, 0),
                              label_offset: Tuple[int, int] = (0, 0),
-                             normalize: bool = True) -> Tuple["QDSDLines", ...]:
+                             normalize: bool = True) -> Tuple["QDSDLines", "QDSDLines", Optional["QDSDLines"]]:
         """
         Initialize dataset of transition lines patches.
         The sizes of the test and validation dataset depend on the ratio. The train dataset get all remaining data.
@@ -209,11 +209,11 @@ class QDSDLines(Dataset):
         else:
             train_set = QDSDLines(patches[test_index:], 'train')
 
-            datasets = (train_set, test_set)
+            datasets = (train_set, test_set, None)
 
         # Print and save stats about datasets
         stats = {}
-        for dataset in datasets:
+        for dataset in (d for d in datasets if d):  # Skip None datasets
             stats.update(dataset.get_stats())
 
         logger.debug('Dataset:' + ''.join([f'\n\t{key}: {value}' for key, value in stats.items()]))
@@ -239,6 +239,6 @@ class QDSDLines(Dataset):
         # Save values to file, for consistant normalization later
         save_normalization(ref_min.item(), ref_max.item())
 
-        for dataset in datasets:
+        for dataset in (d for d in datasets if d):  # Skip None datasets
             dataset._patches -= ref_min
             dataset._patches /= (ref_max - ref_min)

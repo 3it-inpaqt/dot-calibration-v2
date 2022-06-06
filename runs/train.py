@@ -1,5 +1,5 @@
 from math import ceil
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import torch
@@ -17,7 +17,8 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dataset, device: torch.device) -> None:
+def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Optional[Dataset], device: torch.device) \
+        -> None:
     """
     Train the network using the dataset.
 
@@ -72,8 +73,9 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
                     timer.pause()
                     check_metrics = _checkpoint(network, epoch * nb_batch + i, train_dataset, validation_dataset,
                                                 best_checkpoint, device)
-                    progress.update(**{'acc': check_metrics['validation'].accuracy,
-                                       settings.main_metric: check_metrics['validation'].main})
+                    progress.update(
+                        **{'acc': check_metrics['validation' if validation_dataset else 'train'].accuracy,
+                           settings.main_metric: check_metrics['validation' if validation_dataset else 'train'].main})
                     metrics_evolution.append(check_metrics)
                     timer.resume()
 
@@ -109,7 +111,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Dat
     plot_train_progress(loss_evolution, metrics_evolution, nb_batch, best_checkpoint)
 
 
-def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Dataset,
+def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Optional[Dataset],
                 best_checkpoint: dict, device: torch.device) -> dict:
     """
     Pause the training to do some jobs, like intermediate testing and network backup.
@@ -127,7 +129,7 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
 
     validation_metrics = train_metrics = None
     # Test on the validation dataset
-    if settings.checkpoint_validation:
+    if validation_dataset and settings.checkpoint_validation:
         validation_metrics = test(network, validation_dataset, device, test_name='checkpoint validation')
         # Check if this is the new best score
         if validation_metrics.main > best_checkpoint['score']:
