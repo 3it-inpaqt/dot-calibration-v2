@@ -50,24 +50,27 @@ def plot_train_progress(loss_evolution: List[float],
         ax1.plot(loss_evolution, label='loss', color='dodgerblue', alpha=0.3)
         ax1.set_ylim(bottom=0)
 
-        if metrics_evolution:
+        if metrics_evolution and len(metrics_evolution) > 0:
             legend_y_anchor = -0.25
 
             # Plot the main metric evolution if available
             ax2 = plt.twinx()
             checkpoint_batches = [a['batch_num'] for a in metrics_evolution]
             train_main_metric = [a['train'].main for a in metrics_evolution]
-            valid_main_metric = [a['validation'].main for a in metrics_evolution]
             ax2.plot(checkpoint_batches, train_main_metric, label=f'train {settings.main_metric}',
                      color='limegreen', linestyle=(0, (2, 1)), alpha=0.5)
-            ax2.plot(checkpoint_batches, valid_main_metric, label=f'validation {settings.main_metric}',
-                     color='green')
 
-            # Star marker for best validation metric
-            if best_checkpoint and best_checkpoint['batch_num'] is not None:
-                ax2.plot(best_checkpoint['batch_num'], best_checkpoint['score'], color='green',
-                         marker='*', markeredgecolor='k', markersize=10, label=f'best valid. {settings.main_metric}')
-                legend_y_anchor -= 0.1
+            if metrics_evolution[0]['validation'] is not None:
+                valid_main_metric = [a['validation'].main for a in metrics_evolution]
+                ax2.plot(checkpoint_batches, valid_main_metric, label=f'validation {settings.main_metric}',
+                         color='green')
+
+                # Star marker for best validation metric
+                if best_checkpoint and best_checkpoint['batch_num'] is not None:
+                    ax2.plot(best_checkpoint['batch_num'], best_checkpoint['score'], color='green',
+                             marker='*', markeredgecolor='k', markersize=10,
+                             label=f'best valid. {settings.main_metric}')
+                    legend_y_anchor -= 0.1
 
             ax2.yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.0%}'.format(y)))
             ax2.set_ylim(bottom=0, top=1)
