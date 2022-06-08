@@ -11,6 +11,7 @@ from tabulate import tabulate
 
 from datasets.diagram import ChargeRegime
 from utils.output import load_runs, set_plot_style
+from utils.settings import settings
 
 
 def load_runs_clean(patterns: Union[str, List[str]]) -> pd.DataFrame:
@@ -26,6 +27,7 @@ def load_runs_clean(patterns: Union[str, List[str]]) -> pd.DataFrame:
     # Move metrics results to root level
     for metric in ['recall', 'precision', 'accuracy', 'f1']:
         data[metric.capitalize()] = data['results.final_classification_results'].map(lambda a: a[metric])
+        data['ct-' + metric.capitalize()] = data['results.threshold_classification_results'].map(lambda a: a[metric])
 
     return data
 
@@ -223,12 +225,32 @@ def compare_models():
 
 def repeat_analyse():
     # Print average result of a repeated run with different seed
-    data = load_runs('tmp-*')
+    data = load_runs_clean('repeat-batch1024*')
 
-    mean_acc = data["results.final_accuracy"].mean()
-    std_acc = data["results.final_accuracy"].std()
-    std_baseline = data['results.baseline_std_test_accuracy'][0]
-    print(f'{len(data):n} runs - avg accuracy: {mean_acc:.2%} (std:{std_acc:.2%}) - baseline: {std_baseline:.2%}')
+    # Accuracy
+    mean_acc = data['Accuracy'].mean()
+    std_acc = data['Accuracy'].std()
+    print(f'{len(data):n} runs - avg Accuracy: {mean_acc:.2%} (std:{std_acc:.2%})')
+
+    # Main metric
+    mean_acc = data[settings.main_metric.capitalize()].mean()
+    std_acc = data[settings.main_metric.capitalize()].std()
+    print(f'{len(data):n} runs - avg {settings.main_metric.capitalize()}: {mean_acc:.2%} (std:{std_acc:.2%})')
+
+    ct1 = data['results.confidence_thresholds'].map(lambda a: a[0])
+    ct2 = data['results.confidence_thresholds'].map(lambda a: a[1])
+    print(f'\nWith confidence thresholds: {ct1.mean():.1%} (std: {ct1.std():.1%}) - '
+          f'{ct2.mean():.1%} (std: {ct2.std():.1%}) - {data["results.unknown_threshold_rate"].mean():.2%} under CT')
+
+    # Accuracy
+    mean_acc = data['ct-Accuracy'].mean()
+    std_acc = data['ct-Accuracy'].std()
+    print(f'{len(data):n} runs - avg CT Accuracy: {mean_acc:.2%} (std:{std_acc:.2%})')
+
+    # Main metric
+    mean_acc = data['ct-' + settings.main_metric.capitalize()].mean()
+    std_acc = data['ct-' + settings.main_metric.capitalize()].std()
+    print(f'{len(data):n} runs - avg CT {settings.main_metric.capitalize()}: {mean_acc:.2%} (std:{std_acc:.2%})')
 
 
 def layers_size_analyse():
@@ -449,4 +471,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    uncertainty_analysis()
+    repeat_analyse()
