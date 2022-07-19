@@ -158,6 +158,9 @@ class Settings:
     conv_layers_kernel: Sequence = (4, 4)
     conv_layers_channel: Sequence = (12, 24)
 
+    # If True, add a max pooling layer after the index matching convolution layer
+    max_pooling_layers: bool = (True, False)
+
     # ==================================================================================================================
     # ==================================================== Training ====================================================
     # ==================================================================================================================
@@ -177,7 +180,7 @@ class Settings:
     momentum: float = 0.9
 
     # Dropout rate for every dropout layers defined in networks.
-    # If a notwork model doesn't have a dropout layer this setting will have no effect.
+    # If a network model doesn't have a dropout layer this setting will have no effect.
     # 0 skip dropout layers
     dropout: int = 0.4
 

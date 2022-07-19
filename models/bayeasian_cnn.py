@@ -31,9 +31,14 @@ class BCNN(ClassifierBayesNN):
 
         self.conv_layers = nn.ModuleList()
         last_nb_channel = 1
-        for channel, kernel in zip(settings.conv_layers_channel, settings.conv_layers_kernel):
+        for channel, kernel, max_pool in zip(settings.conv_layers_channel,
+                                             settings.conv_layers_kernel,
+                                             settings.max_pooling_layers):
             self.conv_layers.append(BayesianConv2d(in_channels=last_nb_channel, out_channels=channel,
                                                    kernel_size=(kernel, kernel)))
+            if max_pool:
+                self.conv_layers.append(nn.MaxPool2d(kernel_size=(2, 2)))
+
             last_nb_channel = channel
 
         # Number of neurons per layer
