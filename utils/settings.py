@@ -158,8 +158,13 @@ class Settings:
     conv_layers_kernel: Sequence = (4, 4)
     conv_layers_channel: Sequence = (12, 24)
 
-    # If True, add a max pooling layer after the index matching convolution layer
-    max_pooling_layers: bool = (True, False)
+    # Define if there is a max pooling layer after each convolution layer (True = max pooling)
+    # Have to match the convolution layers size
+    max_pooling_layers: Sequence = (True, False)
+
+    # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
+    # Have to match the number of layers (convolution + linear)
+    batch_norm_layers: Sequence = (True, True, True, True)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -333,8 +338,10 @@ class Settings:
         assert isinstance(self.model_type, str) and self.model_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN'], \
             f'Invalid network type {self.model_type}'
         assert all((a > 0 for a in self.hidden_layers_size)), 'Hidden layer size should be more than 0'
-        assert len(self.conv_layers_channel) == len(self.conv_layers_kernel), \
-            'Convolution channel and kernels list should have the same length'
+        assert len(self.conv_layers_channel) == len(self.conv_layers_kernel) == len(self.max_pooling_layers), \
+            'All convolution meta parameters should have the same size (channel, kernels and max pooling)'
+        assert len(self.conv_layers_channel) + len(self.hidden_layers_size) == len(self.batch_norm_layers), \
+            'The batch normalisation meta parameters should be define for each layer (convolution and linear)'
         assert all((a > 0 for a in self.conv_layers_channel)), 'Conv layer nb channel should be more than 0'
         assert all((a > 1 for a in self.conv_layers_kernel)), 'Conv layer kernel size should be more than 1'
 

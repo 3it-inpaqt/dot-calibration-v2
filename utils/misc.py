@@ -43,7 +43,7 @@ def clip(n, smallest, largest):
     return max(smallest, min(n, largest))
 
 
-def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[Union[nn.Conv2d, nn.MaxPool2d]]) \
+def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[Union[nn.Conv2d, nn.MaxPool2d, nn.Sequential]]) \
         -> Tuple[int, ...]:
     """
     Compute the size of output dimension of a list of convolutional and max pooling layers, according to the initial
@@ -54,8 +54,19 @@ def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[Union[nn.
     :param layers: The list of convolutional layers.
     :return: The final output dimension.
     """
-    out_h, out_w = input_size
+    # Keep only the layer that affect the size of the data
+    resize_layers = []
     for la in layers:
+        if type(la) in [nn.Conv2d, nn.MaxPool2d]:
+            resize_layers.append(la)
+        elif type(la) is nn.Sequential:
+            for sub_la in la:
+                # TODO make it recursive
+                if type(sub_la) in [nn.Conv2d, nn.MaxPool2d]:
+                    resize_layers.append(sub_la)
+
+    out_h, out_w = input_size
+    for la in resize_layers:
         # Compatibility with Max Pooling and BayesianConv2d where properties are integer instead of tuple
         padding = (la.padding, la.padding) if isinstance(la.padding, int) else la.padding
         dilation = (la.dilation, la.dilation) if isinstance(la.dilation, int) else la.dilation
@@ -65,7 +76,7 @@ def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[Union[nn.
         out_h = (out_h + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1
         out_w = (out_w + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1
 
-    return layers[-1].out_channels, int(out_h), int(out_w)
+    return resize_layers[-1].out_channels, int(out_h), int(out_w)
 
 
 def yaml_preprocess(item: Any) -> Union[str, int, float, List, Dict]:
