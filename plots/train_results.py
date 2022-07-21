@@ -56,12 +56,20 @@ def plot_train_progress(loss_evolution: List[float],
             # Plot the main metric evolution if available
             ax2 = plt.twinx()
             checkpoint_batches = [a['batch_num'] for a in metrics_evolution]
+            # Train evolution
             train_main_metric = [a['train'].main for a in metrics_evolution]
-            valid_main_metric = [a['validation'].main for a in metrics_evolution]
             ax2.plot(checkpoint_batches, train_main_metric, label=f'train {settings.main_metric}',
                      color='limegreen', linestyle=(0, (2, 1)), alpha=0.5)
-            ax2.plot(checkpoint_batches, valid_main_metric, label=f'validation {settings.main_metric}',
-                     color='green')
+            # Testing evolution
+            if 'test' in metrics_evolution[0] and metrics_evolution[0]['test'] is not None:
+                test_main_metric = [a['test'].main for a in metrics_evolution]
+                ax2.plot(checkpoint_batches, test_main_metric, label=f'test {settings.main_metric}',
+                         color='darkolivegreen')
+            # Validation evolution
+            if 'validation' in metrics_evolution[0] and metrics_evolution[0]['validation'] is not None:
+                valid_main_metric = [a['validation'].main for a in metrics_evolution]
+                ax2.plot(checkpoint_batches, valid_main_metric, label=f'validation {settings.main_metric}',
+                         color='green')
 
             # Star marker for best validation metric
             if best_checkpoint and best_checkpoint['batch_num'] is not None:

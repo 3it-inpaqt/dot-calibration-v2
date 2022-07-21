@@ -261,7 +261,7 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
         run_baselines(train_dataset, test_dataset, device)
 
     # Start the training
-    train(network, train_dataset, validation_dataset, device)
+    train(network, train_dataset, validation_dataset, test_dataset, device)
 
     # Tune confidence thresholds
     network.confidence_thresholds = tune_confidence_thresholds(

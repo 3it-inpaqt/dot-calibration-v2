@@ -250,6 +250,9 @@ class Settings:
     # The validation ratio have to be higher than 0.
     checkpoint_validation: bool = True
 
+    # If the inference metrics of the testing dataset should be computed, or not, during checkpoint.
+    checkpoint_test: bool = False
+
     # If True and the run have a valid name, save the neural network parameters in the run directory at each checkpoint.
     checkpoint_save_network: bool = False
 
