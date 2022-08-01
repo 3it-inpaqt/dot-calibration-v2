@@ -26,17 +26,28 @@ class FeedForward(ClassifierNN):
 
         # Number of neurons per layer
         # eg: input_size, hidden size 1, hidden size 2, ..., nb_classes
-        layers_size = [math.prod(input_shape)]
-        layers_size.extend(settings.hidden_layers_size)
-        layers_size.append(1)
+        layer_sizes = [math.prod(input_shape)]
+        layer_sizes.extend(settings.hidden_layers_size)
+        layer_sizes.append(1)
 
         # Create fully connected linear layers
         self.fc_layers = nn.ModuleList()
-        for i in range(len(layers_size) - 1):
-            self.fc_layers.append(nn.Linear(layers_size[i], layers_size[i + 1]))
+        for i in range(len(layer_sizes) - 1):
+            layer = nn.Sequential()
+            # Fully connected
+            layer.append(nn.Linear(layer_sizes[i], layer_sizes[i + 1]))
+            # If this is not the output layer
+            if i != len(layer_sizes) - 2:
+                # Batch normalisation
+                if settings.batch_norm_layers[i]:
+                    layer.append(nn.BatchNorm1d(layer_sizes[i + 1]))
+                # Activation function
+                layer.append(nn.ReLU())
+                # Dropout
+                if settings.dropout > 0:
+                    layer.append(nn.Dropout(settings.dropout))
 
-        # Create a dropout layer if p > 0
-        self.dropout = nn.Dropout(settings.dropout) if settings.dropout > 0 else None
+            self.fc_layers.append(layer)
 
         # Binary Cross Entropy including sigmoid layer
         self._criterion = nn.BCEWithLogitsLoss()
@@ -54,9 +65,7 @@ class FeedForward(ClassifierNN):
 
         # Run fully connected layers
         for fc in self.fc_layers[:-1]:
-            x = torch.relu(fc(x))
-            if self.dropout:
-                x = self.dropout(x)
+            x = fc(x)
 
         # Last layer doesn't use sigmoid because it's include in the loss function
         x = self.fc_layers[-1](x)

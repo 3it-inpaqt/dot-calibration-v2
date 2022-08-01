@@ -343,8 +343,12 @@ class Settings:
         assert all((a > 0 for a in self.hidden_layers_size)), 'Hidden layer size should be more than 0'
         assert len(self.conv_layers_channel) == len(self.conv_layers_kernel) == len(self.max_pooling_layers), \
             'All convolution meta parameters should have the same size (channel, kernels and max pooling)'
-        assert len(self.conv_layers_channel) + len(self.hidden_layers_size) == len(self.batch_norm_layers), \
-            'The batch normalisation meta parameters should be define for each layer (convolution and linear)'
+        if self.model_type.upper() in ['CNN', 'BCNN']:
+            assert len(self.conv_layers_channel) + len(self.hidden_layers_size) == len(self.batch_norm_layers), \
+                'The batch normalisation meta parameters should be define for each layer (convolution and linear)'
+        if self.model_type.upper() in ['FF', 'BFF']:
+            assert len(self.hidden_layers_size) == len(self.batch_norm_layers), \
+                'The batch normalisation meta parameters should be define for each linear layer'
         assert all((a > 0 for a in self.conv_layers_channel)), 'Conv layer nb channel should be more than 0'
         assert all((a > 1 for a in self.conv_layers_kernel)), 'Conv layer kernel size should be more than 1'
 
