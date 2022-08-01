@@ -63,14 +63,16 @@ class CNN(ClassifierNN):
             layer = nn.Sequential()
             # Fully connected
             layer.append(nn.Linear(fc_layer_sizes[i], fc_layer_sizes[i + 1]))
-            # Batch normalisation
-            if settings.batch_norm_layers[len(settings.conv_layers_channel) + i - 1]:
-                layer.append(nn.BatchNorm1d(fc_layer_sizes[i + 1]))
-            # Activation function
-            layer.append(nn.ReLU())
-            # Dropout
-            if settings.dropout > 0:
-                layer.append(nn.Dropout(settings.dropout))
+            # If this is not the output layer
+            if i != len(fc_layer_sizes) - 2:
+                # Batch normalisation
+                if settings.batch_norm_layers[len(settings.conv_layers_channel) + i]:
+                    layer.append(nn.BatchNorm1d(fc_layer_sizes[i + 1]))
+                # Activation function
+                layer.append(nn.ReLU())
+                # Dropout
+                if settings.dropout > 0:
+                    layer.append(nn.Dropout(settings.dropout))
 
             self.fc_layers.append(layer)
 
@@ -105,7 +107,7 @@ class CNN(ClassifierNN):
         # Flatten [batch_size, 1] to [batch_size]
         return torch.squeeze(x)
 
-    def training_step(self, inputs: Any, labels: Any):
+    def training_step(self, inputs: Any, labels: Any) -> float:
         """
         Define the logic for one training step.
 

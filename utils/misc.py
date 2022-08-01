@@ -5,6 +5,7 @@ from math import ceil
 from typing import Any, Dict, Iterable, List, Tuple, Union
 
 import torch
+from blitz.modules import BayesianConv2d
 from torch import nn
 
 from utils.settings import settings
@@ -43,8 +44,9 @@ def clip(n, smallest, largest):
     return max(smallest, min(n, largest))
 
 
-def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[Union[nn.Conv2d, nn.MaxPool2d, nn.Sequential]]) \
-        -> Tuple[int, ...]:
+def calc_out_conv_layers(input_size: Tuple[int, int],
+                         layers: Iterable[Union[nn.Conv2d, nn.MaxPool2d, nn.Sequential, BayesianConv2d]]) -> Tuple[
+    int, ...]:
     """
     Compute the size of output dimension of a list of convolutional and max pooling layers, according to the initial
     input size.
@@ -57,12 +59,12 @@ def calc_out_conv_layers(input_size: Tuple[int, int], layers: Iterable[Union[nn.
     # Keep only the layer that affect the size of the data
     resize_layers = []
     for la in layers:
-        if type(la) in [nn.Conv2d, nn.MaxPool2d]:
+        if type(la) in [nn.Conv2d, nn.MaxPool2d, BayesianConv2d]:
             resize_layers.append(la)
         elif type(la) is nn.Sequential:
             for sub_la in la:
                 # TODO make it recursive
-                if type(sub_la) in [nn.Conv2d, nn.MaxPool2d]:
+                if type(sub_la) in [nn.Conv2d, nn.MaxPool2d, BayesianConv2d]:
                     resize_layers.append(sub_la)
 
     out_h, out_w = input_size
