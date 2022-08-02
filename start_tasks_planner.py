@@ -211,6 +211,38 @@ if __name__ == '__main__':
     uncertainty_grid_search = Planner('confidence_threshold', np.arange(0.9, 1.005, 0.005),
                                       runs_name='uncertainty-{confidence_threshold:.3f}-{model_type}')
 
+    stability_study = CombinatorPlanner([
+        # Global settings
+        Planner('checkpoint_test', [True]),
+        # Network
+        ParallelPlanner([
+            Planner('model_type', ['CNN']),
+            Planner('hidden_layers_size', [cnns_hidden_size]),
+            Planner('learning_rate', [cnns_lr]),
+            Planner('nb_train_update', [cnn_update]),
+        ]),
+        # Partial dataset
+        CombinatorPlanner([
+            Planner('research_group', ['michel_pioro_ladriere']),
+            Planner('pixel_size', [0.001]),
+            Planner('nb_epoch', [0]),  # Nb epoch defined by nb_train_update
+            Planner('label_offset_x', [6]),
+            Planner('label_offset_y', [6]),
+            Planner('conv_layers_channel', [[12, 24]]),
+            Planner('test_ratio', [0]),
+            Planner('validate_left_line', [False]),
+            # List diagrams for cross-validation
+            Planner('test_diagram', ['1779Dev2-20161127_145', '1779Dev2-20161127_442', '1779Dev2-20161127_146']),
+        ]),
+        # Meta parameters to try
+        CombinatorPlanner([
+            Planner('dropout', [0, 0.4]),
+            Planner('batch_norm_layers', [[True, True, True, True], [False, False, False, False]]),
+            Planner('max_pooling_layers', [[True, True], [True, False], [False, False]]),
+        ])
+    ], runs_name='stability-{test_diagram}-dropout_{dropout}-batch_norm_layers_{batch_norm_layers[0]}'
+                 '-max_pooling_layers_{max_pooling_layers}')
+
     # Make full scan plots
     full_scan_all = CombinatorPlanner([
         Planner('autotuning_procedures', [['full']]),
@@ -262,4 +294,4 @@ if __name__ == '__main__':
         datasets_planner_cross_valid
     ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
 
-    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=True)
+    run_tasks_planner(stability_study, skip_existing_runs=True, tuning_task=False)
