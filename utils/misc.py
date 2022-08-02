@@ -45,8 +45,8 @@ def clip(n, smallest, largest):
 
 
 def calc_out_conv_layers(input_size: Tuple[int, int],
-                         layers: Iterable[Union[nn.Conv2d, nn.MaxPool2d, nn.Sequential, BayesianConv2d]]) -> Tuple[
-    int, ...]:
+                         layers: Iterable[Union[nn.Conv2d, nn.MaxPool2d, nn.Sequential, BayesianConv2d]]) \
+        -> Tuple[int, ...]:
     """
     Compute the size of output dimension of a list of convolutional and max pooling layers, according to the initial
     input size.
@@ -68,6 +68,7 @@ def calc_out_conv_layers(input_size: Tuple[int, int],
                     resize_layers.append(sub_la)
 
     out_h, out_w = input_size
+    out_channels = 1
     for la in resize_layers:
         # Compatibility with Max Pooling and BayesianConv2d where properties are integer instead of tuple
         padding = (la.padding, la.padding) if isinstance(la.padding, int) else la.padding
@@ -78,7 +79,11 @@ def calc_out_conv_layers(input_size: Tuple[int, int],
         out_h = (out_h + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1
         out_w = (out_w + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1
 
-    return resize_layers[-1].out_channels, int(out_h), int(out_w)
+        if type(la) in [nn.Conv2d, BayesianConv2d]:
+            # Get the channel count from the last conv layer
+            out_channels = la.out_channels
+
+    return out_channels, int(out_h), int(out_w)
 
 
 def yaml_preprocess(item: Any) -> Union[str, int, float, List, Dict]:
