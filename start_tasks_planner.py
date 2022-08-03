@@ -44,7 +44,8 @@ def run_tasks_planner(runs_planner: BasePlanner,
             for _ in runs_planner:
                 settings.validate()
         except AssertionError as exc:
-            raise RuntimeError('Invalid planned settings, runs aborted before to start') from exc
+            raise RuntimeError(f'Invalid planned settings for "{settings.run_name}",'
+                               f' runs aborted before to start') from exc
 
         BasePlanner.reset_names()
         logger.info('Completed successful validation of the runs planner')
