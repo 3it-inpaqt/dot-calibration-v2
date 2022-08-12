@@ -2,7 +2,7 @@
 #SBATCH --account=rrg-rgmelko-ab
 #SBATCH --gres=gpu:v100:1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=8G
+#SBATCH --mem=16G
 #SBATCH --time=10:00:00
 #SBATCH --job-name=dot-calibration-v2-runs-planner
 #SBATCH --output=out/slurm-%j.out

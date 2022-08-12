@@ -204,7 +204,7 @@ def plot_confidence(confidence_per_case: List[List[List[float]]], unknown_thresh
 
     palette = {True: "tab:green", False: "tab:red"}
     sns.displot(df, x='confidence', hue='is_correct', kind='hist', palette=palette, legend=False, multiple="layer",
-                element="step")
+                element="step", bins=100)
 
     colors = ['tab:purple', 'tab:olive']
     for cls, threshold, color in zip(QDSDLines.classes, unknown_thresholds, colors):
