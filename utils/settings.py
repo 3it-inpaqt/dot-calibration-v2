@@ -33,7 +33,7 @@ class Settings:
     seed: int = 42
 
     # If true every baseline are run before the real training. If false this step is skipped.
-    evaluate_baselines: bool = True
+    evaluate_baselines: bool = False
 
     # The metric to use for plotting, logging and model performance evaluation.
     # See https://yonvictor.notion.site/Classification-Metrics-2074032f927847c0885918eb9ddc508c
@@ -64,7 +64,7 @@ class Settings:
     console_color: bool = True
 
     # If True show matplotlib images when they are ready.
-    show_images: bool = True
+    show_images: bool = False
 
     # If True and the run have a valid name, save matplotlib images in the run directory
     save_images: bool = True
@@ -160,11 +160,11 @@ class Settings:
 
     # Define if there is a max pooling layer after each convolution layer (True = max pooling)
     # Have to match the convolution layers size
-    max_pooling_layers: Sequence = (True, False)
+    max_pooling_layers: Sequence = (True, True)
 
     # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
     # Have to match the number of layers (convolution + linear)
-    batch_norm_layers: Sequence = (True, True, True, True)
+    batch_norm_layers: Sequence = (False, False, False, False)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -180,9 +180,6 @@ class Settings:
 
     # The learning rate value used by the SGD for parameters update.
     learning_rate: float = 0.001
-
-    # The momentum value used by the SGD for parameters update.
-    momentum: float = 0.9
 
     # Dropout rate for every dropout layers defined in networks.
     # If a network model doesn't have a dropout layer this setting will have no effect.
@@ -212,7 +209,7 @@ class Settings:
 
     # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
     # Negative threshold means automatic value selection using tau.
-    confidence_threshold: float = 0.90
+    confidence_threshold: float = -1
 
     # Relative importance of model error compare to model uncertainty for automatic confidence threshold tuning.
     # Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
