@@ -237,7 +237,7 @@ class Settings:
     # ==================================================================================================================
 
     # The number of checkpoints per training epoch, if 0 no checkpoint is processed
-    checkpoints_per_epoch: int = 0
+    checkpoints_per_epoch: int = 1
 
     # The number of data in the checkpoint training subset.
     # Set to 0 to don't compute the train metrics during checkpoints.
