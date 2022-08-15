@@ -218,7 +218,6 @@ if __name__ == '__main__':
         # Network
         ParallelPlanner([
             Planner('model_type', ['CNN']),
-            Planner('hidden_layers_size', [cnns_hidden_size]),
             Planner('learning_rate', [cnns_lr]),
             Planner('nb_train_update', [cnn_update]),
         ]),
@@ -233,16 +232,16 @@ if __name__ == '__main__':
             Planner('test_ratio', [0]),
             Planner('validate_left_line', [False]),
             # List diagrams for cross-validation
-            Planner('test_diagram', ['1779Dev2-20161127_145', '1779Dev2-20161127_442', '1779Dev2-20161127_146']),
+            Planner('test_diagram', ['1779Dev2-20161127_145-part1', '1779Dev2-20161127_145-part2']),
         ]),
         # Meta parameters to try
         CombinatorPlanner([
+            Planner('hidden_layers_size', [[100, 50], [200, 50]]),
             Planner('dropout', [0, 0.4]),
-            Planner('batch_norm_layers', [[True, True, True, True], [False, False, False, False]]),
-            Planner('max_pooling_layers', [[True, True], [True, False], [False, False]]),
+            Planner('max_pooling_layers', [[True, True], [False, False]]),
         ])
-    ], runs_name='stability-{test_diagram}-dropout_{dropout}-batch_norm_layers_{batch_norm_layers[0]}'
-                 '-max_pooling_layers_{max_pooling_layers}')
+    ], runs_name='stability-{test_diagram}-dropout_{dropout}-max_pooling_layers_{max_pooling_layers[0]}-'
+                 'ff-{hidden_layers_size}')
 
     # Make full scan plots
     full_scan_all = CombinatorPlanner([
