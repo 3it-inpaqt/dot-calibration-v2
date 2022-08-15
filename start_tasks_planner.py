@@ -120,9 +120,9 @@ if __name__ == '__main__':
             Planner('validate_left_line', [False]),
             # List diagrams for cross-validation
             Planner('test_diagram',
-                    ['1779Dev2-20161127_443', '1779Dev2-20161127_442', '1779Dev2-20161127_145', '1779Dev2-20161127_970',
-                     '1779Dev2-20161127_146', '1779Dev2-20161127_468', '1779Dev2-20161127_402', '1779Dev2-20161127_386'
-                     ]),
+                    ['1779Dev2-20161127_443', '1779Dev2-20161127_442', '1779Dev2-20161127_970',
+                     '1779Dev2-20161127_145-part1', '1779Dev2-20161127_145-part2', '1779Dev2-20161127_146',
+                     '1779Dev2-20161127_468', '1779Dev2-20161127_402', '1779Dev2-20161127_386']),
         ]),
         CombinatorPlanner([
             Planner('research_group', ['louis_gaudreau']),
