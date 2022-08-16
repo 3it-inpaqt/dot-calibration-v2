@@ -303,4 +303,4 @@ if __name__ == '__main__':
         datasets_planner_cross_valid
     ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
 
-    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=False)
+    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=True)
