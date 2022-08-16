@@ -160,6 +160,8 @@ if __name__ == '__main__':
     ff_update = 25_000
     cnn_update = 20_000
     bcnn_update = 20_000
+    ffs_batch_norm = [False] * len(ffs_hidden_size)
+    cnns_batch_norm = [False] * (len(cnns_hidden_size) + len(settings.conv_layers_kernel))
 
     # Patch size study
     size_range = range(8, 28)
@@ -171,6 +173,7 @@ if __name__ == '__main__':
         Planner('hidden_layers_size', [cnns_hidden_size]),
         Planner('learning_rate', [cnns_lr]),
         Planner('nb_train_update', [cnn_update]),
+        Planner('batch_norm_layers', [cnns_batch_norm]),
         datasets_planner,
         ParallelPlanner([
             Planner('patch_overlap_x', overlap_range),
@@ -187,6 +190,7 @@ if __name__ == '__main__':
         Planner('model_type', ['FF', 'CNN']),  # No Bayesian to save time
         Planner('learning_rate', [ffs_lr, cnns_lr]),
         Planner('nb_train_update', [ff_update, cnn_update]),
+        Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm]),
         datasets_planner,
         SequencePlanner([
             # 1 Layer
@@ -204,6 +208,7 @@ if __name__ == '__main__':
         Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size]),
         Planner('learning_rate', [ffs_lr, cnns_lr]),
         Planner('nb_train_update', [ff_update, cnn_update]),
+        Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm]),
         datasets_planner,
         Planner('batch_size', list(chain(range(25, 150, 25), range(150, 500, 50), range(500, 2000, 100))))
     ], runs_name='train_batch_size-{research_group}-{model_type}-{batch_size}')
@@ -220,6 +225,7 @@ if __name__ == '__main__':
             Planner('model_type', ['CNN']),
             Planner('learning_rate', [cnns_lr]),
             Planner('nb_train_update', [cnn_update]),
+            Planner('batch_norm_layers', [cnns_batch_norm]),
         ]),
         # Partial dataset
         CombinatorPlanner([
@@ -255,6 +261,7 @@ if __name__ == '__main__':
             Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
             Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
+            Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm, cnns_batch_norm]),
         ]),
         datasets_planner_cross_valid
     ], runs_name='full_scan-{research_group}-{model_type}-{test_diagram}')
@@ -275,6 +282,7 @@ if __name__ == '__main__':
             Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
             Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
+            Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm, cnns_batch_norm]),
         ]),
         datasets_planner_cross_valid,
         # Planner('seed', range(10))
@@ -289,9 +297,10 @@ if __name__ == '__main__':
             Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
             Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
+            Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm, cnns_batch_norm]),
             Planner('autotuning_use_oracle', [False, False, False]),
         ]),
         datasets_planner_cross_valid
     ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
 
-    run_tasks_planner(stability_study, skip_existing_runs=True, tuning_task=False)
+    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=False)
