@@ -236,8 +236,15 @@ class Settings:
     # ================================================== Checkpoints ===================================================
     # ==================================================================================================================
 
-    # The number of checkpoints per training epoch, if 0 no checkpoint is processed
-    checkpoints_per_epoch: int = 1
+    # The number of checkpoints per training epoch.
+    # Can be combined with updates_per_checkpoints.
+    # Set to 0 to disable.
+    checkpoints_per_epoch: int = 0
+
+    # The number of model update (back propagation) before to start a checkpoint
+    # Can be combined with checkpoints_per_epoch.
+    # Set to 0 to disable.
+    checkpoints_after_updates: int = 200
 
     # The number of data in the checkpoint training subset.
     # Set to 0 to don't compute the train metrics during checkpoints.
@@ -364,7 +371,8 @@ class Settings:
             f'Invalid bayesian confidence metric value "{self.bayesian_confidence_metric}"'
 
         # Checkpoints
-        assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'
+        assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints per epoch should be >= 0'
+        assert self.checkpoints_after_updates >= 0, 'The number of updates per checkpoints should be >= 0'
 
         # Autotuning
         procedures_allow = ('random', 'shift', 'shift_u', 'jump', 'jump_u', 'full')
