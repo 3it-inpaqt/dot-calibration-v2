@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=rrg-rgmelko-ab
 #SBATCH --mail-user=victor.yon@usherbrooke.ca
-#SBATCH --mail-type=BEGIN,END,FAIL,INVALID_DEPEND,REQUEUE,TIME_LIMIT_90,TIME_LIMIT
+#SBATCH --mail-type=BEGIN,END,FAIL,INVALID_DEPEND,REQUEUE,TIME_LIMIT_90
 #SBATCH --gres=gpu:v100:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G

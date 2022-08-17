@@ -30,7 +30,6 @@ def run_tasks_planner(runs_planner: BasePlanner,
     # Typical settings override for planner runs
     settings.run_name = None  # The name should be overridden during the runs
     settings.show_images = False
-    settings.use_data_cache = True
 
     # Set plot style
     set_plot_style()
@@ -153,13 +152,15 @@ if __name__ == '__main__':
     ])
 
     # Default settings for each NN
-    ffs_hidden_size = [200, 100]
-    cnns_hidden_size = [100, 50]
+    ffs_hidden_size = [400, 100]
+    cnns_hidden_size = [200, 100]
     ffs_lr = 0.0005
     cnns_lr = 0.001
     ff_update = 25_000
     cnn_update = 20_000
     bcnn_update = 20_000
+    ff_dropout = cnn_dropout = 0
+    bcnn_dropout = 0
     ffs_batch_norm = [False] * len(ffs_hidden_size)
     cnns_batch_norm = [False] * (len(cnns_hidden_size) + len(settings.conv_layers_kernel))
 
@@ -171,6 +172,7 @@ if __name__ == '__main__':
         Planner('model_type', ['CNN']),  # No Bayesian to save time
         Planner('evaluate_baselines', [True]),
         Planner('hidden_layers_size', [cnns_hidden_size]),
+        Planner('dropout', [cnn_dropout]),
         Planner('learning_rate', [cnns_lr]),
         Planner('nb_train_update', [cnn_update]),
         Planner('batch_norm_layers', [cnns_batch_norm]),
@@ -189,6 +191,7 @@ if __name__ == '__main__':
     layers_size = CombinatorPlanner([
         Planner('model_type', ['FF', 'CNN']),  # No Bayesian to save time
         Planner('learning_rate', [ffs_lr, cnns_lr]),
+        Planner('dropout', [ff_dropout, cnn_dropout]),
         Planner('nb_train_update', [ff_update, cnn_update]),
         Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm]),
         datasets_planner,
@@ -207,6 +210,7 @@ if __name__ == '__main__':
         Planner('model_type', ['FF', 'CNN']),  # No Bayesian to save time
         Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size]),
         Planner('learning_rate', [ffs_lr, cnns_lr]),
+        Planner('dropout', [ff_dropout, cnn_dropout]),
         Planner('nb_train_update', [ff_update, cnn_update]),
         Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm]),
         datasets_planner,
@@ -260,6 +264,7 @@ if __name__ == '__main__':
             Planner('model_type', ['FF', 'CNN', 'BCNN']),
             Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
             Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
+            Planner('dropout', [ff_dropout, cnn_dropout, bcnn_dropout]),
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
             Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm, cnns_batch_norm]),
         ]),
@@ -281,6 +286,7 @@ if __name__ == '__main__':
             Planner('model_type', ['FF', 'CNN', 'BCNN']),
             Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
             Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
+            Planner('dropout', [ff_dropout, cnn_dropout, bcnn_dropout]),
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
             Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm, cnns_batch_norm]),
         ]),
@@ -296,6 +302,7 @@ if __name__ == '__main__':
             Planner('model_type', ['FF', 'CNN', 'BCNN']),
             Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
             Planner('learning_rate', [ffs_lr, cnns_lr, cnns_lr]),
+            Planner('dropout', [ff_dropout, cnn_dropout, bcnn_dropout]),
             Planner('nb_train_update', [ff_update, cnn_update, bcnn_update]),
             Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm, cnns_batch_norm]),
             Planner('autotuning_use_oracle', [False, False, False]),

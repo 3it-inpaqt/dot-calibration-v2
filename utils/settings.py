@@ -152,7 +152,7 @@ class Settings:
     model_type: str = 'CNN'
 
     # The number of fully connected hidden layer and their respective number of neurons.
-    hidden_layers_size: Sequence = (100, 50)
+    hidden_layers_size: Sequence = (200, 100)
 
     # The number of convolution layers and their respective properties (for CNN models only).
     conv_layers_kernel: Sequence = (4, 4)
@@ -160,7 +160,7 @@ class Settings:
 
     # Define if there is a max pooling layer after each convolution layer (True = max pooling)
     # Have to match the convolution layers size
-    max_pooling_layers: Sequence = (True, True)
+    max_pooling_layers: Sequence = (False, False)
 
     # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
     # Have to match the number of layers (convolution + linear)
