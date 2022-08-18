@@ -156,9 +156,9 @@ if __name__ == '__main__':
     cnns_hidden_size = [200, 100]
     ffs_lr = 0.0005
     cnns_lr = 0.001
-    ff_update = 25_000
-    cnn_update = 20_000
-    bcnn_update = 20_000
+    ff_update = 15_000
+    cnn_update = 10_000
+    bcnn_update = 10_000
     ff_dropout = cnn_dropout = 0
     bcnn_dropout = 0
     ffs_batch_norm = [False] * len(ffs_hidden_size)
