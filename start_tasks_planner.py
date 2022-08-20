@@ -312,6 +312,6 @@ if __name__ == '__main__':
         Planner('save_images', [False]),
         Planner('plot_diagrams', [False]),
         Planner('checkpoints_after_updates', [400]),
-    ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
+    ], runs_name='tuning-{seed}-{research_group}-{model_type}-{test_diagram}')
 
     run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=True)
