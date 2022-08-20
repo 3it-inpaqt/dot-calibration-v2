@@ -199,7 +199,7 @@ class Settings:
     # The final value will be a multiple of the number of batch in 1 epoch (rounded to the higher number of epoch).
     # Can't be set as the same time as nb_epoch, since it indirectly define it.
     # 0 is disabled (nb_epoch must me > 0)
-    nb_train_update: int = 20_000
+    nb_train_update: int = 10_000
 
     # Save the best network state during the training based on the test main metric.
     # Then load it when the training is complet.

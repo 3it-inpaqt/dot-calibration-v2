@@ -297,7 +297,7 @@ if __name__ == '__main__':
     # Run tuning on all datasets and procedures
     tune_all_diagrams = CombinatorPlanner([
         Planner('autotuning_nb_iteration', [50]),
-        Planner('autotuning_procedures', [['full', 'jump', 'jump_u']]),
+        Planner('autotuning_procedures', [['jump', 'jump_u']]),
         ParallelPlanner([
             Planner('model_type', ['FF', 'CNN', 'BCNN']),
             Planner('hidden_layers_size', [ffs_hidden_size, cnns_hidden_size, cnns_hidden_size]),
@@ -307,7 +307,11 @@ if __name__ == '__main__':
             Planner('batch_norm_layers', [ffs_batch_norm, cnns_batch_norm, cnns_batch_norm]),
             Planner('autotuning_use_oracle', [False, False, False]),
         ]),
-        datasets_planner_cross_valid
+        datasets_planner_cross_valid,
+        # Setting for faster runs
+        Planner('save_images', [False]),
+        Planner('plot_diagrams', [False]),
+        Planner('checkpoints_after_updates', [400]),
     ], runs_name='tuning-{research_group}-{model_type}-{test_diagram}')
 
     run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=True)
