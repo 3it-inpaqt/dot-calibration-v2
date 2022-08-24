@@ -225,10 +225,10 @@ def repeat_analyse():
     # Print average result of a repeated run with different seed
     data = load_runs('tmp-*')
 
-    mean_acc = data["results.final_accuracy"].mean()
-    std_acc = data["results.final_accuracy"].std()
-    std_baseline = data['results.baseline_std_test_accuracy'][0]
-    print(f'{len(data):n} runs - avg accuracy: {mean_acc:.2%} (std:{std_acc:.2%}) - baseline: {std_baseline:.2%}')
+    mean_acc = data["F1"].mean()
+    std_acc = data["F1"].std()
+    # std_baseline = data['results.baseline_std_test_accuracy'][0]
+    print(f'{len(data):n} runs - avg accuracy: {mean_acc:.2%} (std:{std_acc:.2%})')
 
 
 def layers_size_analyse():
@@ -384,21 +384,24 @@ def results_table():
                 row['settings.research_group'],  # Dataset
                 row['settings.model_type'],  # Model
                 row['Accuracy'],  # Model accuracy
+                row['F1'],  # Model F1 score
                 'Uncertainty' in tuning_result['procedure_name'],  # Use uncertainty
                 tuning_result['diagram_name'],  # Diagram
                 tuning_result['nb_steps'],  # Nb scan
                 tuning_result['nb_classification_success'],  # Nb good inference
-                tuning_result['charge_area'] == target  # Autotuning success
+                tuning_result['charge_area'] == target,  # Autotuning success
+                row['settings.seed']  # Seed
             ])
 
     # Convert to dataframe for convenance
     tuning_table = pd.DataFrame(tuning_table,
-                                columns=['dataset', 'model', 'model_test_acc', 'use_uncertainty', 'diagram', 'nb_scan',
-                                         'nb_good_inference', 'tuning_success'])
+                                columns=['dataset', 'model', 'model_test_acc', 'model_test_f1', 'use_uncertainty',
+                                         'diagram', 'nb_scan', 'nb_good_inference', 'tuning_success', 'seed'])
 
-    # Result grouped by tuning method and diagram
-    result_by_diagram = tuning_table.groupby(['dataset', 'model', 'use_uncertainty', 'diagram']).agg(
+    # ================================ Result for each seed and each diagram
+    result_by_diagram = tuning_table.groupby(['dataset', 'model', 'use_uncertainty', 'diagram', 'seed']).agg(
         model_test_acc=('model_test_acc', 'mean'),  # The accuracy should be the same for each diagram (same model)
+        model_test_f1=('model_test_f1', 'mean'),  # The score should be the same for each diagram (same model)
         nb_scan=('nb_scan', 'sum'),
         mean_scan=('nb_scan', 'mean'),
         nb_good=('nb_good_inference', 'sum'),
@@ -406,47 +409,73 @@ def results_table():
     )
     result_by_diagram['model_tuning_acc'] = result_by_diagram['nb_good'] / result_by_diagram['nb_scan']
 
-    # Result grouped by tuning method (and variability by diagrams)
-    result_by_method = result_by_diagram.groupby(['dataset', 'model', 'use_uncertainty']).agg({
+    print('\n\n----------------------------------------------------\n')
+    print('Result by diagrams\n')
+    print(result_by_diagram[['model_test_acc', 'model_test_f1', 'mean_scan', 'tuning_success']].to_string())
+
+    # ================================ Result for each seed (average on diagrams)
+    result_by_seed = tuning_table.groupby(['dataset', 'model', 'use_uncertainty', 'seed']).agg(
+        model_test_acc=('model_test_acc', 'mean'),
+        model_test_acc_std=('model_test_acc', 'std'),
+        model_test_f1=('model_test_f1', 'mean'),
+        model_test_f1_std=('model_test_f1', 'std'),
+        nb_scan=('nb_scan', 'sum'),
+        mean_scan=('nb_scan', 'mean'),
+        nb_good=('nb_good_inference', 'sum'),
+        tuning_success=('tuning_success', lambda x: x.sum() / x.count()),
+    )
+    result_by_seed['model_tuning_acc'] = result_by_seed['nb_good'] / result_by_seed['nb_scan']
+
+    print('\n\n----------------------------------------------------\n')
+    print('Result by seed\n')
+    print(result_by_seed[['model_test_acc', 'model_test_acc_std', 'model_test_f1', 'model_test_f1_std',
+                          'mean_scan', 'tuning_success']].to_string())
+
+    # ================================ Result grouped by tuning method (variability by seed)
+    by_method_seed_var = result_by_seed.groupby(['dataset', 'model', 'use_uncertainty']).agg({
         'mean_scan': ['mean', 'std'],  # Number of scan during the tuning
         'model_test_acc': ['mean', 'std'],  # Model accuracy on test set
+        'model_test_f1': ['mean', 'std'],  # Model f1 score on test set
         'model_tuning_acc': ['mean', 'std'],  # Model accuracy during the tuning procedure
         'tuning_success': ['mean', 'std']  # Tuning procedure that successfully found the 1 electron regime
     })
 
     # Sorting row
-    result_by_method.sort_values(by=['dataset', 'model', 'use_uncertainty'], ascending=[False, True, False],
-                                 inplace=True)
+    by_method_seed_var.sort_values(by=['dataset', 'model', 'use_uncertainty'], ascending=[False, True, False],
+                                   inplace=True)
 
-    # Show all
-    print(result_by_method)
+    print('\n\n----------------------------------------------------\n')
+    print('Result by method (variability by seed)\n')
+    print(by_method_seed_var.to_string())
 
     # Remove the 'group by' index and compact rename columns
-    result_by_method.reset_index(inplace=True)
-    result_by_method.columns = [f'{i}|{j}' if j != '' else f'{i}' for i, j in result_by_method.columns]
+    by_method_seed_var.reset_index(inplace=True)
+    by_method_seed_var.columns = [f'{i}|{j}' if j != '' else f'{i}' for i, j in by_method_seed_var.columns]
 
     # Convert boolean values
-    result_by_method['use_uncertainty'] = result_by_method['use_uncertainty'].map({True: 'Yes', False: 'No'})
+    by_method_seed_var['use_uncertainty'] = by_method_seed_var['use_uncertainty'].map({True: 'Yes', False: 'No'})
 
     # Filter and rename columns
-    result_by_method = result_by_method[['dataset', 'model', 'model_test_acc|mean', 'use_uncertainty', 'mean_scan|mean',
-                                         'tuning_success|mean', 'tuning_success|std']]
-    result_by_method.columns = ['Dataset', 'Model', 'Model test accuracy', 'Tuning with uncertainty', 'Average steps',
-                                'Tuning success', 'Tuning success diagrams STD']
+    by_method_seed_var = by_method_seed_var[[
+        'dataset', 'model', 'model_test_acc|mean', 'model_test_acc|std',
+        'use_uncertainty', 'mean_scan|mean', 'tuning_success|mean', 'tuning_success|std'
+    ]]
+    by_method_seed_var.columns = ['Dataset', 'Model', 'Model test accuracy', 'STD',
+                                  'Tuning with uncertainty', 'Average steps', 'Tuning success', 'STD']
 
     # Show latex version for paper
     print('\n\n----------------------------------------------------\n\n')
-    print(tabulate(result_by_method, headers='keys', tablefmt='latex', showindex=False,
-                   floatfmt=(None, None, '.1%', None, '.0f', '.1%', '.1%')))
+    print(tabulate(by_method_seed_var, headers='keys', tablefmt='latex', showindex=False,
+                   floatfmt=(None, None, '.1%', '.1%', None, '.0f', '.1%', '.1%')))
     # Show the same in pretty table
     print('\n\n----------------------------------------------------\n\n')
-    result_by_method.columns = [col.replace('\n', r'\\') for col in result_by_method.columns]
-    print(tabulate(result_by_method, headers='keys', tablefmt='fancy_grid', showindex=False,
-                   floatfmt=(None, None, '.1%', None, '.0f', '.1%', '.1%')))
+    by_method_seed_var.columns = [col.replace('\n', r'\\') for col in by_method_seed_var.columns]
+    print(tabulate(by_method_seed_var, headers='keys', tablefmt='fancy_grid', showindex=False,
+                   floatfmt=(None, None, '.1%', '.1%', None, '.0f', '.1%', '.1%')))
 
 
 if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    uncertainty_analysis()
+    results_table()
