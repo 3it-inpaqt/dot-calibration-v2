@@ -369,7 +369,9 @@ def uncertainty_analysis():
 
 
 def results_table():
-    data = load_runs_clean(['tuning-*'])
+    data = load_runs_clean(['tuning-10*'])
+    oracle_baseline = load_runs(['tuning-oracle-*'])
+    data = pd.concat([data, oracle_baseline], ignore_index=True)
 
     # Make a dataframe with a line per tuning result
     tuning_table = []
@@ -380,11 +382,13 @@ def results_table():
             if not tuning_result['procedure_name'].startswith('Jump'):
                 continue
 
+            use_oracle = bool(row['settings.autotuning_use_oracle'])
+
             tuning_table.append([
                 row['settings.research_group'],  # Dataset
-                row['settings.model_type'],  # Model
-                row['Accuracy'],  # Model accuracy
-                row['F1'],  # Model F1 score
+                'oracle' if use_oracle else row['settings.model_type'],  # Model
+                1 if use_oracle else row['Accuracy'],  # Model accuracy
+                1 if use_oracle else row['F1'],  # Model F1 score
                 'Uncertainty' in tuning_result['procedure_name'],  # Use uncertainty
                 tuning_result['diagram_name'],  # Diagram
                 tuning_result['nb_steps'],  # Nb scan

@@ -274,10 +274,14 @@ if __name__ == '__main__':
     # Run tuning on all datasets and procedures
     tune_oracle = CombinatorPlanner([
         Planner('autotuning_nb_iteration', [50]),
-        Planner('autotuning_procedures', [['jump', 'shift', 'jump_u', 'shift_u', 'random']]),
+        Planner('autotuning_procedures', [['jump', 'shift', 'random']]),
         Planner('autotuning_use_oracle', [True]),
-        datasets_planner
-    ], runs_name='tuning-oracle-{research_group}')
+        datasets_planner_cross_valid,
+        Planner('seed', range(10)),
+        # Setting for faster runs
+        Planner('save_images', [False]),
+        Planner('plot_diagrams', [False]),
+    ], runs_name='tuning-oracle-{seed}-{research_group}-{test_diagram}')
 
     # Train all networks with all datasets
     train_all_networks = CombinatorPlanner([
@@ -314,4 +318,4 @@ if __name__ == '__main__':
         Planner('checkpoints_after_updates', [400]),
     ], runs_name='tuning-{seed}-{research_group}-{model_type}-{test_diagram}')
 
-    run_tasks_planner(tune_all_diagrams, skip_existing_runs=True, tuning_task=True)
+    run_tasks_planner(tune_oracle, skip_existing_runs=True, tuning_task=True)
