@@ -509,6 +509,9 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
 
             axs[i, j].axis('off')
 
+        if settings.test_noise:
+            plt.suptitle(f'Gaussian noise: {settings.test_noise:.0%}')
+
     save_plot('patch_sample')
 
 

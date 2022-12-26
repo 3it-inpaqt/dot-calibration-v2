@@ -143,6 +143,10 @@ class Settings:
     # Use to consistant normalization of the data after the training.
     normalization_values_path: str = ''
 
+    # The percentage of gaussian noise to add in the test set.
+    # Used to test uncertainty.
+    test_noise: float = 0.0
+
     # ==================================================================================================================
     # ===================================================== Model ======================================================
     # ==================================================================================================================

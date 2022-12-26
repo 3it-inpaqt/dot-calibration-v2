@@ -24,12 +24,13 @@ class QDSDLines(Dataset):
         'line'  # True (1)
     ]
 
-    def __init__(self, patches: List[Tuple], role: str):
+    def __init__(self, patches: List[Tuple], role: str, transform: Optional[List[Callable]] = None):
         """
         Create a dataset of transition lines patches.
         Should be build with QDSDLines.build_split_datasets.
 
         :param patches: The list of patches as (2D array of values, labels as boolean)
+        :param transform: The list of transformation function to apply on the patches
         :param role: The role of this dataset ("train" or "test" or "validation")
         """
 
@@ -42,7 +43,7 @@ class QDSDLines(Dataset):
         self._patches = torch.stack(self._patches)
         self._patches_labels = torch.Tensor(self._patches_labels).bool()
 
-        self.transform: List[Callable] = []
+        self.transform: List[Callable] = transform or []
 
     def __len__(self):
         return len(self._patches)
@@ -190,12 +191,18 @@ class QDSDLines(Dataset):
         # Shuffle patches before to split them into different the datasets
         shuffle(patches)
 
+        # Create data transform method if test noise is enable
+        if settings.test_noise > 0:
+            test_transform = [AddGaussianNoise(std=settings.test_noise)]
+        else:
+            test_transform = None
+
         if use_test_ratio:
             test_index = round(nb_patches * test_ratio_or_names)
-            test_set = QDSDLines(patches[:test_index], 'test')
+            test_set = QDSDLines(patches[:test_index], 'test', test_transform)
         else:
             test_index = 0
-            test_set = QDSDLines(test_patches, 'test')
+            test_set = QDSDLines(test_patches, 'test', test_transform)
 
         # With validation dataset
         if validation_ratio != 0:
@@ -242,3 +249,19 @@ class QDSDLines(Dataset):
         for dataset in (d for d in datasets if d):  # Skip None datasets
             dataset._patches -= ref_min
             dataset._patches /= (ref_max - ref_min)
+
+
+class AddGaussianNoise(object):
+    """
+    Add random gaussian noise to a tensor.
+    """
+
+    def __init__(self, mean=0, std=1):
+        self.std = std
+        self.mean = mean
+
+    def __call__(self, tensor):
+        return tensor + torch.randn(tensor.size()) * self.std + self.mean
+
+    def __repr__(self):
+        return self.__class__.__name__ + f'(mean={self.mean}, std={self.std})'
