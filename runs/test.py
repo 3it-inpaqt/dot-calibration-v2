@@ -109,7 +109,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
         save_results(final_classification_results=metrics)
         plot_confusion_matrix(nb_labels_predictions, metrics, class_names=test_dataset.classes)
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
-        plot_confidence(confidence_per_case, network.confidence_thresholds)
+        plot_confidence(confidence_per_case, network.confidence_thresholds, 'test', per_classes=True)
 
         # Final test results but with confidence threshold
         if network.confidence_thresholds:

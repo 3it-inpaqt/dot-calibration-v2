@@ -180,54 +180,108 @@ def plot_classification_sample(samples_per_case: List[List[List[Tuple[List, floa
                              confidences=confidences)
 
 
-def plot_confidence(confidence_per_case: List[List[List[float]]], unknown_thresholds: List[float]) -> None:
+def plot_confidence(confidence_per_case: List[List[List[float]]], unknown_thresholds: List[float],
+                    dataset_role: str, combined: bool = True, per_classes: bool = False) -> None:
     """
     Plot the confidence density based on validity of the classification.
 
     :param confidence_per_case: The list of confidence score per classification case
       as [label class index][prediction class index]
+    :param unknown_thresholds: The list of thresholds for each class
+    :param dataset_role: The role of the dataset (train, validation, test)
+    :param combined: If true the confidence will be combined for all classes
+    :param per_classes: If true the confidence will be plotted per class
     """
-    good_pred_confidence = list()
-    bad_pred_confidence = list()
 
-    # Group confidence by prediction success
-    for label in range(len(confidence_per_case)):
-        for prediction in range(len(confidence_per_case[label])):
-            if label == prediction:
-                good_pred_confidence.extend(confidence_per_case[label][prediction])
-            else:
-                bad_pred_confidence.extend(confidence_per_case[label][prediction])
+    assert combined or per_classes, 'At least one of the two plot type must be selected'
 
-    # Convert to dataframe to please seaborn
-    df = pd.DataFrame({'confidence': good_pred_confidence + bad_pred_confidence,
-                       'is_correct': [True] * len(good_pred_confidence) + [False] * len(bad_pred_confidence)})
+    # Create subplots axes
+    nb_subplots = 1 + (len(QDSDLines.classes) if per_classes else 0)
+    fig, axes = plt.subplots(nb_subplots, 1, figsize=(10, 5 * nb_subplots))
 
+    # Legend color
     palette = {True: "tab:green", False: "tab:red"}
-    sns.displot(df, x='confidence', hue='is_correct', kind='hist', palette=palette, legend=False, multiple="layer",
-                element="step", bins=100)
+    threshold_colors = ['tab:purple', 'tab:olive']
 
-    colors = ['tab:purple', 'tab:olive']
-    for cls, threshold, color in zip(QDSDLines.classes, unknown_thresholds, colors):
-        plt.axvline(x=threshold, color=color, linestyle=':')
+    # Plot the combined confidence distribution (all classes)
+    if combined:
+        good_pred_confidence = list()
+        bad_pred_confidence = list()
 
-    plt.ylabel('Count')
-    plt.xlabel('Classification confidence')
-    plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
-    plt.yscale('log')
-    plt.legend(labels=['Good classification', 'Bad classification'] +
-                      [f'Confidence threshold {cls}' for cls in QDSDLines.classes], loc='upper left')
-    plt.title(f'Classification confidence\nfor {len(df):n} test patches')
+        # Group confidence by prediction success
+        for label in range(len(confidence_per_case)):
+            for prediction in range(len(confidence_per_case[label])):
+                if label == prediction:
+                    good_pred_confidence.extend(confidence_per_case[label][prediction])
+                else:
+                    bad_pred_confidence.extend(confidence_per_case[label][prediction])
 
-    save_plot('confidence_distribution')
+        ax = axes[0] if len(axes) > 1 else axes
+        # Convert to dataframe to please seaborn
+        df = pd.DataFrame({'confidence': good_pred_confidence + bad_pred_confidence,
+                           'is_correct': [True] * len(good_pred_confidence) + [False] * len(bad_pred_confidence)})
+        # Plot the global confidence distribution
+        sns.histplot(df, x='confidence', hue='is_correct', palette=palette, legend=False, multiple="layer",
+                     element="step", bins=100, ax=ax)
+        ax.set_title(f'Global ({len(df):,d} samples)')
+        ax.set_yscale('log')
+        ax.set_xlabel('Classification confidence')
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+
+        # Plot the thresholds as vertical lines
+        for cls, threshold, color in zip(QDSDLines.classes, unknown_thresholds, threshold_colors):
+            ax.axvline(x=threshold, color=color, linestyle=':')
+
+    # Plot the confidence distribution for each class
+    if per_classes:
+        iterator = enumerate(zip(unknown_thresholds, threshold_colors, axes[1 if combined else 0:]))
+        for cls_i, (threshold, threshold_color, ax) in iterator:
+            good_pred_confidence = list()
+            bad_pred_confidence = list()
+
+            # Group confidence by prediction success for the current class
+            for label in range(len(confidence_per_case)):
+                for prediction in range(len(confidence_per_case[label])):
+                    if prediction == cls_i:
+                        if label == prediction:
+                            good_pred_confidence.extend(confidence_per_case[label][prediction])
+                        else:
+                            bad_pred_confidence.extend(confidence_per_case[label][prediction])
+
+            # Convert to dataframe to please seaborn
+            df = pd.DataFrame({'confidence': good_pred_confidence + bad_pred_confidence,
+                               'is_correct': [True] * len(good_pred_confidence) + [False] * len(bad_pred_confidence)})
+            # Plot the global confidence distribution
+            sns.histplot(df, x='confidence', hue='is_correct', palette=palette, legend=False,
+                         multiple="layer", element="step", bins=100, ax=ax)
+            ax.set_title(QDSDLines.classes[cls_i].capitalize() + f' ({len(df):,d} samples)')
+            ax.set_yscale('log')
+            ax.set_xlabel('Classification confidence')
+            ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+
+            # Plot the threshold as vertical line
+            ax.axvline(x=threshold, color=threshold_color, linestyle=':')
+
+    # Add the legend in the first subplot
+    first_ax = axes[0] if len(axes) > 1 else axes
+    first_ax.legend(labels=['Good classification', 'Bad classification'] +
+                           [f'Confidence threshold {cls}' for cls in QDSDLines.classes], loc='upper left')
+
+    # Set global title
+    fig.suptitle(f'Confidence distribution from {dataset_role} dataset')
+
+    save_plot(f'confidence_distribution_{dataset_role}')
 
 
-def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sample_size: int) -> None:
+def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sample_size: int,
+                                     dataset_role: str) -> None:
     """
     Plot the evolution of performance score depending on the confidence threshold.
 
     :param thresholds: The thresholds tested
     :param scores_history: The score for each threshold and each classes
     :param sample_size: The size of the dataset used to compute the scores
+    :param dataset_role: The role (train, valid or test) of the dataset used to compute the scores
     """
     scores_history = list(zip(*scores_history))  # Group by class
 
@@ -238,6 +292,7 @@ def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sam
     plt.xlabel('Confidence threshold')
     plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
     plt.legend()
-    plt.title(f'Evolution of performance score\ndepending on the confidence threshold ({sample_size} sample)')
+    plt.title(f'Evolution of performance score\ndepending on the confidence threshold\n'
+              f'{sample_size} samples from {dataset_role} dataset')
 
-    save_plot('threshold_tuning')
+    save_plot(f'threshold_tuning_{dataset_role}')
