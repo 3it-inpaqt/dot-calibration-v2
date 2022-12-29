@@ -12,6 +12,13 @@ from tabulate import tabulate
 from datasets.diagram import ChargeRegime
 from utils.output import load_runs, set_plot_style
 
+LATEX_FORMAT = False
+
+if LATEX_FORMAT:
+    DATASET_NAMES = {'michel_pioro_ladriere': 'Si-QD', 'louis_gaudreau': 'GaAs-QD'}
+else:
+    DATASET_NAMES = {'michel_pioro_ladriere': 'Michel', 'louis_gaudreau': 'Louis'}
+
 
 def load_runs_clean(patterns: Union[str, List[str]]) -> pd.DataFrame:
     """
@@ -26,6 +33,8 @@ def load_runs_clean(patterns: Union[str, List[str]]) -> pd.DataFrame:
     # Move metrics results to root level
     for metric in ['recall', 'precision', 'accuracy', 'f1']:
         data[metric.capitalize()] = data['results.final_classification_results'].map(lambda a: a[metric])
+        data[metric.capitalize() + ' Uncertainty'] = data['results.threshold_classification_results'].map(
+            lambda a: a[metric])
 
     return data
 
@@ -368,6 +377,41 @@ def uncertainty_analysis():
     plt.show(block=False)
 
 
+def uncertainty_test_noise():
+    """
+    Plot the evolution of the tuning success in function of the noise level.
+    """
+    data = load_runs_clean(['uncertainty_study-CNN-*'])
+
+    # Rename col for auto plot labels
+    data.rename(columns={'settings.test_noise': 'Gaussian noise',
+                         'settings.research_group': 'Dataset',
+                         'results.unknown_threshold_rate': 'Unknown rate',
+                         'settings.model_type': 'Model'}, inplace=True)
+
+    datasets = data['Dataset'].unique()
+    nb_datasets = len(datasets)
+    plot, axes = plt.subplots(2, nb_datasets, figsize=(5 + nb_datasets * 6, 5), sharex='col', sharey='row')
+    axes = axes if nb_datasets > 1 else [axes]
+
+    # Make a column for each dataset
+    for i, dataset in enumerate(datasets):
+        score, uncertainty = axes[0][i], axes[1][i]
+        d = data[data['Dataset'] == dataset]
+        sns.lineplot(data=d, x='Gaussian noise', y='F1', hue='Model', ax=score)
+        sns.lineplot(data=d, x='Gaussian noise', y='Unknown rate', hue='Model', ax=uncertainty)
+        score.set_title(DATASET_NAMES[dataset])
+
+        score.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+        score.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+        uncertainty.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+        uncertainty.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+
+    plt.suptitle(f'Classification performance in function of test noise')
+    plt.tight_layout()
+    plt.show(block=False)
+
+
 def results_table():
     data = load_runs_clean(['tuning-10*'])
     oracle_baseline = load_runs(['tuning-oracle-*'])
@@ -482,4 +526,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    results_table()
+    uncertainty_test_noise()

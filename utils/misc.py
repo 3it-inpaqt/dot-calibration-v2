@@ -4,6 +4,7 @@ from dataclasses import asdict, is_dataclass
 from math import ceil
 from typing import Any, Dict, Iterable, List, Tuple, Union
 
+import numpy as np
 import torch
 from blitz.modules import BayesianConv2d
 from torch import nn
@@ -94,6 +95,10 @@ def yaml_preprocess(item: Any) -> Union[str, int, float, List, Dict]:
     :return: The converted item.
     """
     # FIXME: detect recursive structures
+
+    # Convert Numpy accurate float representation to standard python float
+    if isinstance(item, np.float_):
+        return float(item)
 
     # If a primitive type know by yalm, then everything is good,
     if isinstance(item, str) or isinstance(item, int) or isinstance(item, float) or isinstance(item, bool):

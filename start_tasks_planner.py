@@ -318,4 +318,27 @@ if __name__ == '__main__':
         Planner('checkpoints_after_updates', [400]),
     ], runs_name='tuning-{seed}-{research_group}-{model_type}-{test_diagram}')
 
-    run_tasks_planner(tune_oracle, skip_existing_runs=True, tuning_task=True)
+    # Evaluate the quality of the uncertainty
+    uncertainty_study = CombinatorPlanner([
+        ParallelPlanner([
+            CombinatorPlanner([
+                ParallelPlanner([
+                    Planner('model_type', ['CNN']),
+                ]),
+                # Datasets
+                datasets_planner,
+            ]),
+            # Trained models
+            Planner('trained_network_cache_path', ['out/ref_cnn_michel_all/best_network.pt',
+                                                   'out/ref_cnn_louis_all/best_network.pt']),
+            Planner('normalization_values_path', ['out/ref_cnn_michel_all/normalization.yaml',
+                                                  'out/ref_cnn_louis_all/normalization.yaml']),
+        ]),
+        # Add noise in the test set
+        Planner('test_noise', list(chain(np.arange(0, 0.1, 0.01),
+                                         np.arange(0.1, 0.5, 0.05),
+                                         np.arange(0.5, 1.01, 0.1)
+                                         ))),
+    ], runs_name='uncertainty_test_noise-{model_type}-{research_group}-{test_noise:.2f}')
+
+    run_tasks_planner(uncertainty_study, skip_existing_runs=True, tuning_task=False)
