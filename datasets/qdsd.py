@@ -230,6 +230,10 @@ class QDSDLines(Dataset):
             # Normalize datasets using train as a reference for min and max
             QDSDLines.normalize(datasets, train_set)
 
+        # Uncomment for data distribution plot (slow)
+        # plot_data_space_distribution(datasets, 'Datasets pixel values distribution',
+        #                              'normalized' if normalize else 'raw')
+
         return datasets
 
     @staticmethod
@@ -256,12 +260,11 @@ class AddGaussianNoise(object):
     Add random gaussian noise to a tensor.
     """
 
-    def __init__(self, mean=0, std=1):
+    def __init__(self, std=1):
         self.std = std
-        self.mean = mean
 
     def __call__(self, tensor):
-        return tensor + torch.randn(tensor.size()) * self.std + self.mean
+        return tensor + torch.randn(tensor.size()) * self.std
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(mean={self.mean}, std={self.std})'
+        return self.__class__.__name__ + f'(std={self.std})'

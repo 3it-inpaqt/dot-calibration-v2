@@ -4,7 +4,7 @@ from functools import partial
 from math import ceil, sqrt
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Sequence, Tuple, Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -563,6 +563,26 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
     fig.suptitle(title)
 
     save_plot(f'sample_{file_name}')
+
+
+def plot_data_space_distribution(datasets: Sequence[Dataset], title: str, file_name: str) -> None:
+    """
+    Plot the pixel values distribution for each dataset.
+
+    :param datasets: The list of dataset to plot.
+    :param title: The title of the plot.
+    :param file_name: The file name of the plot if saved.
+    """
+    # Create subplots
+    fig, axes = plt.subplots(nrows=1, ncols=len(datasets), figsize=(len(datasets) * 6, 8))
+
+    for i, dataset in enumerate(datasets):
+        # Plot the distribution
+        sns.histplot(dataset._patches.flatten(), ax=axes[i], kde=True, stat='count', bins=200)
+        axes[i].set_title(dataset.role.capitalize())
+
+    fig.suptitle(title)
+    save_plot(f'data_distribution_{file_name}')
 
 
 class TextHandler(HandlerBase):
