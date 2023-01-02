@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from matplotlib import ticker
+from matplotlib.lines import Line2D
 from matplotlib.ticker import PercentFormatter
 from pandas import DataFrame
 from tabulate import tabulate
@@ -381,7 +382,7 @@ def uncertainty_test_noise():
     """
     Plot the evolution of the tuning success in function of the noise level.
     """
-    data = load_runs_clean(['uncertainty_study-CNN-*'])
+    data = load_runs_clean(['uncertainty_test_noise-CNN-*'])
 
     # Rename col for auto plot labels
     data.rename(columns={'settings.test_noise': 'Gaussian noise',
@@ -398,14 +399,22 @@ def uncertainty_test_noise():
     for i, dataset in enumerate(datasets):
         score, uncertainty = axes[0][i], axes[1][i]
         d = data[data['Dataset'] == dataset]
-        sns.lineplot(data=d, x='Gaussian noise', y='F1', hue='Model', ax=score)
-        sns.lineplot(data=d, x='Gaussian noise', y='Unknown rate', hue='Model', ax=uncertainty)
+        sns.lineplot(data=d, x='Gaussian noise', y='F1 Uncertainty', hue='Model', ax=score, legend=(i == 0))
+        sns.lineplot(data=d, x='Gaussian noise', y='F1', hue='Model', linestyle='--', ax=score, legend=False)
+        sns.lineplot(data=d, x='Gaussian noise', y='Unknown rate', hue='Model', ax=uncertainty, legend=False)
         score.set_title(DATASET_NAMES[dataset])
 
+        score.set_ylabel('F1-scores')
         score.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
         score.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
         uncertainty.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
         uncertainty.xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1))
+
+        # Add legend entry for dashed line (no uncertainty score)
+        if i == 0:
+            handles, _ = score.get_legend_handles_labels()
+            handles.append(Line2D([0], [0], color='black', linestyle='--', label='No uncertainty'))
+            score.legend(handles=handles)
 
     plt.suptitle(f'Classification performance in function of test noise')
     plt.tight_layout()
