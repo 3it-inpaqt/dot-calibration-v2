@@ -264,7 +264,9 @@ class AddGaussianNoise(object):
         self.std = std
 
     def __call__(self, tensor):
-        return tensor + torch.randn(tensor.size()) * self.std
+        # Add random noise to the tensor (the intensity is relative to the std and the tensor values range)
+        value_range = torch.max(tensor) - torch.min(tensor)
+        return tensor + torch.randn(tensor.size()) * self.std * value_range
 
     def __repr__(self):
         return self.__class__.__name__ + f'(std={self.std})'
