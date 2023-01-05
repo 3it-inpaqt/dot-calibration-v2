@@ -1,8 +1,11 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="start_tuning" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+  <configuration default="false" name="start_full_exp" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
     <module name="pytorch-boilerplate" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+    </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <option name="IS_MODULE_SDK" value="true" />
@@ -19,7 +22,7 @@
         <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
       </ENTRIES>
     </EXTENSION>
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/start_tuning.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/start_full_exp.py" />
     <option name="PARAMETERS" value="" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
