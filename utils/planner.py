@@ -133,6 +133,7 @@ class Planner(BasePlanner):
         self.setting_name = setting_name
         self.setting_values = setting_values
 
+        self._is_original_value = True
         self._setting_original_value = None  # Will be set when the iteration start
         self._values_iterator = None
 
@@ -140,9 +141,10 @@ class Planner(BasePlanner):
 
     def __iter__(self) -> Iterator:
         """ See :func:`~utils.planner.BasePlanner.__iter__` """
-        # Save the original value if it's the first iteration since the init or a reset
-        if self._setting_original_value is None:
+        # Save the original value if it's the first iteration
+        if self._is_original_value:
             self._setting_original_value = getattr(settings, self.setting_name)
+            self._is_original_value = False
 
         # Start values iteration
         self._values_iterator = iter(self.setting_values)
@@ -174,9 +176,10 @@ class Planner(BasePlanner):
 
     def reset_original_values(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_original_values` """
-        if self._values_iterator is not None:
+        if not self._is_original_value:
             if getattr(settings, self.setting_name) != self._setting_original_value:
                 setattr(settings, self.setting_name, self._setting_original_value)
+            self._is_original_value = True
             self._setting_original_value = None
 
     def reset_state(self) -> None:
@@ -487,6 +490,7 @@ class AdaptativePlanner(BasePlanner):
         self.setting_name = setting_name
         self.setting_value_template = setting_value_template
 
+        self._is_original_value = True
         self._setting_original_value = None  # Will be set when the iteration start
 
         super().__init__(runs_name)
@@ -496,9 +500,10 @@ class AdaptativePlanner(BasePlanner):
         if not self.is_sub_planner:
             raise ValueError('Adaptative planner should only be used as a child of a ParallelPlanner.')
 
-        # Save the original value if it's the first iteration since the init or a reset
-        if self._setting_original_value is None:
+        # Save the original value if it's the first iteration
+        if self._is_original_value:
             self._setting_original_value = getattr(settings, self.setting_name)
+            self._is_original_value = False
 
         return self
 
@@ -524,9 +529,11 @@ class AdaptativePlanner(BasePlanner):
 
     def reset_original_values(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_original_values` """
-        if getattr(settings, self.setting_name) != self._setting_original_value:
-            setattr(settings, self.setting_name, self._setting_original_value)
-        self._setting_original_value = None
+        if not self._is_original_value:
+            if getattr(settings, self.setting_name) != self._setting_original_value:
+                setattr(settings, self.setting_name, self._setting_original_value)
+            self._is_original_value = True
+            self._setting_original_value = None
 
     def reset_state(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_counters` """

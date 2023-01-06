@@ -24,9 +24,9 @@ cnns_batch_norm = [False] * (len(cnns_hidden_size) + len(settings.conv_layers_ke
 
 
 def run_tasks_planner(runs_planner: BasePlanner,
-                      tuning_task: bool = False,
+                      tuning_task: bool = True,
                       skip_validation: bool = False,
-                      skip_existing_runs: bool = False) -> None:
+                      skip_existing_runs: bool = True) -> None:
     """
     Start a sequence of task following the run planner.
 

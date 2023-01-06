@@ -456,8 +456,9 @@ class Settings:
         :param name: The name of the attribut
         :param value: The value of the attribut
         """
-        logger.debug(f'Setting "{name}" changed from "{getattr(self, name)}" to "{value}".')
-        self.__dict__[name] = value
+        if name not in self.__dict__ or self.__dict__[name] != value:
+            logger.debug(f'Setting "{name}" changed from "{getattr(self, name)}" to "{value}".')
+            self.__dict__[name] = value
 
     def __delattr__(self, name):
         raise AttributeError('Removing a setting is forbidden for the sake of consistency.')

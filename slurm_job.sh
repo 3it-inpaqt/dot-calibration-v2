@@ -12,10 +12,9 @@ module load geos/3.9.1 python/3.8.10
 
 # Create python virtual env (all package have to be available on the system)
 #virtualenv --no-download "$SLURM_TMPDIR"/venv
-# source "$SLURM_TMPDIR"/venv/bin/activate
+#source "$SLURM_TMPDIR"/venv/bin/activate
 #pip install --no-index --upgrade pip
 #pip install -r requirements.txt
-#pip install https://github.com/ufoym/imbalanced-dataset-sampler/archive/master.zip
 
 # If the virtual env is already on the working directory
 source venv/bin/activate
