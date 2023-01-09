@@ -368,7 +368,7 @@ full_scan_cross_valid = ParallelPlanner([
     AdaptativePlanner('normalization_values_path',
                       'out/tuning_cross_valid-{seed:02}-{model_type}-{research_group}-{test_diagram}/'
                       'normalization.yaml'),
-], runs_name='full_cross_valid-{model_type}-{research_group}-{test_diagram}')
+], runs_name='full_scan_cross_valid-{model_type}-{research_group}-{test_diagram}')
 
 # Run training and tuning on all datasets and procedures
 tune_all = CombinatorPlanner([

@@ -15,6 +15,7 @@ class StdBaseline:
     """
     threshold: float = None
     class_below: bool = True
+    confidence_thresholds: List[float] = None
 
     @SectionTimer('std baseline training', 'debug')
     def train(self, train_dataset: QDSDLines) -> None:
@@ -74,7 +75,7 @@ class StdBaseline:
         """
         scores = self(inputs)
         predictions = torch.round(scores).bool()  # Round to 0 or 1
-        confidences = 1  # Hardcode confidence at 100% for the baseline
+        confidences = torch.ones_like(predictions)  # Hardcode confidence at 100% for the baseline
         return predictions, confidences
 
     def __call__(self, patch_batch: torch.Tensor) -> torch.Tensor:
