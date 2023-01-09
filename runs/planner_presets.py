@@ -292,10 +292,7 @@ uncertainty_study_all = CombinatorPlanner([
                           'out/tuning-{seed:02}-{model_type}-{research_group}/normalization.yaml'),
     ]),
     # Add noise in the test set
-    Planner('test_noise', list(chain(np.arange(0, 0.1, 0.01),
-                                     np.arange(0.1, 0.5, 0.05),
-                                     np.arange(0.5, 1.01, 0.1)
-                                     ))),
+    Planner('test_noise', list(chain(np.arange(0, 0.1, 0.02), np.arange(0.1, 1.01, 0.1)))),
 ], runs_name='uncertainty_test_noise-{seed:02}-{model_type}-{research_group}-{test_noise:.2f}')
 
 uncertainty_study_cross_valid = CombinatorPlanner([
@@ -313,10 +310,7 @@ uncertainty_study_cross_valid = CombinatorPlanner([
                           'normalization.yaml'),
     ]),
     # Add noise in the test set
-    Planner('test_noise', list(chain(np.arange(0, 0.1, 0.01),
-                                     np.arange(0.1, 0.5, 0.05),
-                                     np.arange(0.5, 1.01, 0.1)
-                                     ))),
+    Planner('test_noise', list(chain(np.arange(0, 0.1, 0.02), np.arange(0.1, 1.01, 0.1)))),
 ], runs_name='uncertainty_test_noise_cross_valid-{seed:02}-{model_type}-{research_group}-{test_diagram}-'
              '{test_noise:.2f}')
 
@@ -348,7 +342,7 @@ full_scan_all = ParallelPlanner([
                       'out/tuning-{seed:02}-{model_type}-{research_group}/best_network.pt'),
     AdaptativePlanner('normalization_values_path',
                       'out/tuning-{seed:02}-{model_type}-{research_group}/normalization.yaml'),
-], runs_name='full_cross_valid-{model_type}-{research_group}-{test_diagram}')
+], runs_name='full_scan-{model_type}-{research_group}')
 
 # Make full scan plots with cross-validation
 full_scan_cross_valid = ParallelPlanner([
