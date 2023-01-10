@@ -20,6 +20,12 @@ if LATEX_FORMAT:
 else:
     DATASET_NAMES = {'michel_pioro_ladriere': 'Michel', 'louis_gaudreau': 'Louis'}
 
+PALETTE_MODELS = {'random': 'lightgrey',
+                  'FF': 'tab:green',
+                  'CNN': 'tab:orange',
+                  'BCNN': 'tab:blue',
+                  'Oracle': 'grey'}
+
 
 def load_runs_clean(patterns: Union[str, List[str]]) -> pd.DataFrame:
     """
@@ -398,9 +404,12 @@ def uncertainty_test_noise():
     for i, dataset in enumerate(datasets):
         score, uncertainty = (axes[0][i], axes[1][i]) if nb_datasets > 1 else (axes[0], axes[1])
         d = data[data['Dataset'] == dataset]
-        sns.lineplot(data=d, x='Gaussian noise', y='F1 Uncertainty', hue='Model', ax=score, legend=(i == 0))
-        sns.lineplot(data=d, x='Gaussian noise', y='F1', hue='Model', linestyle='--', ax=score, legend=False)
-        sns.lineplot(data=d, x='Gaussian noise', y='Unknown rate', hue='Model', ax=uncertainty, legend=False)
+        sns.lineplot(data=d, x='Gaussian noise', y='F1 Uncertainty', hue='Model', ax=score, palette=PALETTE_MODELS,
+                     legend=(i == 0))
+        sns.lineplot(data=d, x='Gaussian noise', y='F1', hue='Model', linestyle='--', ax=score, palette=PALETTE_MODELS,
+                     legend=False)
+        sns.lineplot(data=d, x='Gaussian noise', y='Unknown rate', hue='Model', ax=uncertainty, palette=PALETTE_MODELS,
+                     legend=False)
         score.set_title(DATASET_NAMES[dataset])
 
         score.set_ylabel('F1-scores')
