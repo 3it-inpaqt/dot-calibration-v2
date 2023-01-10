@@ -382,7 +382,7 @@ def uncertainty_test_noise():
     """
     Plot the evolution of the tuning success in function of the noise level.
     """
-    data = load_runs_clean(['uncertainty_test_noise-CNN-*'])
+    data = load_runs_clean(['uncertainty_test_noise-*'])
 
     # Rename col for auto plot labels
     data.rename(columns={'settings.test_noise': 'Gaussian noise',
@@ -393,11 +393,10 @@ def uncertainty_test_noise():
     datasets = data['Dataset'].unique()
     nb_datasets = len(datasets)
     plot, axes = plt.subplots(2, nb_datasets, figsize=(5 + nb_datasets * 6, 5), sharex='col', sharey='row')
-    axes = axes if nb_datasets > 1 else [axes]
 
     # Make a column for each dataset
     for i, dataset in enumerate(datasets):
-        score, uncertainty = axes[0][i], axes[1][i]
+        score, uncertainty = (axes[0][i], axes[1][i]) if nb_datasets > 1 else (axes[0], axes[1])
         d = data[data['Dataset'] == dataset]
         sns.lineplot(data=d, x='Gaussian noise', y='F1 Uncertainty', hue='Model', ax=score, legend=(i == 0))
         sns.lineplot(data=d, x='Gaussian noise', y='F1', hue='Model', linestyle='--', ax=score, legend=False)
