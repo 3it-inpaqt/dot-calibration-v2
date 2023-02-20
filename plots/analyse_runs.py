@@ -397,8 +397,9 @@ def uncertainty_test_noise():
                          'settings.model_type': 'Model'}, inplace=True)
 
     datasets = data['Dataset'].unique()
+    datasets.sort()
     nb_datasets = len(datasets)
-    plot, axes = plt.subplots(2, nb_datasets, figsize=(5 + nb_datasets * 6, 5), sharex='col', sharey='row')
+    plot, axes = plt.subplots(2, nb_datasets, figsize=(5 + nb_datasets * 6, 10), sharex='col', sharey='row')
 
     # Make a column for each dataset
     for i, dataset in enumerate(datasets):
