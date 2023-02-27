@@ -296,3 +296,53 @@ def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sam
               f'{sample_size} samples from {dataset_role} dataset')
 
     save_plot(f'threshold_tuning_{dataset_role}')
+
+def plot_confidence_calibration(confidence_per_case: List[List[List[float]]], dataset_role: str,
+                                bins: int = 10) -> None:
+    """
+    Plot the confidence calibration as a bar plot.
+
+    :param confidence_per_case: The list of confidence score per classification case
+      as [label class index][prediction class index]
+    :param dataset_role: The role of the dataset (train, validation, test)
+    :param bins: The number of bins in the plot.
+    """
+
+    good_pred_bin_count = [0] * bins
+    bad_pred_bin_count = [0] * bins
+    success_rate = [0] * bins
+
+    # Group confidence by prediction success
+    for label in range(len(confidence_per_case)):
+        for prediction in range(len(confidence_per_case[label])):
+            for confidence in confidence_per_case[label][prediction]:
+                # Get the index of the bin for this confidence
+                confidence_group = int(confidence * 100 / bins) if confidence < 1 else bins - 1
+                if label == prediction:
+                    good_pred_bin_count[confidence_group] += 1
+                else:
+                    bad_pred_bin_count[confidence_group] += 1
+
+    # Compute the success rate for each bin
+    for i in range(bins):
+        total = good_pred_bin_count[i] + bad_pred_bin_count[i]
+        success_rate[i] = good_pred_bin_count[i] / (good_pred_bin_count[i] + bad_pred_bin_count[i]) if total > 0 else 0
+
+    with sns.axes_style("ticks"):
+        # Bar plot
+        plt.bar([(b / bins) + (1 / (2 * bins)) for b in range(bins)], success_rate, width=0.1)
+        # Reference x=y line
+        plt.axline((0, 0), slope=1, color='black', linestyle='--', label='Perfect calibration')
+
+        # Limit axis to 100%
+        plt.xlim(0, 1)
+        plt.ylim(0, 1)
+        plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+        plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+
+        plt.xlabel('Confidence')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        plt.title(f'Confidence calibration\nfrom {dataset_role} dataset')
+
+        save_plot(f'confidence_calibration_{dataset_role}')
