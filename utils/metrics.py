@@ -11,6 +11,16 @@ from utils.output import save_network_info
 from utils.settings import settings
 
 
+def calibration_metrics(confidence_per_case: List[List[List[float]]], nb_bins: int = 10, adaptative: bool = True,
+                        cls: Optional[int] = None):
+
+    # Convert to matrix
+    # Sort by confidence
+    # Split in bins (fixed or adaptative)
+    # Compute the mean of the confidence in each bin
+    pass
+
+
 def classification_metrics(confusion_matrix: np.ndarray) -> ClassificationMetrics:
     """
     Compute different metrics to quantify a classification quality.
@@ -34,7 +44,7 @@ def classification_metrics(confusion_matrix: np.ndarray) -> ClassificationMetric
                  'f1': 0.8588368153585544
                  'nb': 50
                  'precisions': 0.8326403326403327
-               'recall': 0.9
+                 'recall': 0.9
 
     :param confusion_matrix: The confusion matrix that contains the number of couple (label, predictions).
     :return: The different classification result metrics (see ClassificationMetrics dataclass).

@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from classes.classifier_nn import ClassifierNN
 from classes.data_structures import ClassificationMetrics
-from plots.train_results import plot_classification_sample, plot_confidence, plot_confidence_calibration, \
+from plots.train_results import plot_classification_sample, plot_confidence, plot_reliability_diagram, \
     plot_confusion_matrix
 from utils.logger import logger
 from utils.metrics import classification_metrics
@@ -111,7 +111,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
         plot_confusion_matrix(nb_labels_predictions, metrics, class_names=test_dataset.classes)
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
         plot_confidence(confidence_per_case, network.confidence_thresholds, 'test', per_classes=True)
-        plot_confidence_calibration(confidence_per_case, 'test', 10)
+        plot_reliability_diagram(confidence_per_case, 'test', 10)
 
         # Final test results but with confidence threshold
         if network.confidence_thresholds:

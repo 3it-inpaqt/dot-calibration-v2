@@ -16,7 +16,7 @@ from models.cnn import CNN
 from models.feed_forward import FeedForward
 from models.gap_baseline import GapBaseline
 from models.std_baseline import StdBaseline
-from plots.train_results import plot_confidence, plot_confidence_calibration, plot_confidence_threshold_tuning
+from plots.train_results import plot_confidence, plot_reliability_diagram, plot_confidence_threshold_tuning
 from runs.test import test
 from runs.train import train
 from utils.logger import logger
@@ -195,7 +195,7 @@ def tune_confidence_thresholds(network, dataset, device) -> List[float]:
                 ', '.join(f'{c}: {t:.1%}' for c, t in zip(dataset.classes, best_thresholds)))
     plot_confidence_threshold_tuning(thresholds, scores_history, len(dataset), dataset.role)
     plot_confidence(confidence_per_case, best_thresholds, dataset.role, per_classes=True)
-    plot_confidence_calibration(confidence_per_case, dataset.role, 10)
+    plot_reliability_diagram(confidence_per_case, dataset.role, 10)
 
     return best_thresholds
 

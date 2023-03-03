@@ -297,8 +297,8 @@ def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sam
 
     save_plot(f'threshold_tuning_{dataset_role}')
 
-def plot_confidence_calibration(confidence_per_case: List[List[List[float]]], dataset_role: str,
-                                bins: int = 10) -> None:
+def plot_reliability_diagram(confidence_per_case: List[List[List[float]]], dataset_role: str,
+                             bins: int = 10, adaptative_bins: bool = False) -> None:
     """
     Plot the confidence calibration as a bar plot.
 
@@ -343,6 +343,6 @@ def plot_confidence_calibration(confidence_per_case: List[List[List[float]]], da
         plt.xlabel('Confidence')
         plt.ylabel('Accuracy')
         plt.legend()
-        plt.title(f'Confidence calibration\nfrom {dataset_role} dataset')
+        plt.title(f'Reliability diagram\nfrom {dataset_role} dataset')
 
-        save_plot(f'confidence_calibration_{dataset_role}')
+        save_plot(f'reliability_diagram_{dataset_role}')
