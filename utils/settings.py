@@ -33,7 +33,7 @@ class Settings:
     seed: int = 42
 
     # If true every baseline are run before the real training. If false this step is skipped.
-    evaluate_baselines: bool = True
+    evaluate_baselines: bool = False
 
     # The metric to use for plotting, logging and model performance evaluation.
     # See https://yonvictor.notion.site/Classification-Metrics-2074032f927847c0885918eb9ddc508c
@@ -64,7 +64,7 @@ class Settings:
     console_color: bool = True
 
     # If True show matplotlib images when they are ready.
-    show_images: bool = True
+    show_images: bool = False
 
     # If True and the run have a valid name, save matplotlib images in the run directory
     save_images: bool = True
@@ -143,6 +143,10 @@ class Settings:
     # Use to consistant normalization of the data after the training.
     normalization_values_path: str = ''
 
+    # The percentage of gaussian noise to add in the test set.
+    # Used to test uncertainty.
+    test_noise: float = 0.0
+
     # ==================================================================================================================
     # ===================================================== Model ======================================================
     # ==================================================================================================================
@@ -152,11 +156,19 @@ class Settings:
     model_type: str = 'CNN'
 
     # The number of fully connected hidden layer and their respective number of neurons.
-    hidden_layers_size: Sequence = (100, 50)
+    hidden_layers_size: Sequence = (200, 100)
 
     # The number of convolution layers and their respective properties (for CNN models only).
     conv_layers_kernel: Sequence = (4, 4)
     conv_layers_channel: Sequence = (12, 24)
+
+    # Define if there is a max pooling layer after each convolution layer (True = max pooling)
+    # Have to match the convolution layers size
+    max_pooling_layers: Sequence = (False, False)
+
+    # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
+    # Have to match the number of layers (convolution + linear)
+    batch_norm_layers: Sequence = (False, False, False, False)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -173,11 +185,8 @@ class Settings:
     # The learning rate value used by the SGD for parameters update.
     learning_rate: float = 0.001
 
-    # The momentum value used by the SGD for parameters update.
-    momentum: float = 0.9
-
     # Dropout rate for every dropout layers defined in networks.
-    # If a notwork model doesn't have a dropout layer this setting will have no effect.
+    # If a network model doesn't have a dropout layer this setting will have no effect.
     # 0 skip dropout layers
     dropout: int = 0.4
 
@@ -194,7 +203,7 @@ class Settings:
     # The final value will be a multiple of the number of batch in 1 epoch (rounded to the higher number of epoch).
     # Can't be set as the same time as nb_epoch, since it indirectly define it.
     # 0 is disabled (nb_epoch must me > 0)
-    nb_train_update: int = 20_000
+    nb_train_update: int = 10_000
 
     # Save the best network state during the training based on the test main metric.
     # Then load it when the training is complet.
@@ -204,7 +213,7 @@ class Settings:
 
     # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
     # Negative threshold means automatic value selection using tau.
-    confidence_threshold: float = 0.90
+    confidence_threshold: float = -1
 
     # Relative importance of model error compare to model uncertainty for automatic confidence threshold tuning.
     # Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
@@ -231,8 +240,15 @@ class Settings:
     # ================================================== Checkpoints ===================================================
     # ==================================================================================================================
 
-    # The number of checkpoints per training epoch, if 0 no checkpoint is processed
+    # The number of checkpoints per training epoch.
+    # Can be combined with updates_per_checkpoints.
+    # Set to 0 to disable.
     checkpoints_per_epoch: int = 0
+
+    # The number of model update (back propagation) before to start a checkpoint
+    # Can be combined with checkpoints_per_epoch.
+    # Set to 0 to disable.
+    checkpoints_after_updates: int = 200
 
     # The number of data in the checkpoint training subset.
     # Set to 0 to don't compute the train metrics during checkpoints.
@@ -241,6 +257,9 @@ class Settings:
     # If the inference metrics of the validation dataset should be computed, or not, during checkpoint.
     # The validation ratio have to be higher than 0.
     checkpoint_validation: bool = True
+
+    # If the inference metrics of the testing dataset should be computed, or not, during checkpoint.
+    checkpoint_test: bool = False
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at each checkpoint.
     checkpoint_save_network: bool = False
@@ -330,8 +349,14 @@ class Settings:
         assert isinstance(self.model_type, str) and self.model_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN'], \
             f'Invalid network type {self.model_type}'
         assert all((a > 0 for a in self.hidden_layers_size)), 'Hidden layer size should be more than 0'
-        assert len(self.conv_layers_channel) == len(self.conv_layers_kernel), \
-            'Convolution channel and kernels list should have the same length'
+        assert len(self.conv_layers_channel) == len(self.conv_layers_kernel) == len(self.max_pooling_layers), \
+            'All convolution meta parameters should have the same size (channel, kernels and max pooling)'
+        if self.model_type.upper() in ['CNN', 'BCNN']:
+            assert len(self.conv_layers_channel) + len(self.hidden_layers_size) == len(self.batch_norm_layers), \
+                'The batch normalisation meta parameters should be define for each layer (convolution and linear)'
+        if self.model_type.upper() in ['FF', 'BFF']:
+            assert len(self.hidden_layers_size) == len(self.batch_norm_layers), \
+                'The batch normalisation meta parameters should be define for each linear layer'
         assert all((a > 0 for a in self.conv_layers_channel)), 'Conv layer nb channel should be more than 0'
         assert all((a > 1 for a in self.conv_layers_kernel)), 'Conv layer kernel size should be more than 1'
 
@@ -350,7 +375,8 @@ class Settings:
             f'Invalid bayesian confidence metric value "{self.bayesian_confidence_metric}"'
 
         # Checkpoints
-        assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints should be >= 0'
+        assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints per epoch should be >= 0'
+        assert self.checkpoints_after_updates >= 0, 'The number of updates per checkpoints should be >= 0'
 
         # Autotuning
         procedures_allow = ('random', 'shift', 'shift_u', 'jump', 'jump_u', 'full')
@@ -430,8 +456,9 @@ class Settings:
         :param name: The name of the attribut
         :param value: The value of the attribut
         """
-        logger.debug(f'Setting "{name}" changed from "{getattr(self, name)}" to "{value}".')
-        self.__dict__[name] = value
+        if name not in self.__dict__ or self.__dict__[name] != value:
+            logger.debug(f'Setting "{name}" changed from "{getattr(self, name)}" to "{value}".')
+            self.__dict__[name] = value
 
     def __delattr__(self, name):
         raise AttributeError('Removing a setting is forbidden for the sake of consistency.')

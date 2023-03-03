@@ -1,4 +1,3 @@
-import math
 from typing import List
 
 import torch
@@ -53,12 +52,17 @@ class ClassifierBayesNN(ClassifierNN):
 
     @staticmethod
     def _entropy_confidence(model_outputs):
-        stds = model_outputs.std(axis=0)
-        pi = torch.Tensor([math.pi])
-        # FIXME the formula doesn't seem good
-        entropies = torch.log(2 * pi * torch.pow(stds.cpu(), 2)) / 2 + 1 / 2
-        return entropies
+        # Get the mean values of the samples for each output.
+        # This value is a proxy for the intractable "expected output" value. This should then approximate the
+        # probability that the model classification is 1 (since it is the output of a sigmoid).
+        p_1 = model_outputs.mean(axis=0)
+        p_0 = 1 - p_1
+
+        # Entropy = -sum(p_i * log(p_i))
+        entropies = - (p_1 * torch.log2(p_1) + p_0 * torch.log2(p_0))
+        return 1 - entropies  # Low entropy means high confidence
 
     @staticmethod
     def _norm_entropy_confidence(model_outputs):
-        raise NotImplemented
+        # The entropy value is already between 0 and 1 since we are considering a binary classification.
+        return ClassifierBayesNN._entropy_confidence(model_outputs)

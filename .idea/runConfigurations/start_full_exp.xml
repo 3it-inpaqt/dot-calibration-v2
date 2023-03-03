@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="start_tasks_planner" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+  <configuration default="false" name="start_full_exp" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
     <module name="pytorch-boilerplate" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -19,7 +19,7 @@
         <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
       </ENTRIES>
     </EXTENSION>
-    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/start_tasks_planner.py" />
+    <option name="SCRIPT_NAME" value="$PROJECT_DIR$/start_full_exp.py" />
     <option name="PARAMETERS" value="" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />

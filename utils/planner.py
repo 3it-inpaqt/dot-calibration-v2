@@ -133,6 +133,7 @@ class Planner(BasePlanner):
         self.setting_name = setting_name
         self.setting_values = setting_values
 
+        self._is_original_value = True
         self._setting_original_value = None  # Will be set when the iteration start
         self._values_iterator = None
 
@@ -140,9 +141,10 @@ class Planner(BasePlanner):
 
     def __iter__(self) -> Iterator:
         """ See :func:`~utils.planner.BasePlanner.__iter__` """
-        # Save the original value if it's the first iteration since the init or a reset
-        if self._setting_original_value is None:
+        # Save the original value if it's the first iteration
+        if self._is_original_value:
             self._setting_original_value = getattr(settings, self.setting_name)
+            self._is_original_value = False
 
         # Start values iteration
         self._values_iterator = iter(self.setting_values)
@@ -174,9 +176,10 @@ class Planner(BasePlanner):
 
     def reset_original_values(self) -> None:
         """ See :func:`~utils.planner.BasePlanner.reset_original_values` """
-        if self._values_iterator is not None:
+        if not self._is_original_value:
             if getattr(settings, self.setting_name) != self._setting_original_value:
                 setattr(settings, self.setting_name, self._setting_original_value)
+            self._is_original_value = True
             self._setting_original_value = None
 
     def reset_state(self) -> None:
@@ -305,11 +308,14 @@ class ParallelPlanner(BasePlanner):
                 runs_name="test-run" => "test-run", "test-run-002, "test-run-003", ...
                 runs_name="{i:03d}-{method}" => "01-method_a", "02-method_b", ...
         """
-        if len(planners) == 0:
+        # Exclude AdaptativePlanner from the checking condition because its size is adaptative
+        fixed_planners = [p for p in planners if not isinstance(p, AdaptativePlanner)]
+
+        if len(fixed_planners) == 0:
             raise ValueError('Empty planners list for parallel planner')
 
         # Check planners length
-        if not all(len(x) == len(planners[0]) for x in planners[1:]):
+        if not all(len(x) == len(fixed_planners[0]) for x in fixed_planners[1:]):
             raise ValueError('Impossible to run parallel planner if all sub-planners don\'t have the same length')
 
         # TODO forbid same setting multiple times
@@ -344,7 +350,8 @@ class ParallelPlanner(BasePlanner):
 
     def __len__(self):
         """ See :func:`~utils.planner.BasePlanner.__len__` """
-        return len(self.planners[0])
+        # Size of the first fixed planner
+        return len(next(p for p in self.planners if not isinstance(p, AdaptativePlanner)))
 
     def default_runs_name(self) -> Optional[str]:
         """ See :func:`~utils.planner.BasePlanner.default_runs_name` """
@@ -456,3 +463,78 @@ class CombinatorPlanner(BasePlanner):
         self._first_iter = True
         for p in self.planners:
             p.reset_state()
+
+
+class AdaptativePlanner(BasePlanner):
+    """
+    A planner that allow to change the values of the settings depending on the other settings values.
+    Should be used as a child of a ParallelPlanner.
+    """
+
+    def __init__(self, setting_name: str, setting_value_template: str, runs_name: Optional[str] = None):
+        """
+        Create an adaptative planner the change its values depending on the other settings values.
+
+        :param setting_name: The name of the setting to change.
+        :param setting_value_template: The string template to use to generate the setting value. Same syntaxe as for
+            runs_name
+        :param runs_name: The string template to use to generate each run name. Allow specifying any setting field with
+            default f-string syntaxe. If multiple run have the same name, add increment. If this parameter is None, the
+            name will be generated according to the settings name, which is very descriptive but could be quite long.
+            The special key "i" refer to the current run index.
+            Eg:
+                runs_name="run-{model_type}" => "run-CNN", "run-FF", "run-RNN", ...
+                runs_name="test-run" => "test-run", "test-run-002, "test-run-003", ...
+                runs_name="{i:03d}-{method}" => "01-method_a", "02-method_b", ...
+        """
+        self.setting_name = setting_name
+        self.setting_value_template = setting_value_template
+
+        self._is_original_value = True
+        self._setting_original_value = None  # Will be set when the iteration start
+
+        super().__init__(runs_name)
+
+    def __iter__(self) -> Iterator:
+        """ See :func:`~utils.planner.BasePlanner.__iter__` """
+        if not self.is_sub_planner:
+            raise ValueError('Adaptative planner should only be used as a child of a ParallelPlanner.')
+
+        # Save the original value if it's the first iteration
+        if self._is_original_value:
+            self._setting_original_value = getattr(settings, self.setting_name)
+            self._is_original_value = False
+
+        return self
+
+    def __next__(self) -> str:
+        """ See :func:`~utils.planner.BasePlanner.__next__` """
+
+        counter_total = sum(BasePlanner._existing_names.values()) + 1
+        # Get new value depending on the other settings values
+        value = self.setting_value_template.format_map({**asdict(settings), **{'i': counter_total}})
+
+        # Set new value
+        setattr(settings, self.setting_name, value)
+
+        return self.get_formatted_name()
+
+    def __len__(self) -> int:
+        """ See :func:`~utils.planner.BasePlanner.__len__` """
+        return 0  # The size depends on the other iterators
+
+    def default_runs_name(self) -> Optional[str]:
+        """ See :func:`~utils.planner.BasePlanner.default_runs_name` """
+        return f'{self.setting_name}_{{{self.setting_name}}}'
+
+    def reset_original_values(self) -> None:
+        """ See :func:`~utils.planner.BasePlanner.reset_original_values` """
+        if not self._is_original_value:
+            if getattr(settings, self.setting_name) != self._setting_original_value:
+                setattr(settings, self.setting_name, self._setting_original_value)
+            self._is_original_value = True
+            self._setting_original_value = None
+
+    def reset_state(self) -> None:
+        """ See :func:`~utils.planner.BasePlanner.reset_counters` """
+        self._setting_original_value = None  # Will be set when the iteration start

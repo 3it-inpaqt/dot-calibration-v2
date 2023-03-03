@@ -27,9 +27,28 @@ class CNN(ClassifierNN):
 
         self.conv_layers = nn.ModuleList()
         last_nb_channel = 1
-        for channel, kernel in zip(settings.conv_layers_channel, settings.conv_layers_kernel):
-            self.conv_layers.append(nn.Conv2d(in_channels=last_nb_channel, out_channels=channel,
-                                              kernel_size=(kernel, kernel)))
+
+        # Create convolution layers
+        for channel, kernel, max_pool, batch_norm in zip(settings.conv_layers_channel,
+                                                         settings.conv_layers_kernel,
+                                                         settings.max_pooling_layers,
+                                                         settings.batch_norm_layers[:len(settings.conv_layers_kernel)]):
+            layer = nn.Sequential()
+            # Convolution
+            layer.append(nn.Conv2d(in_channels=last_nb_channel, out_channels=channel, kernel_size=(kernel, kernel)))
+            # Batch normalisation
+            if batch_norm:
+                layer.append(nn.BatchNorm2d(num_features=channel))
+            # Activation function
+            layer.append(nn.ReLU())
+            # Max pooling
+            if max_pool:
+                layer.append(nn.MaxPool2d(kernel_size=(2, 2)))
+            # Dropout
+            if settings.dropout > 0:
+                layer.append(nn.Dropout(settings.dropout))
+
+            self.conv_layers.append(layer)
             last_nb_channel = channel
 
         # Number of neurons per layer
@@ -41,10 +60,21 @@ class CNN(ClassifierNN):
         # Create fully connected linear layers
         self.fc_layers = nn.ModuleList()
         for i in range(len(fc_layer_sizes) - 1):
-            self.fc_layers.append(nn.Linear(fc_layer_sizes[i], fc_layer_sizes[i + 1]))
+            layer = nn.Sequential()
+            # Fully connected
+            layer.append(nn.Linear(fc_layer_sizes[i], fc_layer_sizes[i + 1]))
+            # If this is not the output layer
+            if i != len(fc_layer_sizes) - 2:
+                # Batch normalisation
+                if settings.batch_norm_layers[len(settings.conv_layers_channel) + i]:
+                    layer.append(nn.BatchNorm1d(fc_layer_sizes[i + 1]))
+                # Activation function
+                layer.append(nn.ReLU())
+                # Dropout
+                if settings.dropout > 0:
+                    layer.append(nn.Dropout(settings.dropout))
 
-        # Create a dropout layer if p > 0
-        self.dropout = nn.Dropout(settings.dropout) if settings.dropout > 0 else None
+            self.fc_layers.append(layer)
 
         # Binary Cross Entropy including sigmoid layer
         self._criterion = nn.BCEWithLogitsLoss()
@@ -62,18 +92,14 @@ class CNN(ClassifierNN):
 
         # Run convolution layers
         for conv in self.conv_layers:
-            x = torch.relu(conv(x))
-            if self.dropout:
-                x = self.dropout(x)
+            x = conv(x)
 
         # Flatten the data (but not the batch)
         x = torch.flatten(x, 1)
 
         # Run fully connected layers
         for fc in self.fc_layers[:-1]:
-            x = torch.relu(fc(x))
-            if self.dropout:
-                x = self.dropout(x)
+            x = fc(x)
 
         # Last layer doesn't use sigmoid because it's include in the loss function
         x = self.fc_layers[-1](x)
@@ -81,7 +107,7 @@ class CNN(ClassifierNN):
         # Flatten [batch_size, 1] to [batch_size]
         return torch.squeeze(x)
 
-    def training_step(self, inputs: Any, labels: Any):
+    def training_step(self, inputs: Any, labels: Any) -> float:
         """
         Define the logic for one training step.
 

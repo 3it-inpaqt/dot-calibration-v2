@@ -465,7 +465,7 @@ def load_runs(patterns: Union[str, List[str]]) -> pd.DataFrame:
 
 
 class ExistingRunName(Exception):
-    """ Exception raised when the user try to start a run with the same name than a previous one. """
+    """ Exception raised when the user try to start a run with the same name as a previous one. """
 
     def __init__(self, run_name: str, path: Path, message: str = None):
         if not message:

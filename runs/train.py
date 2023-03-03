@@ -17,14 +17,16 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Optional[Dataset], device: torch.device) \
+def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Optional[Dataset],
+          test_dataset: Optional[Dataset], device: torch.device) \
         -> None:
     """
     Train the network using the dataset.
 
     :param network: The network to train in place.
     :param train_dataset: The dataset used to train the network.
-    :param validation_dataset: The dataset used to run intermediate test on the network during the training.
+    :param validation_dataset: The validation dataset used to run intermediate test on the network during the training.
+    :param test_dataset: The test dataset used to run intermediate test on the network during the training.
     :param device: The device used to store the network and datasets (it can influence the behaviour of the training)
     """
     # If path set, try to load a pre-trained network from cache
@@ -47,11 +49,21 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
                               num_workers=get_nb_loader_workers(device))
     nb_batch = len(train_loader)
     nb_epoch = settings.nb_epoch if settings.nb_epoch > 0 else ceil(settings.nb_train_update / nb_batch)
-    logger.info(f'Train on {nb_batch:n} batches for {nb_epoch:n} epochs ({nb_epoch * nb_batch} parameters updates)')
 
-    # Define the indexes of checkpoints for each epoch
-    # Eg.: with 'nb_batch' = 100 and 'checkpoints_per_epoch' = 3, then the indexes will be [0, 33, 66]
-    checkpoints_i = [int(i / settings.checkpoints_per_epoch * nb_batch) for i in range(settings.checkpoints_per_epoch)]
+    # Define the indexes of checkpoints
+    checkpoints_epoch = set()
+    if settings.checkpoints_per_epoch > 0:
+        # Eg.: with 'nb_batch' = 100 and 'checkpoints_per_epoch' = 3, then the indexes will be [0, 33, 66]
+        checkpoints_epoch = {int(i / settings.checkpoints_per_epoch * nb_batch)
+                             for i in range(settings.checkpoints_per_epoch)}
+
+    checkpoints_global = set()
+    if settings.checkpoints_after_updates > 0:
+        # Eg.: with 'nb_batch' = 100 and 'checkpoints_per_epoch' = 3, then the indexes will be [0, 33, 66]
+        checkpoints_global = {i for i in range(0, nb_epoch * nb_batch, settings.checkpoints_after_updates)}
+
+    logger.info(f'Train on {nb_batch:n} batches for {nb_epoch:n} epochs ({nb_epoch * nb_batch} parameters updates '
+                f'and {len(checkpoints_global) + (len(checkpoints_epoch) * nb_epoch)} checkpoints)')
 
     # Metrics to monitoring the training and draw plots
     loss_evolution: List[float] = []
@@ -69,10 +81,10 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
                 progress.incr()
 
                 # Checkpoint if enable for this batch
-                if i in checkpoints_i:
+                if i in checkpoints_epoch or (epoch * nb_batch + i) in checkpoints_global:
                     timer.pause()
                     check_metrics = _checkpoint(network, epoch * nb_batch + i, train_dataset, validation_dataset,
-                                                best_checkpoint, device)
+                                                test_dataset, best_checkpoint, device)
                     progress.update(
                         **{'acc': check_metrics['validation' if validation_dataset else 'train'].accuracy,
                            settings.main_metric: check_metrics['validation' if validation_dataset else 'train'].main})
@@ -87,14 +99,12 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
             # Epoch statistics
             _record_epoch_stats(epochs_stats, loss_evolution[-len(train_loader):], nb_epoch)
 
-    if len(metrics_evolution) == 0:
-        save_results(epochs_stats=epochs_stats)
-    else:
+    save_results(epochs_stats=epochs_stats)
+    if len(metrics_evolution) > 0:
         # Do one last checkpoint to complet the plot
         metrics_evolution.append(
-            _checkpoint(network, nb_epoch * nb_batch, train_dataset, validation_dataset, best_checkpoint,
+            _checkpoint(network, nb_epoch * nb_batch, train_dataset, validation_dataset, test_dataset, best_checkpoint,
                         device))
-        save_results(epochs_stats=epochs_stats, metrics_validation=metrics_evolution)
 
     if settings.save_network:
         save_network(network, 'final_network')
@@ -112,7 +122,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
 
 
 def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Optional[Dataset],
-                best_checkpoint: dict, device: torch.device) -> dict:
+                test_dataset: Optional[Dataset], best_checkpoint: dict, device: torch.device) -> dict:
     """
     Pause the training to do some jobs, like intermediate testing and network backup.
 
@@ -120,6 +130,7 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
     :param batch_num: The batch number since the beginning of the training (used as checkpoint id)
     :param train_dataset: The training dataset
     :param validation_dataset: The validation dataset
+    :param validation_dataset: The testing dataset
     :return: A dictionary with the tests results
     """
 
@@ -127,7 +138,7 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
     if settings.checkpoint_save_network:
         save_network(network, f'{batch_num:n}_checkpoint_network')
 
-    validation_metrics = train_metrics = None
+    validation_metrics = train_metrics = test_metrics = None
     # Test on the validation dataset
     if validation_dataset and settings.checkpoint_validation:
         validation_metrics = test(network, validation_dataset, device, test_name='checkpoint validation')
@@ -141,6 +152,10 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
                 # TODO find a workaround to save it if this is an unnamed run.
                 save_network(network, 'best_network')
 
+    # Test on testing dataset
+    if test_dataset and settings.checkpoint_test:
+        test_metrics = test(network, test_dataset, device, test_name='checkpoint testing')
+
     # Test on a subset of train dataset
     if settings.checkpoint_train_size > 0:
         train_metrics = test(network, train_dataset, device, test_name='checkpoint train',
@@ -151,7 +166,7 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
 
     logger.debug(f'Checkpoint {batch_num:<6n} | validation {validation_metrics} | train {train_metrics}')
 
-    return {'batch_num': batch_num, 'validation': validation_metrics, 'train': train_metrics}
+    return {'batch_num': batch_num, 'validation': validation_metrics, 'train': train_metrics, 'test': test_metrics}
 
 
 def _record_epoch_stats(epochs_stats: List[dict], epoch_losses: List[float], nb_epoch: int) -> None:

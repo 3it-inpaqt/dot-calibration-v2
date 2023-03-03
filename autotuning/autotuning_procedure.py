@@ -491,21 +491,22 @@ class AutotuningProcedure:
                                    'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
                                    'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
                                    'history_uncertainty': True})
-            # step with error and soft error color
-            pool.apply_async(plot_diagram,
-                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None, 'image_name': name + ' errors',
-                                   'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
-                                   'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
-                                   'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
-                                   'confidence_thresholds': self.model.confidence_thresholds,
-                                   'history_uncertainty': False})
-            # step with error color and uncertainty
-            pool.apply_async(plot_diagram,
-                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
-                                   'image_name': name + ' errors uncertainty', 'interpolation_method': 'nearest',
-                                   'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
-                                   'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                   'scan_errors': True, 'history_uncertainty': True})
+            if not settings.autotuning_use_oracle:
+                # step with error and soft error color
+                pool.apply_async(plot_diagram,
+                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None, 'image_name': name + ' errors',
+                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                       'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
+                                       'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
+                                       'confidence_thresholds': self.model.confidence_thresholds,
+                                       'history_uncertainty': False})
+                # step with error color and uncertainty
+                pool.apply_async(plot_diagram,
+                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
+                                       'image_name': name + ' errors uncertainty', 'interpolation_method': 'nearest',
+                                       'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
+                                       'scan_history': self._scan_history, 'final_coord': final_coord,
+                                       'show_offset': False, 'scan_errors': True, 'history_uncertainty': True})
 
             # Wait for the processes to finish
             pool.close()

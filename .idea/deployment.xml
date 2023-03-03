@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" serverName="victoryon@35.232.161.209:22 key" remoteFilesAllowedToDisappearOnAutoupload="false" confirmBeforeUploading="false" showExcludedInSync="true">
+    <option name="confirmBeforeUploading" value="false" />
+    <serverData>
+      <paths name="victoryon@35.232.161.209:22 key">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/vyon/dot-calibration-v2" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/out" />
+            <excludedPath local="true" path="$PROJECT_DIR$/data" />
+            <excludedPath local="true" path="$PROJECT_DIR$/venv" />
+            <excludedPath local="true" path="$PROJECT_DIR$/settings.yaml" />
+            <excludedPath path="/home/vyon/dot-calibration-v2/out" />
+            <excludedPath path="/home/vyon/dot-calibration-v2/data" />
+            <excludedPath path="/home/vyon/dot-calibration-v2/venv" />
+            <excludedPath path="/home/vyon/dot-calibration-v2/.git" />
+            <excludedPath local="true" path="$PROJECT_DIR$/.git" />
+            <excludedPath local="true" path="$PROJECT_DIR$/.idea" />
+            <excludedPath local="true" path="$PROJECT_DIR$/__pycache__" />
+            <excludedPath path="/home/vyon/dot-calibration-v2/__pycache__" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>
