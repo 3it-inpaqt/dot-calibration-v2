@@ -10,7 +10,7 @@ from matplotlib.ticker import PercentFormatter
 from pandas import DataFrame
 from tabulate import tabulate
 
-from datasets.diagram import ChargeRegime
+from datasets.diagram_offline import ChargeRegime
 from utils.output import load_runs, set_plot_style
 from utils.settings import settings
 

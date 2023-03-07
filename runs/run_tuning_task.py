@@ -14,7 +14,8 @@ from autotuning.shift_uncertainty import ShiftUncertainty
 from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
 from classes.data_structures import AutotuningResult
-from datasets.diagram import ChargeRegime, Diagram
+from datasets.diagram import Diagram
+from datasets.diagram_offline import ChargeRegime
 from plots.autotuning import plot_autotuning_results
 from runs.run_line_task import get_cuda_device
 from utils.logger import logger
@@ -31,7 +32,7 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
 
     :param model: The classifier model used by the tuning procedure. If the model is None, the Oracle option should be
         enabled.
-    :param diagrams: The list of diagrams to run on the tuning procedure.
+    :param diagrams: The list of diagrams to run on the tuning procedure. It could be offline or online diagrams.
     """
     if len(diagrams) == 0:
         raise ValueError('No diagram provided to the tuning run.')
@@ -69,8 +70,7 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
 
                     # Start the procedure
                     procedure.setup_next_tuning(diagram)  # Give diagram and set starting coordinates randomly
-                    logger.debug(f'Start tuning diagram {diagram.file_basename} '
-                                 f'(size: {len(diagram.x_axes)}x{len(diagram.y_axes)})')
+                    logger.debug(f'Start tuning diagram: {diagram}')
                     result = procedure.run_tuning()
 
                     # Save result and log

@@ -5,7 +5,7 @@ from typing import Callable, Iterable, List, Optional, Tuple, Union
 import torch
 from torch.utils.data import Dataset
 
-from datasets.diagram import Diagram
+from datasets.diagram_offline import DiagramOffline
 from utils.logger import logger
 from utils.output import load_data_cache, save_data_cache, save_normalization, save_results
 from utils.settings import settings
@@ -162,12 +162,12 @@ class QDSDLines(Dataset):
             patches = load_data_cache(cache_path)
         else:
             # Load fom files and labels (but lines only)
-            diagrams = Diagram.load_diagrams(pixel_size,
-                                             research_group,
-                                             Path(DATA_DIR, 'interpolated_csv.zip'),
-                                             Path(DATA_DIR, 'labels.json'),
-                                             single_dot,
-                                             True, False)
+            diagrams = DiagramOffline.load_diagrams(pixel_size,
+                                                    research_group,
+                                                    Path(DATA_DIR, 'interpolated_csv.zip'),
+                                                    Path(DATA_DIR, 'labels.json'),
+                                                    single_dot,
+                                                    True, False)
 
             for diagram in diagrams:
                 diagram_patches = diagram.get_patches(patch_size, overlap, label_offset)

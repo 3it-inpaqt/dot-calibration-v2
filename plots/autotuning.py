@@ -1,7 +1,7 @@
 import seaborn as sns
 from pandas import DataFrame
 
-from datasets.diagram import ChargeRegime
+from datasets.diagram_offline import ChargeRegime
 from utils.output import save_plot
 
 
