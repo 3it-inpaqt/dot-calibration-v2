@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Callable, Deque, Iterable, List, Optional, Tuple
 
+import torch
+
 from utils.settings import settings
 
 
@@ -177,3 +179,11 @@ class SearchLineSlope:
             if is_line:
                 return position
         return None
+
+
+@dataclass(frozen=True)
+class ExperimentalMeasurement:
+    """ Data class to keep track of experimental measurement at each step. """
+    coord_x: int
+    coord_y: int
+    values: torch.Tensor

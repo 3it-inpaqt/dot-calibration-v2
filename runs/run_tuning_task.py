@@ -16,6 +16,7 @@ from classes.classifier_nn import ClassifierNN
 from classes.data_structures import AutotuningResult
 from datasets.diagram import Diagram
 from datasets.diagram_offline import ChargeRegime
+from datasets.diagram_online import DiagramOnline
 from plots.autotuning import plot_autotuning_results
 from runs.run_line_task import get_cuda_device
 from utils.logger import logger
@@ -51,7 +52,8 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
     autotuning_results = defaultdict(list)
 
     # Start the autotuning testing
-    logger.info(f'{len(diagrams)} diagram(s) will be process {settings.autotuning_nb_iteration} time(s) '
+    is_online = ' online' if len(diagrams) == 1 and isinstance(diagrams[0], DiagramOnline) else ''
+    logger.info(f'{len(diagrams)}{is_online} diagram(s) will be process {settings.autotuning_nb_iteration} time(s) '
                 f'with {len(settings.autotuning_procedures)} autotuning procedure(s)')
 
     # Only 1 iteration for the 'full' procedure

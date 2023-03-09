@@ -6,7 +6,7 @@ import torch
 
 from classes.classifier import Classifier
 from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
-from datasets.diagram_offline import DiagramOffline
+from datasets.diagram import Diagram
 from plots.data import plot_diagram, plot_diagram_step_animation
 from runs.run_line_task import get_cuda_device
 from utils.misc import get_nb_loader_workers
@@ -14,7 +14,7 @@ from utils.settings import settings
 
 
 class AutotuningProcedure:
-    """ Procedure for autotuning tuning of static stability diagrams. """
+    """ Procedure for autotuning tuning of stability diagrams. """
 
     def __init__(self, model: Optional[Classifier],
                  patch_size: Tuple[int, int],
@@ -41,7 +41,7 @@ class AutotuningProcedure:
         self.label_offsets: Tuple[int, int] = label_offsets
         self.is_oracle_enable: bool = is_oracle_enable
         self.boundary_policy: BoundaryPolicy = boundary_policy
-        self.diagram: Optional[DiagramOffline] = None
+        self.diagram: Optional[Diagram] = None
         self.x: Optional[int] = None
         self.y: Optional[int] = None
 
@@ -524,7 +524,7 @@ class AutotuningProcedure:
         # Generate a gif image
         plot_diagram_step_animation(self.diagram, name, self._scan_history, final_coord)
 
-    def setup_next_tuning(self, diagram: DiagramOffline, start_coord: Optional[Tuple[int, int]] = None) -> None:
+    def setup_next_tuning(self, diagram: Diagram, start_coord: Optional[Tuple[int, int]] = None) -> None:
         """
         Set up the starting point and the diagram of the next tuning run.
         This action is revert by reset_procedure.

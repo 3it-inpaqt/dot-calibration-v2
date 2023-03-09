@@ -1,6 +1,7 @@
 import argparse
 import re
 from dataclasses import asdict, dataclass
+from math import isnan
 from typing import Sequence, Union
 
 import configargparse
@@ -103,7 +104,7 @@ class Settings:
     patch_overlap_y: int = 10
 
     # The width of the border to ignore during the patch labeling (number of pixel)
-    # Eg.: If one line touch only 1 pixel at the right of the patch and the label_offset_x is >1 then the patch will be
+    # E.g.: If one line touch only 1 pixel at the right of the patch and the label_offset_x is >1 then the patch will be
     # labeled as "no_line"
     label_offset_x: int = 6
     label_offset_y: int = 6
@@ -297,6 +298,23 @@ class Settings:
     # For the 'full' procedure this number is override to 1.
     autotuning_nb_iteration: int = 50
 
+    # ==================================================================================================================
+    # ==================================================== Connector ===================================================
+    # ==================================================================================================================
+
+    # If True, a fake connector will be use instead of the real one.
+    # For debug purpose only.
+    use_mock: bool = False
+
+    # The maximum and minimum voltage that we can request from the connector.
+    # This need to be explicitly defined before to tune an online diagram with a connector.
+    min_voltage: float = float('nan')
+    max_voltage: float = float('nan')
+
+    # The voltage range in which we can choose a random starting point, for each gate.
+    range_voltage_x: Sequence = (float('nan'), float('nan'))
+    range_voltage_y: Sequence = (float('nan'), float('nan'))
+
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
         return len(self.run_name) > 0
@@ -384,6 +402,15 @@ class Settings:
             assert isinstance(procedure, str) and procedure.lower() in procedures_allow, \
                 f'Invalid autotuning procedure name {procedure}'
         assert self.autotuning_nb_iteration >= 1, 'At least 1 autotuning iteration required'
+
+        # Connector
+        assert len(self.range_voltage_x) == 2 and len(self.range_voltage_y) == 2, \
+            'The range of voltage should be a list of 2 values (min, max)'
+        assert ((isnan(self.range_voltage_x[0]) and isnan(self.range_voltage_x[1])) or
+                (self.range_voltage_x[0] <= self.range_voltage_x[1])) and \
+               ((isnan(self.range_voltage_y[0]) and isnan(self.range_voltage_y[1])) or
+                (self.range_voltage_y[0] <= self.range_voltage_y[1])), \
+            'The first value of the range voltage should be lower or equal to the second'
 
     def __init__(self):
         """

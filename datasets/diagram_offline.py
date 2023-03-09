@@ -12,7 +12,7 @@ from classes.data_structures import ChargeRegime
 from datasets.diagram import Diagram
 from plots.data import plot_diagram
 from utils.logger import logger
-from utils.misc import clip
+from utils.output import load_normalization
 from utils.settings import settings
 
 
@@ -33,6 +33,17 @@ class DiagramOffline(Diagram):
 
     # The charge area lines annotations
     charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]
+
+    def __init__(self, file_basename: str, x_axes: Sequence[float], y_axes: Sequence[float], values: torch.Tensor,
+                 transition_lines: Optional[List[LineString]],
+                 charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]):
+        super().__init__(file_basename)
+
+        self.x_axes = x_axes
+        self.y_axes = y_axes
+        self.values = values
+        self.transition_lines = transition_lines
+        self.charge_areas = charge_areas
 
     def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
         """
@@ -358,29 +369,17 @@ class DiagramOffline(Diagram):
         return processed_areas
 
     @staticmethod
-    def _coord_to_volt(coord: Iterable[float], min_v: float, max_v: float, value_step: float, snap: int = 1,
-                       is_y: bool = False) -> List[float]:
+    def normalize_diagrams(diagrams: Iterable["DiagramOffline"]) -> None:
         """
-        Convert some coordinates to volt value for a specific stability diagram.
-
-        :param coord: The list coordinates to convert
-        :param min_v: The minimal valid value for the gate voltage in this diagram
-        :param max_v: The maximal valid value for the gate voltage in this diagram
-        :param value_step: The voltage difference between two coordinates (pixel size)
-        :param snap: The snap margin, every points near to image border at this distance will be rounded to the image
-         border (in number of pixels)
-        :param is_y: If true this is the y-axis (to apply a flip)
-        :return: The list of coordinates as gate voltage values
+        Normalize the diagram with the same min/max value used during the training.
+        The values are fetch via the normalization_values_path setting.
+        :param diagrams: The diagrams to normalize.
         """
-        # Convert coordinates to actual voltage value
-        coord = list(map(lambda t: t * value_step + min_v, coord))
+        if settings.autotuning_use_oracle:
+            return  # No need to normalize if we use the oracle
 
-        if is_y:
-            # Flip Y axis (the label and the diagrams don't have the same y0 placement)
-            coord = list(map(lambda t: max_v - t + min_v, coord))
+        min_value, max_value = load_normalization()
 
-        # Clip to border to avoid errors
-        # TODO snap to borders
-        coord = list(map(lambda t: clip(t, min_v, max_v), coord))
-
-        return coord
+        for diagram in diagrams:
+            diagram.values -= min_value
+            diagram.values /= max_value - min_value

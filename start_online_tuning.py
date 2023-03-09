@@ -1,9 +1,12 @@
+from math import isnan
+
 from connectors.connector import Connector
 from runs.run_line_task import clean_up, get_cuda_device, init_model, preparation
 from runs.run_tuning_task import run_autotuning
 from utils.logger import logger
 from utils.output import load_network_
 from utils.settings import settings
+from utils.timer import SectionTimer
 
 
 def start_online_tuning_task() -> None:
@@ -17,6 +20,12 @@ def start_online_tuning_task() -> None:
     if settings.trained_network_cache_path is None:
         raise ValueError('A pre-trained model has to be defined for the online tuning task '
                          '("trained_network_cache_path" setting).')
+    if 'full' in settings.autotuning_procedures:
+        raise ValueError('The "full" procedure is not compatible with the online tuning task '
+                         '("autotuning_procedures" setting).')
+    if isnan(settings.min_voltage) or isnan(settings.max_voltage):
+        raise ValueError('The min and max voltage have to be defined before to start an online tuning task '
+                         '("min_voltage" and "max_voltage" settings).')
 
     # Instantiate the model according to the settings
     model = init_model()
@@ -24,9 +33,10 @@ def start_online_tuning_task() -> None:
     if not load_network_(model, settings.trained_network_cache_path, get_cuda_device()):
         raise ValueError(f'Could not load the pretrained model from "{settings.trained_network_cache_path}".')
 
-    # Get the connector to measure online data from experimental setup
+    # Get the connector to measure online data from experimental setup.
     # Then instantiate an online diagram with this connector.
-    diagram = Connector.get_connector().get_diagram()
+    with SectionTimer('setup connection'):
+        diagram = Connector.get_connector().get_diagram()
 
     # Run the autotuning task with one online diagram
     run_autotuning(model, [diagram])

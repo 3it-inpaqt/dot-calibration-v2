@@ -32,7 +32,7 @@ def start_tuning_task() -> None:
 
         # Normalize the diagram with the same min/max value used during the training.
         # The values are fetch via the "normalization_values_path" setting or in the current run directory.
-        DiagramOffline.normalize(diagrams)
+        DiagramOffline.normalize_diagrams(diagrams)
 
     # Run the autotuning task
     run_autotuning(model, diagrams)
