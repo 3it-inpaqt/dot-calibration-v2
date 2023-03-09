@@ -17,6 +17,14 @@ class Diagram:
     def __init__(self, file_basename: str):
         self.file_basename = file_basename
 
+    def get_random_starting_point(self) -> Tuple[int, int]:
+        """
+        Get a random starting point in the diagram.
+
+        :return: The starting point coordinates as (x, y).
+        """
+        raise NotImplementedError
+
     def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
@@ -54,6 +62,14 @@ class Diagram:
         :param coord_x: The x coordinate to check (not the voltage)
         :param coord_y: The y coordinate to check (not the voltage)
         :return: The charge regime
+        """
+        raise NotImplementedError
+
+    def get_max_patch_coordinates(self) -> Tuple[int, int]:
+        """
+        Get the maximum coordinates of a patch in this diagram.
+
+        :return: The maximum coordinates as (x, y)
         """
         raise NotImplementedError
 

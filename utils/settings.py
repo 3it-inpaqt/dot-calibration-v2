@@ -302,9 +302,13 @@ class Settings:
     # ==================================================== Connector ===================================================
     # ==================================================================================================================
 
-    # If True, a fake connector will be use instead of the real one.
-    # For debug purpose only.
-    use_mock: bool = False
+    # The name if the connector to use to capture online diagrams.
+    # Possible values: 'mock', 'py_hegel'
+    connector_name: str = 'mock'
+
+    # If True, the commands will be printed in the log output instead to be sent to the experimental measurement tools.
+    # This is useful safely debug the connector.
+    manual_mode: bool = False
 
     # The maximum and minimum voltage that we can request from the connector.
     # This need to be explicitly defined before to tune an online diagram with a connector.
@@ -312,8 +316,8 @@ class Settings:
     max_voltage: float = float('nan')
 
     # The voltage range in which we can choose a random starting point, for each gate.
-    range_voltage_x: Sequence = (float('nan'), float('nan'))
-    range_voltage_y: Sequence = (float('nan'), float('nan'))
+    start_range_voltage_x: Sequence = (float('nan'), float('nan'))
+    start_range_voltage_y: Sequence = (float('nan'), float('nan'))
 
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
@@ -404,12 +408,12 @@ class Settings:
         assert self.autotuning_nb_iteration >= 1, 'At least 1 autotuning iteration required'
 
         # Connector
-        assert len(self.range_voltage_x) == 2 and len(self.range_voltage_y) == 2, \
-            'The range of voltage should be a list of 2 values (min, max)'
-        assert ((isnan(self.range_voltage_x[0]) and isnan(self.range_voltage_x[1])) or
-                (self.range_voltage_x[0] <= self.range_voltage_x[1])) and \
-               ((isnan(self.range_voltage_y[0]) and isnan(self.range_voltage_y[1])) or
-                (self.range_voltage_y[0] <= self.range_voltage_y[1])), \
+        assert len(self.start_range_voltage_x) == 2 and len(self.start_range_voltage_y) == 2, \
+            'The start_range of voltage should be a list of 2 values (min, max)'
+        assert ((isnan(self.start_range_voltage_x[0]) and isnan(self.start_range_voltage_x[1])) or
+                (self.start_range_voltage_x[0] <= self.start_range_voltage_x[1])) and \
+               ((isnan(self.start_range_voltage_y[0]) and isnan(self.start_range_voltage_y[1])) or
+                (self.start_range_voltage_y[0] <= self.start_range_voltage_y[1])), \
             'The first value of the range voltage should be lower or equal to the second'
 
     def __init__(self):

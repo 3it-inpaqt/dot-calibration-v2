@@ -184,6 +184,6 @@ class SearchLineSlope:
 @dataclass(frozen=True)
 class ExperimentalMeasurement:
     """ Data class to keep track of experimental measurement at each step. """
-    coord_x: int
-    coord_y: int
+    start_volt_x: float
+    start_volt_y: float
     values: torch.Tensor

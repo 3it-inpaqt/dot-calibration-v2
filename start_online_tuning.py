@@ -14,18 +14,7 @@ def start_online_tuning_task() -> None:
     Start an online tuning task. The model has to be pretrained.
     """
 
-    # Check some settings incompatible with the online tuning task
-    if settings.autotuning_use_oracle:
-        raise ValueError('The online tuning task is not compatible with the Oracle ("autotuning_use_oracle" setting).')
-    if settings.trained_network_cache_path is None:
-        raise ValueError('A pre-trained model has to be defined for the online tuning task '
-                         '("trained_network_cache_path" setting).')
-    if 'full' in settings.autotuning_procedures:
-        raise ValueError('The "full" procedure is not compatible with the online tuning task '
-                         '("autotuning_procedures" setting).')
-    if isnan(settings.min_voltage) or isnan(settings.max_voltage):
-        raise ValueError('The min and max voltage have to be defined before to start an online tuning task '
-                         '("min_voltage" and "max_voltage" settings).')
+    check_settings()
 
     # Instantiate the model according to the settings
     model = init_model()
@@ -41,6 +30,22 @@ def start_online_tuning_task() -> None:
     # Run the autotuning task with one online diagram
     run_autotuning(model, [diagram])
 
+
+def check_settings() -> None:
+    """
+    Check some settings incompatible with the online tuning task before to start.
+    """
+    if settings.autotuning_use_oracle:
+        raise ValueError('The online tuning task is not compatible with the Oracle ("autotuning_use_oracle" setting).')
+    if settings.trained_network_cache_path is None:
+        raise ValueError('A pre-trained model has to be defined for the online tuning task '
+                         '("trained_network_cache_path" setting).')
+    if 'full' in settings.autotuning_procedures:
+        raise ValueError('The "full" procedure is not compatible with the online tuning task '
+                         '("autotuning_procedures" setting).')
+    if isnan(settings.min_voltage) or isnan(settings.max_voltage):
+        raise ValueError('The min and max voltage have to be defined before to start an online tuning task '
+                         '("min_voltage" and "max_voltage" settings).')
 
 if __name__ == '__main__':
     # Prepare the environment

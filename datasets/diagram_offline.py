@@ -2,6 +2,7 @@ import gzip
 import json
 import zipfile
 from pathlib import Path
+from random import randrange
 from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -44,6 +45,14 @@ class DiagramOffline(Diagram):
         self.values = values
         self.transition_lines = transition_lines
         self.charge_areas = charge_areas
+
+    def get_random_starting_point(self) -> Tuple[int, int]:
+        """
+        Generate (pseudo) random coordinates for the top left corder of a patch inside the diagram.
+        :return: The (pseudo) random coordinates.
+        """
+        max_x, max_y = self.get_max_patch_coordinates()
+        return randrange(max_x), randrange(max_y)
 
     def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
         """
@@ -188,6 +197,14 @@ class DiagramOffline(Diagram):
         plot_diagram(self.x_axes, self.y_axes, self.values, self.file_basename + label_extra, 'nearest',
                      self.x_axes[1] - self.x_axes[0], transition_lines=self.transition_lines,
                      charge_regions=self.charge_areas, focus_area=focus_area, show_offset=False, scale_bar=True)
+
+    def get_max_patch_coordinates(self) -> Tuple[int, int]:
+        """
+        Get the maximum coordinates of a patch in this diagram.
+
+        :return: The maximum coordinates as (x, y)
+        """
+        return len(self.x_axes) - settings.patch_size_x - 1, len(self.y_axes) - settings.patch_size_y - 1
 
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'

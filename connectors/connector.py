@@ -1,5 +1,6 @@
 from classes.data_structures import ExperimentalMeasurement
 from datasets.diagram_online import DiagramOnline
+from utils.logger import logger
 from utils.settings import settings
 
 
@@ -36,14 +37,17 @@ class Connector:
         :return: The connector.
         """
 
-        # Fake connector for testing
-        if settings.use_mock:
+        # Chose the corrector in function of the settings
+        if settings.connector_name == 'mock':
+            logger.warning('Using the mock connector, every measurement will output random values.')
             from connectors.mock import Mock
             return Mock()
 
-        # Chose the corrector in function of the dataset
-        if settings.research_group.startswith('eva_dupont_ferrier'):
+        if settings.manual_mode:
+            logger.warning('Manual mode is activated. The online tuning task will not be able to run automatically.')
+
+        if settings.connector_name == 'py_hegel':
             from connectors.py_hegel import PyHegel
             return PyHegel()
-        else:
-            raise ValueError(f'Connector not implemented for the dataset "{settings.research_group}".')
+
+        raise NotImplementedError(f'Connector not implemented: "{settings.connector_name}".')

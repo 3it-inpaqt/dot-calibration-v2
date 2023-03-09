@@ -1,5 +1,4 @@
 from multiprocessing import Pool
-from random import randrange
 from typing import List, Optional, Tuple
 
 import torch
@@ -7,6 +6,8 @@ import torch
 from classes.classifier import Classifier
 from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
 from datasets.diagram import Diagram
+from datasets.diagram_offline import DiagramOffline
+from datasets.diagram_online import DiagramOnline
 from plots.data import plot_diagram, plot_diagram_step_animation
 from runs.run_line_task import get_cuda_device
 from utils.misc import get_nb_loader_workers
@@ -92,7 +93,7 @@ class AutotuningProcedure:
         # They could be changed to fit inside the diagram if necessary
         self._enforce_boundary_policy()
 
-        # Fetch ground truth from labels
+        # Fetch ground truth from labels if available (all set to None if Online diagram)
         ground_truth, soft_truth_larger, soft_truth_smaller = self.get_ground_truths(self.x, self.y)
 
         result: Tuple[bool, float]
@@ -298,8 +299,9 @@ class AutotuningProcedure:
         if self.boundary_policy in [BoundaryPolicy.SOFT_VOID, BoundaryPolicy.SOFT_RANDOM]:
             return False
 
+        max_x, _ = self.diagram.get_max_patch_coordinates()
         if self.boundary_policy is BoundaryPolicy.HARD:
-            return self.x >= len(self.diagram.x_axes) - self.patch_size[0] - 1
+            return self.x >= max_x
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
@@ -312,8 +314,9 @@ class AutotuningProcedure:
         if self.boundary_policy in [BoundaryPolicy.SOFT_VOID, BoundaryPolicy.SOFT_RANDOM]:
             return False
 
+        _, max_y = self.diagram.get_max_patch_coordinates()
         if self.boundary_policy is BoundaryPolicy.HARD:
-            return self.y >= len(self.diagram.y_axes) - self.patch_size[1] - 1
+            return self.y >= max_y
 
         raise ValueError(f'Unknown policy {self.boundary_policy}')
 
@@ -391,9 +394,7 @@ class AutotuningProcedure:
             return True
 
         if force or self.boundary_policy is BoundaryPolicy.HARD:
-            patch_size_x, patch_size_y = self.patch_size
-            max_x = len(self.diagram.x_axes) - patch_size_x - 1
-            max_y = len(self.diagram.y_axes) - patch_size_y - 1
+            max_x, max_y = self.diagram.get_max_patch_coordinates()
 
             match_policy = True
             if self.x < 0:
@@ -411,17 +412,7 @@ class AutotuningProcedure:
 
             return match_policy
 
-        raise ValueError(f'Unknown policy {self.boundary_policy}')
-
-    def get_random_coordinates_in_diagram(self) -> Tuple[int, int]:
-        """
-        Generate (pseudo) random coordinates for the top left corder of a patch inside the diagram.
-        :return: The (pseudo) random coordinates.
-        """
-        patch_size_x, patch_size_y = self.patch_size
-        max_x = len(self.diagram.x_axes) - patch_size_x - 1
-        max_y = len(self.diagram.y_axes) - patch_size_y - 1
-        return randrange(max_x), randrange(max_y)
+        raise ValueError(f'Unknown or invalid policy "{self.boundary_policy}" for diagram "{self.diagram}"')
 
     def get_nb_steps(self) -> int:
         """
@@ -439,27 +430,32 @@ class AutotuningProcedure:
         """ Return the number of successful line detection """
         return len([e for e in self._scan_history if e.model_classification == e.ground_truth])
 
-    def get_ground_truths(self, x, y) -> (bool, bool, bool):
+    def get_ground_truths(self, x, y) -> (Optional[bool], Optional[bool], Optional[bool]):
         """
         Get the ground truths of a specific position on the current diagram according to the labels.
         Come in 3 flavors: the real ground truth and 2 the "near" ground truths for detect soft errors.
+        If the current diagram is online return None for all ground truths instead.
 
         :param x: The x coordinate of the position to check.
         :param y: The y coordinate of the position to check.
         :return: The ground truth, the ground truth with a larger active area (smaller offset), the ground truth with a
-         smaller active area (larger offset).
+         smaller active area (larger offset). Or None for all ground truths instead if the current diagram is online.
         """
-        # Fetch ground truth from labels
-        ground_truth = self.diagram.is_line_in_patch((x, y), self.patch_size, self.label_offsets)
+        if isinstance(self.diagram, DiagramOffline):
+            # Fetch ground truth from labels
+            ground_truth = self.diagram.is_line_in_patch((x, y), self.patch_size, self.label_offsets)
 
-        # Also fetch soft truth to detect error of type "almost good" when the line is near to the active area
-        # +2 and -2 pixel to the offset, with limit to 0 and patch size - 2.
-        soft_offsets_smaller = tuple(max(off - 2, 0) for off in self.label_offsets)
-        soft_offsets_larger = tuple(min(off + 2, s - 2) for s, off in zip(self.patch_size, self.label_offsets))
-        soft_truth_larger = self.diagram.is_line_in_patch((x, y), self.patch_size, soft_offsets_smaller)
-        soft_truth_smaller = self.diagram.is_line_in_patch((x, y), self.patch_size, soft_offsets_larger)
+            # Also fetch soft truth to detect error of type "almost good" when the line is near to the active area
+            # +2 and -2 pixel to the offset, with limit to 0 and patch size - 2.
+            soft_offsets_smaller = tuple(max(off - 2, 0) for off in self.label_offsets)
+            soft_offsets_larger = tuple(min(off + 2, s - 2) for s, off in zip(self.patch_size, self.label_offsets))
+            soft_truth_larger = self.diagram.is_line_in_patch((x, y), self.patch_size, soft_offsets_smaller)
+            soft_truth_smaller = self.diagram.is_line_in_patch((x, y), self.patch_size, soft_offsets_larger)
 
-        return ground_truth, soft_truth_larger, soft_truth_smaller
+            return ground_truth, soft_truth_larger, soft_truth_smaller
+
+        # No information about the ground truth
+        return None, None, None
 
     def nb_pending(self) -> int:
         """ Return the number of patch inference pending. """
@@ -533,8 +529,11 @@ class AutotuningProcedure:
         :param start_coord: The starting coordinates (top right of the patch square). If None, random coordinates are
         set inside the diagram.
         """
+        if isinstance(diagram, DiagramOnline) and self.boundary_policy is not BoundaryPolicy.HARD:
+            raise RuntimeError('Cannot use online diagram with soft boundary policy.')
+
         self.diagram = diagram
-        self.x, self.y = self.get_random_coordinates_in_diagram() if start_coord is None else start_coord
+        self.x, self.y = self.diagram.get_random_starting_point() if start_coord is None else start_coord
 
     def _tune(self) -> Tuple[int, int]:
         """

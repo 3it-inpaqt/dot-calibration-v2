@@ -24,7 +24,7 @@ class Jump(AutotuningProcedure):
     def _tune(self) -> Tuple[int, int]:
         # Search first line, if none found return a random position
         if not self._search_first_line():
-            return self.get_random_coordinates_in_diagram()
+            return self.diagram.get_random_starting_point()
 
         # Optional step: detect line slope
         if settings.auto_detect_slope:
@@ -277,7 +277,7 @@ class Jump(AutotuningProcedure):
 
         # If no line found, desperately guess random position as last resort
         if self._leftmost_line_coord is None:
-            self.x, self.y = self.get_random_coordinates_in_diagram()
+            self.x, self.y = self.diagram.get_random_starting_point()
             return
 
         x, y = self._leftmost_line_coord
