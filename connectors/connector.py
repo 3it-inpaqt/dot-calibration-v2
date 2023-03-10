@@ -1,5 +1,6 @@
 from classes.data_structures import ExperimentalMeasurement
 from datasets.diagram_online import DiagramOnline
+from plots.data import plot_diagram
 from utils.logger import logger
 from utils.settings import settings
 from utils.timer import SectionTimer
@@ -32,7 +33,7 @@ class Connector:
             result = self._measurement(start_volt_x, end_volt_x, step_volt_x, start_volt_y, end_volt_y, step_volt_y)
 
         if settings.is_named_run() and settings.save_measurements:
-            pass  # TODO plot the measurement
+            plot_diagram(result.x_axes, result.y_axes, result.data, 'measurement_')
 
         return result
 

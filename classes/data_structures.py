@@ -4,7 +4,7 @@ Bunch of dataclasses and enumerations to structure information and simplify code
 from collections import deque
 from dataclasses import dataclass
 from enum import Enum, unique
-from typing import Callable, Deque, Iterable, List, Optional, Tuple
+from typing import Callable, Deque, Iterable, List, Optional, Sequence, Tuple
 
 import torch
 
@@ -184,6 +184,6 @@ class SearchLineSlope:
 @dataclass(frozen=True)
 class ExperimentalMeasurement:
     """ Data class to keep track of experimental measurement at each step. """
-    start_volt_x: float
-    start_volt_y: float
-    values: torch.Tensor
+    x_axes: Sequence[float]
+    y_axes: Sequence[float]
+    data: torch.Tensor

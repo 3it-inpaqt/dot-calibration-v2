@@ -1,9 +1,10 @@
 import re
 from tempfile import NamedTemporaryFile
-from typing import IO
+from typing import IO, Sequence
 
 import numpy as np
 import torch
+from torch import Tensor
 
 from classes.data_structures import ExperimentalMeasurement
 from connectors.connector import Connector
@@ -51,9 +52,9 @@ class PyHegel(Connector):
 
             # Parse the output file
             with open(out_file.name) as f:
-                values = PyHegel._load_raw_points(f)
+                x, y, values = PyHegel._load_raw_points(f)
 
-        return ExperimentalMeasurement(start_volt_x, start_volt_y, values)
+        return ExperimentalMeasurement(x, y, values)
 
     def _send_command(self, command: str) -> None:
         """
@@ -70,7 +71,7 @@ class PyHegel(Connector):
             raise NotImplementedError  # TODO implement sending commands to pyHegel
 
     @staticmethod
-    def _load_raw_points(file: IO) -> torch.Tensor:
+    def _load_raw_points(file: IO) -> tuple[Sequence[float], Sequence[float], Tensor]:
         """
         Load the raw files with all columns.
 
@@ -88,9 +89,11 @@ class PyHegel(Connector):
             if line[0] != '#':
                 raise RuntimeError('Amplification value not found in file comments')
 
-        print(f'Amplification: {amplification}')
         data = np.loadtxt(file)
-        x = data[:, 0]
-        y = data[:, 2]
-        z = data[:, 4] / amplification
-        return x, y, z
+        x = np.unique(data[:, 0])
+        y = np.unique(data[:, 2])
+        values = torch.tensor(data[:, 4] / amplification, dtype=torch.float)
+
+        logger.debug(f'Raw measurement data parsed, {len(x)} lines with amplification: {amplification}')
+
+        return x, y, values
