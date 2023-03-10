@@ -9,7 +9,7 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def start_online_tuning_task() -> None:
+def start_tuning_online_task() -> None:
     """
     Start an online tuning task. The model has to be pretrained.
     """
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     # Catch and log every exception during runtime
     # noinspection PyBroadException
     try:
-        start_online_tuning_task()
+        start_tuning_online_task()
 
     except KeyboardInterrupt:
         logger.error('Online tuning task interrupted by the user.', exc_info=True)

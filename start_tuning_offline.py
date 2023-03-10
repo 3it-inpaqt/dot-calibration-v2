@@ -10,7 +10,7 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def start_tuning_task() -> None:
+def start_tuning_offline_task() -> None:
     """
     Start the charge tuning task.
     Train a model if necessary, then test it.
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     # Catch and log every exception during runtime
     # noinspection PyBroadException
     try:
-        start_tuning_task()
+        start_tuning_offline_task()
 
     except KeyboardInterrupt:
         logger.error('Tuning task interrupted by the user.', exc_info=True)

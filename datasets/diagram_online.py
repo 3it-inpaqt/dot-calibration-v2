@@ -74,7 +74,7 @@ class DiagramOnline(Diagram):
         y_range_volt = Diagram._coord_to_volt(y_range_coord, min_y_v, max_y_v, settings.pixel_size)
 
         # Request a new measurement to the connector
-        logger.info(f'Requesting {prod(patch_size)} measurements to the {self._connector} connector: '
+        logger.info(f'Requesting measurement ({prod(patch_size):,d} points) to the {self._connector} connector: '
                     f'X|{x_range_coord[0]}-{x_range_coord[1]}| ({x_range_volt[0]:.3f}V {x_range_volt[1]:.3f}V), '
                     f'Y|{y_range_coord[0]}-{y_range_coord[1]}| ({y_range_volt[0]:.3f}V {y_range_volt[1]:.3f}V)')
 

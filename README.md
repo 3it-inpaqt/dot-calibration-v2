@@ -48,7 +48,7 @@ python3 start_lines.py
 ### Charge state autotuning task
 
 ```shell
-python3 start_tuning.py
+python3 start_tuning_offline.py
 ```
 
 ## Files structure

@@ -4,7 +4,7 @@ import numpy as np
 
 from runs.run_line_task import clean_up, fix_seed
 from start_lines import start_line_task
-from start_tuning import start_tuning_task
+from start_tuning_offline import start_tuning_offline_task
 from utils.logger import logger
 from utils.output import ExistingRunName, init_out_directory, set_plot_style
 from utils.planner import AdaptativePlanner, BasePlanner, CombinatorPlanner, ParallelPlanner, Planner, SequencePlanner
@@ -93,7 +93,7 @@ def run_tasks_planner(runs_planner: BasePlanner,
         try:
             # Start the run
             if tuning_task:
-                start_tuning_task()
+                start_tuning_offline_task()
             else:
                 start_line_task()
 
