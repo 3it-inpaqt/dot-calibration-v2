@@ -468,6 +468,10 @@ class AutotuningProcedure:
         :param final_coord: The final coordinate of the tuning procedure
         :param success_tuning: Result of the tuning (True = Success)
         """
+
+        if (not settings.save_images or not settings.is_named_run()) and not settings.show_images:
+            return  # No need to plot anything
+
         d = self.diagram
         values = d.values.cpu()
         name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
