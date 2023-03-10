@@ -311,7 +311,7 @@ class Settings:
 
     # If True, the commands will be printed in the log output instead to be sent to the experimental measurement tools.
     # This is useful safely debug the connector.
-    manual_mode: bool = False
+    manual_mode: bool = True
 
     # The maximum and minimum voltage that we can request from the connector.
     # This need to be explicitly defined before to tune an online diagram with a connector.

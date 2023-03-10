@@ -74,20 +74,20 @@ class DiagramOnline(Diagram):
 
         # Request a new measurement to the connector
         logger.debug(f'Requesting measurement ({prod(patch_size):,d} points) to the {self._connector} connector: '
-                     f'|X|{x_range_coord[0]}→{x_range_coord[1]}| ({x_range_volt[0]:.3f}V→{x_range_volt[1]:.3f}V) '
-                     f'|Y|{y_range_coord[0]}→{y_range_coord[1]}| ({y_range_volt[0]:.3f}V→{y_range_volt[1]:.3f}V)')
+                     f'|X|{x_range_coord[0]}->{x_range_coord[1]}| ({x_range_volt[0]:.3f}V->{x_range_volt[1]:.3f}V) '
+                     f'|Y|{y_range_coord[0]}->{y_range_coord[1]}| ({y_range_volt[0]:.3f}V->{y_range_volt[1]:.3f}V)')
         measurement = self._connector.measurement(x_range_volt[0], x_range_volt[1], settings.pixel_size,
                                                   y_range_volt[0], y_range_volt[1], settings.pixel_size)
 
         # Validate the measurement size
-        if tuple(measurement.values.shape) != patch_size:
-            raise ValueError(f'Unexpected measurement size: {tuple(measurement.values.shape)} while {patch_size} has'
+        if tuple(measurement.data.shape) != patch_size:
+            raise ValueError(f'Unexpected measurement size: {tuple(measurement.data.shape)} while {patch_size} has'
                              f' been requested.')
 
         # Save the measurement in the history to keep track of it
         self._measurement_history.append(measurement)
-        # Send the values matrix to the appropriate device (cpu or gpu)
-        measurement.values.to(self._torch_device)
+        # Send the data matrix to the appropriate device (cpu or gpu)
+        measurement.data.to(self._torch_device)
 
         # Normalize the measurement with the normalization range used during the training, then return it.
         return self.normalize(measurement.values)

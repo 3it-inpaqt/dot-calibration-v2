@@ -183,6 +183,9 @@ def get_save_path(directory: Path, file_name: str, extension: str, allow_overwri
 
     return save_path
 
+def get_new_measurement_out_file(file_name: str) -> Path:
+    return get_save_path(Path(OUT_DIR, settings.run_name, 'measures'), file_name, 'txt', True)
+
 
 def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: bool = False) \
         -> Optional[Union[Path, io.BytesIO]]:
