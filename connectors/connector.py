@@ -2,6 +2,7 @@ from classes.data_structures import ExperimentalMeasurement
 from datasets.diagram_online import DiagramOnline
 from utils.logger import logger
 from utils.settings import settings
+from utils.timer import SectionTimer
 
 
 class Connector:
@@ -15,6 +16,40 @@ class Connector:
 
     def measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float,
                     start_volt_y: float, end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
+        """
+        Request an experimental measurement to the connector.
+
+        :param start_volt_x: The beginning of the voltage sweep in the x-axis.
+        :param end_volt_x: The end of the voltage sweep in the x-axis.
+        :param step_volt_x: The step size of the voltage sweep in the x-axis.
+        :param start_volt_y: The beginning of the voltage sweep in the y-axis.
+        :param end_volt_y: The end of the voltage sweep in the y-axis.
+        :param step_volt_y: The step size of the voltage sweep in the y-axis.
+        :return: The experimental measurement.
+        """
+
+        with SectionTimer('measurement', 'debug'):
+            result = self._measurement(start_volt_x, end_volt_x, step_volt_x, start_volt_y, end_volt_y, step_volt_y)
+
+        if settings.is_named_run() and settings.save_measurements:
+            pass  # TODO plot the measurement
+
+        return result
+
+    def _measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float,
+                     start_volt_y: float, end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
+        """
+        Request an experimental measurement to the connector.
+        The internal logic of the measurement has to be overwritten by each connector implementation.
+
+        :param start_volt_x: The beginning of the voltage sweep in the x-axis.
+        :param end_volt_x: The end of the voltage sweep in the x-axis.
+        :param step_volt_x: The step size of the voltage sweep in the x-axis.
+        :param start_volt_y: The beginning of the voltage sweep in the y-axis.
+        :param end_volt_y: The end of the voltage sweep in the y-axis.
+        :param step_volt_y: The step size of the voltage sweep in the y-axis.
+        :return: The experimental measurement.
+        """
         raise NotImplementedError
 
     def get_diagram(self) -> "DiagramOnline":

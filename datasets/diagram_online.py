@@ -9,7 +9,6 @@ from datasets.diagram import Diagram
 from utils.logger import logger
 from utils.output import load_normalization
 from utils.settings import settings
-from utils.timer import SectionTimer
 
 
 class DiagramOnline(Diagram):
@@ -77,10 +76,8 @@ class DiagramOnline(Diagram):
         logger.debug(f'Requesting measurement ({prod(patch_size):,d} points) to the {self._connector} connector: '
                      f'|X|{x_range_coord[0]}→{x_range_coord[1]}| ({x_range_volt[0]:.3f}V→{x_range_volt[1]:.3f}V) '
                      f'|Y|{y_range_coord[0]}→{y_range_coord[1]}| ({y_range_volt[0]:.3f}V→{y_range_volt[1]:.3f}V)')
-
-        with SectionTimer('experimental measurement', 'debug'):
-            measurement = self._connector.measurement(x_range_volt[0], x_range_volt[1], settings.pixel_size,
-                                                      y_range_volt[0], y_range_volt[1], settings.pixel_size)
+        measurement = self._connector.measurement(x_range_volt[0], x_range_volt[1], settings.pixel_size,
+                                                  y_range_volt[0], y_range_volt[1], settings.pixel_size)
 
         # Validate the measurement size
         if tuple(measurement.values.shape) != patch_size:

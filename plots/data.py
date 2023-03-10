@@ -65,24 +65,24 @@ def plot_diagram(x_i, y_i,
     :param charge_regions: The charge region annotations to draw on top of the image.
     :param transition_lines: The transition line annotation to draw on top of the image.
     :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
-    :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0).
+    :param show_offset: If True, draw the offset rectangle (ignored if both offset x and y are 0).
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
-    :param scan_errors: If True and scan_history defined, plot the step error on the diagram. If False plot the class
+    :param scan_errors: If True, and scan_history defined, plot the step error on the diagram. If False plot the class
      inference instead. Soft errors are shown only if uncertainty is disabled.
     :param confidence_thresholds: The model confidence threshold values for each class. Only necessary if scan_errors
      and not history_uncertainty enabled (yes, this is very specific).
-    :param fog_of_war: If True and scan_history defined, hide the section of the diagram that was never scanned.
+    :param fog_of_war: If True, and scan_history defined, hide the section of the diagram that was never scanned.
     :param fading_history: The number of scan inference the plot, the latest first. The number set will be plotted with
      solid color and the same number will fad progressively. Not compatible with history_uncertainty.
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
      the uncertainty.
-    :param scale_bar: If True and pixels provided, plot the pixel color scale at the right of the diagram. If the data
+    :param scale_bar: If True, and pixels provided, plot the pixel color scale at the right of the diagram. If the data
      are normalized this scale unit doesn't make sense.
     :param final_coord: The final tuning coordinates.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
     :param text_stats: If True, add statistics information in the plot.
-    :param show_title: If True plot figure title. If omitted, show title only if not latex format.
-    :param show_crosses: If True plot the crosses representing the start and the end of the tuning if possible.
+    :param show_title: If True, plot figure title. If omitted, show title only if not latex format.
+    :param show_crosses: If True, plot the crosses representing the start and the end of the tuning if possible.
     :param vmin: Minimal pixel value for color scaling. Set to keep consistant color between plots. If None, the scaling
      is computed by matplotlib based on pixel currently visible.
      :param vmax: Maximal pixel value for color scaling. Set to keep consistant color between plots. If None, the

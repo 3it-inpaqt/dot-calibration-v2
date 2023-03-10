@@ -10,8 +10,8 @@ class Mock(Connector):
         self._is_connected = True
         logger.info('Mock connector ready.')
 
-    def measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float, start_volt_y: float,
-                    end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
+    def _measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float, start_volt_y: float,
+                     end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
         """
         Make a fake measurement. Output random values.
 
