@@ -275,9 +275,10 @@ class DiagramOffline(Diagram):
                 charge_area = None
 
                 if load_lines:
+                    # TODO adapt for double dot (load line_2 too)
                     # Load transition line annotations
                     transition_lines = DiagramOffline._load_lines_annotations(
-                        filter(lambda l: l['title'] == 'line', current_labels['objects']), x, y,
+                        filter(lambda l: l['title'] == 'line_1', current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
 
@@ -287,9 +288,10 @@ class DiagramOffline(Diagram):
                         continue
 
                 if load_areas:
+                    # TODO adapt for double dot (load N_electron_2 too)
                     # Load charge area annotations
                     charge_area = DiagramOffline._load_charge_annotations(
-                        filter(lambda l: l['title'] != 'line', current_labels['objects']), x, y,
+                        filter(lambda l: l['title'] != 'line_1', current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
 
