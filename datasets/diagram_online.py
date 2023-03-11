@@ -90,7 +90,7 @@ class DiagramOnline(Diagram):
         measurement.data.to(self._torch_device)
 
         # Normalize the measurement with the normalization range used during the training, then return it.
-        return self.normalize(measurement.values)
+        return self.normalize(measurement.data)
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         pass

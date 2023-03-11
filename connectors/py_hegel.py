@@ -1,5 +1,4 @@
 import re
-from tempfile import NamedTemporaryFile
 from typing import IO, Sequence, Tuple
 
 import numpy as np
@@ -9,8 +8,8 @@ from torch import Tensor
 from classes.data_structures import ExperimentalMeasurement
 from connectors.connector import Connector
 from utils.logger import logger
+from utils.output import get_new_measurement_out_file_path
 from utils.settings import settings
-from utils.output import get_new_measurement_out_file
 
 
 class PyHegel(Connector):
@@ -40,10 +39,9 @@ class PyHegel(Connector):
         nb_measurements_x = round((end_volt_x - start_volt_x) / step_volt_x)
         nb_measurements_y = round((end_volt_y - start_volt_y) / step_volt_y)
 
-        out_file = get_new_measurement_out_file('py_hegel')
-        # TODO create folder
+        out_file = get_new_measurement_out_file_path(f'py_hegel_{start_volt_x:.4f}V_{start_volt_y:.4f}V')
 
-        # Send the command to pyHegel
+        # Send the command to pyHegel, block the process until it's done.
         self._send_command(
             f"sweep_multi([B2,D1], "
             f"[{start_volt_x:.4f}, {start_volt_y:.4f}], "

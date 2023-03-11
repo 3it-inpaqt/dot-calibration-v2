@@ -3,6 +3,7 @@ import re
 from collections.abc import Iterable
 from itertools import chain
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any, List, Optional, Tuple, Union
 
 import imageio
@@ -96,6 +97,13 @@ def remove_out_directory(directory: Path) -> None:
     for p_file in directory.glob('*.pt'):
         p_file.unlink()
 
+    # Remove measurements
+    measurements_dir = directory / 'measurements'
+    if measurements_dir.is_dir():
+        for measurement_file in measurements_dir.glob('*.txt'):
+            measurement_file.unlink()
+        measurements_dir.rmdir()
+
     # Remove tmp directory
     directory.rmdir()
 
@@ -183,8 +191,25 @@ def get_save_path(directory: Path, file_name: str, extension: str, allow_overwri
 
     return save_path
 
-def get_new_measurement_out_file(file_name: str) -> Path:
-    return get_save_path(Path(OUT_DIR, settings.run_name, 'measures'), file_name, 'txt', True)
+
+def get_new_measurement_out_file_path(file_name: str) -> Path:
+    """
+    Get the path to a new output measurement file for online diagrams.
+
+    :param file_name: The file name without extension.
+    :return: The path to the file (file not created).
+    """
+    # Generate a path to a new file in the run directory if possible.
+    if settings.is_named_run() and settings.save_measurements:
+        measurement_dir = Path(OUT_DIR, settings.run_name, 'measurements')
+        measurement_dir.mkdir(parents=True)
+        return get_save_path(measurement_dir, file_name, 'txt', True)
+    # Otherwise, return a temporary file
+    else:
+        # To make sure this file name is secure we create the file and close it, then we return the path to it.
+        file = NamedTemporaryFile(prefix=file_name + '_', suffix='txt', delete=False)
+        file.close()
+        return Path(file.name)
 
 
 def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: bool = False) \
