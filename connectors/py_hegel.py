@@ -1,6 +1,6 @@
 import re
 from tempfile import NamedTemporaryFile
-from typing import IO, Sequence
+from typing import IO, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -10,6 +10,7 @@ from classes.data_structures import ExperimentalMeasurement
 from connectors.connector import Connector
 from utils.logger import logger
 from utils.settings import settings
+from utils.output import get_new_measurement_out_file
 
 
 class PyHegel(Connector):
@@ -24,7 +25,7 @@ class PyHegel(Connector):
             f"dmm = instruments.agilent_multi_34410A('{read_instrument_id}')",
             # Y-axes instrument
             f"bilt1 = instruments.iTest_be2102('{axes_y_instrument_id}', 1)",
-            f"D1 = instruments.RampDevice(bilt1, 0.1)"
+            f"D1 = instruments.RampDevice(bilt1, 0.1)",
             # X-axes instrument
             f"bilt3 = instruments.iTest_be2102('{axes_x_instrument_id}', 3)",
             f"B2 = instruments.RampDevice(bilt3, 0.1)"
@@ -36,23 +37,27 @@ class PyHegel(Connector):
     def _measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float, start_volt_y: float,
                      end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
 
-        # Create a temporary file to store the output of the measurement
-        with NamedTemporaryFile(mode='r', delete=True, prefix='py_hegel_out_', suffix='.txt') as out_file:
-            # Send the command to pyHegel
-            self._send_command(
-                f"sweep_multi([B2,D1], "
-                f"[{start_volt_x:.4f}, {start_volt_y:.4f}], "
-                f"[{end_volt_x:.4f}, {end_volt_y:.4f}], "
-                f"[{step_volt_x}, {step_volt_y}], "
-                f"out=dmm.readval, "
-                f"filename='{out_file.name}', "
-                f"graph=None, "
-                f"updown=[False,'alternate'])"
-            )
+        nb_measurements_x = round((end_volt_x - start_volt_x) / step_volt_x)
+        nb_measurements_y = round((end_volt_y - start_volt_y) / step_volt_y)
 
-            # Parse the output file
-            with open(out_file.name) as f:
-                x, y, values = PyHegel._load_raw_points(f)
+        out_file = get_new_measurement_out_file('py_hegel')
+        # TODO create folder
+
+        # Send the command to pyHegel
+        self._send_command(
+            f"sweep_multi([B2,D1], "
+            f"[{start_volt_x:.4f}, {start_volt_y:.4f}], "
+            f"[{end_volt_x:.4f}, {end_volt_y:.4f}], "
+            f"[{nb_measurements_x}, {nb_measurements_y}], "
+            f"out=dmm.readval, "
+            f"filename=r'{out_file.resolve()}', "
+            f"graph=None, "
+            f"updown=[False,'alternate'])"
+        )
+
+        # Parse the output file
+        with open(out_file) as f:
+            x, y, values = PyHegel._load_raw_points(f)
 
         return ExperimentalMeasurement(x, y, values)
 
@@ -71,7 +76,7 @@ class PyHegel(Connector):
             raise NotImplementedError  # TODO implement sending commands to pyHegel
 
     @staticmethod
-    def _load_raw_points(file: IO) -> tuple[Sequence[float], Sequence[float], Tensor]:
+    def _load_raw_points(file: IO) -> Tuple[Sequence[float], Sequence[float], Tensor]:
         """
         Load the raw files with all columns.
 
