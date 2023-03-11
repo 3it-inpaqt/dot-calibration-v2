@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.data_structures import Direction, SearchLineSlope
+from utils.logger import logger
 from utils.settings import settings
 
 
@@ -417,5 +418,14 @@ class Jump(AutotuningProcedure):
         elif settings.research_group == 'louis_gaudreau':
             self._line_slope = 45  # Prior assumption about line direction
             self._line_distances = [3]  # Prior assumption about distance between lines
+
+        elif settings.research_group == 'eva_dupont_ferrier_gen3':
+            self._line_slope = 10  # Prior assumption about line direction
+            self._line_distances = [3]  # Prior assumption about distance between lines
+
+        else:
+            logger.warning(f'No prior knowledge defined for the dataset: {settings.research_group}')
+            self._line_slope = 45  # Prior assumption about line direction
+            self._line_distances = [4]  # Prior assumption about distance between lines
 
         self._leftmost_line_coord = None
