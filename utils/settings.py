@@ -309,9 +309,11 @@ class Settings:
     # Possible values: 'mock', 'py_hegel'
     connector_name: str = 'mock'
 
-    # If True, the commands will be printed in the log output instead to be sent to the experimental measurement tools.
-    # This is useful safely debug the connector.
-    manual_mode: bool = True
+    # The level of automation of the connector.
+    # 'auto': the connector will automatically send the command to the measurement device.
+    # 'semi-auto': the connector will show the command to the user before to send it to the measurement device.
+    # 'manual': the connector will only show the command to the user, and will not send it to the measurement device.
+    interaction_mode: str = 'semi-auto'
 
     # The maximum and minimum voltage that we can request from the connector.
     # This need to be explicitly defined before to tune an online diagram with a connector.
@@ -418,6 +420,8 @@ class Settings:
                ((isnan(self.start_range_voltage_y[0]) and isnan(self.start_range_voltage_y[1])) or
                 (self.start_range_voltage_y[0] <= self.start_range_voltage_y[1])), \
             'The first value of the range voltage should be lower or equal to the second'
+        assert self.interaction_mode.lower().strip() in ('auto', 'semi-auto', 'manual'), \
+            f'Invalid connector interaction mode: {self.interaction_mode}'
 
     def __init__(self):
         """

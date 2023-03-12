@@ -29,6 +29,10 @@ class Connector:
         :return: The experimental measurement.
         """
 
+        # Check the voltage (RuntimeError raised if not valid)
+        self._is_valid_voltage(start_volt_x, start_volt_y)
+        self._is_valid_voltage(end_volt_x, end_volt_y)
+
         with SectionTimer('measurement', 'debug'):
             result = self._measurement(start_volt_x, end_volt_x, step_volt_x, start_volt_y, end_volt_y, step_volt_y)
 
@@ -67,6 +71,23 @@ class Connector:
         return self.__class__.__name__
 
     @staticmethod
+    def _is_valid_voltage(x_v: float, y_v: float) -> bool:
+        """
+        Check if the given voltage is valid for the experimental setup according to the settings.
+
+        :param x_v: The voltage in the x-axis.
+        :param y_v: The voltage in the y-axis.
+        :return: True if the voltage is valid, a RuntimeError is raised otherwise.
+        """
+        if x_v < settings.min_voltage or x_v > settings.max_voltage:
+            raise RuntimeError(f'Voltage {x_v:.4f}V is not valid in the x-axis. '
+                               f'Not in range [{settings.min_voltage:.4f}V, {settings.max_voltage:.4f}V].')
+        if y_v < settings.min_voltage or y_v > settings.max_voltage:
+            raise RuntimeError(f'Voltage {x_v:.4f}V is not valid in the x-axis. '
+                               f'Not in range [{settings.min_voltage:.4f}V, {settings.max_voltage:.4f}V].')
+        return True
+
+    @staticmethod
     def get_connector() -> "Connector":
         """
         Factory method to get a connector according to the settings.
@@ -79,8 +100,13 @@ class Connector:
             from connectors.mock import Mock
             return Mock()
 
-        if settings.manual_mode:
+        mode = settings.interaction_mode.lower().strip()
+        if mode == 'manual':
             logger.warning('Manual mode is activated. The online tuning task will not be able to run automatically.')
+        elif mode == 'semi-auto':
+            logger.info('Semi-auto mode is activated. The user will need to validate every command.')
+        elif mode == 'auto':
+            logger.warning('Auto mode is activated. The online tuning task will run automatically.')
 
         if settings.connector_name == 'py_hegel':
             from connectors.py_hegel import PyHegel

@@ -66,8 +66,9 @@ class PyHegel(Connector):
         """
 
         logger.debug(f'Sending command to pyHegel: "{command}"')
+        mode = settings.interaction_mode.lower().strip()
 
-        if settings.manual_mode:
+        if mode == 'manual':
             # Wait for the user to run the command himself.
             input(f'[MANUAL]: {command}')
         else:
