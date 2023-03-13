@@ -11,6 +11,9 @@ from utils.logger import logger
 from utils.output import get_new_measurement_out_file_path
 from utils.settings import settings
 
+# Global variable to show warning only once
+_AMPLIFICATION_WARNING = False
+
 
 class PyHegel(Connector):
     def _setup_connection(self) -> None:
@@ -93,18 +96,27 @@ class PyHegel(Connector):
             if line[0] != '#':
                 # End of comments, no amplification found
                 amplification = 1
+                global _AMPLIFICATION_WARNING
+                if not _AMPLIFICATION_WARNING:
+                    logger.warning(f'No amplification found in the measurement file, assuming {amplification} '
+                                   f'for all future measurements.')
+                    _AMPLIFICATION_WARNING = True
                 break
 
         # Reset the file pointer because we have iterated the first data line
         file.seek(0)
 
-        data = np.loadtxt(file)
+        data = np.loadtxt(file, usecols=(0, 1, 2))
+
+        # Sort by x, then by y because the y sweeping can alternate between top and down.
+        data = data[np.lexsort((data[:, 1], data[:, 0]))]
+
         x = np.unique(data[:, 0])
         y = np.unique(data[:, 1])
         values = torch.tensor(data[:, 2] / amplification, dtype=torch.float)
 
         # Reshape the values to match the x and y axes
-        values = values.reshape(len(y), len(x))
+        values = values.reshape(len(x), len(y))
 
         logger.debug(f'Raw measurement data parsed, {len(x)}×{len(y)} points with amplification: {amplification}')
 
