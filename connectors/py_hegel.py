@@ -22,12 +22,12 @@ class PyHegel(Connector):
         commands = [
             # Reading instrument
             f"dmm = instruments.agilent_multi_34410A('{read_instrument_id}')",
-            # Y-axes instrument
-            f"bilt1 = instruments.iTest_be2102('{axes_y_instrument_id}', 1)",
-            f"D1 = instruments.RampDevice(bilt1, 0.1)",
             # X-axes instrument
             f"bilt3 = instruments.iTest_be2102('{axes_x_instrument_id}', 3)",
-            f"B2 = instruments.RampDevice(bilt3, 0.1)"
+            f"G1 = instruments.RampDevice(bilt3, 0.1)"
+            # Y-axes instrument
+            f"bilt1 = instruments.iTest_be2102('{axes_y_instrument_id}', 1)",
+            f"G2 = instruments.RampDevice(bilt1, 0.1)",
         ]
 
         for command in commands:
@@ -39,11 +39,12 @@ class PyHegel(Connector):
         nb_measurements_x = round((end_volt_x - start_volt_x) / step_volt_x)
         nb_measurements_y = round((end_volt_y - start_volt_y) / step_volt_y)
 
-        out_file = get_new_measurement_out_file_path(f'py_hegel_{start_volt_x:.4f}V_{start_volt_y:.4f}V')
+        out_file = get_new_measurement_out_file_path(f'{self._nb_measurement:03}_'
+                                                     f'{start_volt_x:.4f}V_{start_volt_y:.4f}V')
 
         # Send the command to pyHegel, block the process until it's done.
         self._send_command(
-            f"sweep_multi([B2,D1], "
+            f"sweep_multi([G1,G2], "
             f"[{start_volt_x:.4f}, {start_volt_y:.4f}], "
             f"[{end_volt_x:.4f}, {end_volt_y:.4f}], "
             f"[{nb_measurements_x}, {nb_measurements_y}], "
@@ -85,19 +86,26 @@ class PyHegel(Connector):
 
         amplification = None
         for line in file:
-            line = line.decode("utf-8")
             match = re.match(r'.*:= Ampli(?:fication)?[=:](.+)$', line)
             if match:
                 amplification = int(float(match[1]))  # Parse exponential notation to integer
                 break
             if line[0] != '#':
-                raise RuntimeError('Amplification value not found in file comments')
+                # End of comments, no amplification found
+                amplification = 1
+                break
+
+        # Reset the file pointer because we have iterated the first data line
+        file.seek(0)
 
         data = np.loadtxt(file)
         x = np.unique(data[:, 0])
-        y = np.unique(data[:, 2])
-        values = torch.tensor(data[:, 4] / amplification, dtype=torch.float)
+        y = np.unique(data[:, 1])
+        values = torch.tensor(data[:, 2] / amplification, dtype=torch.float)
 
-        logger.debug(f'Raw measurement data parsed, {len(x)} lines with amplification: {amplification}')
+        # Reshape the values to match the x and y axes
+        values = values.reshape(len(y), len(x))
+
+        logger.debug(f'Raw measurement data parsed, {len(x)}×{len(y)} points with amplification: {amplification}')
 
         return x, y, values

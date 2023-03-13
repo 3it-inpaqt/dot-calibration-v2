@@ -202,7 +202,7 @@ def get_new_measurement_out_file_path(file_name: str) -> Path:
     # Generate a path to a new file in the run directory if possible.
     if settings.is_named_run() and settings.save_measurements:
         measurement_dir = Path(OUT_DIR, settings.run_name, 'measurements')
-        measurement_dir.mkdir(parents=True)
+        measurement_dir.mkdir(parents=True, exist_ok=True)
         return get_save_path(measurement_dir, file_name, 'txt', True)
     # Otherwise, return a temporary file
     else:

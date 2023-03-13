@@ -8,6 +8,7 @@ from utils.timer import SectionTimer
 
 class Connector:
     _is_connected: bool = False
+    _nb_measurement: int = 0
 
     def _setup_connection(self) -> None:
         """
@@ -33,11 +34,14 @@ class Connector:
         self._is_valid_voltage(start_volt_x, start_volt_y)
         self._is_valid_voltage(end_volt_x, end_volt_y)
 
+        self._nb_measurement += 1
+
         with SectionTimer('measurement', 'debug'):
             result = self._measurement(start_volt_x, end_volt_x, step_volt_x, start_volt_y, end_volt_y, step_volt_y)
 
-        if settings.is_named_run() and settings.save_measurements:
-            plot_diagram(result.x_axes, result.y_axes, result.data, 'measurement', 'none', step_volt_x, scale_bar=True)
+        if settings.plot_measurements:
+            plot_diagram(result.x_axes, result.y_axes, result.data, f'measurement_{self._nb_measurement:03}', 'none',
+                         step_volt_x, scale_bar=True)
 
         return result
 

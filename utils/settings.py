@@ -70,8 +70,11 @@ class Settings:
     # If True and the run have a valid name, save matplotlib images in the run directory
     save_images: bool = True
 
-    # If True and the run have a valid name, save the experimental patch measured in the run directory
+    # If True and the run have a valid name, save the experimental patches measured in the run directory
     save_measurements: bool = True
+
+    # If True, plot the measurement. It is then saved or shown depending on the other settings.
+    plot_measurements: bool = True
 
     # If True and the run have a valid name, save animated GIF in the run directory
     save_gif: bool = False
