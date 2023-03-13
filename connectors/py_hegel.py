@@ -1,4 +1,5 @@
 import re
+from subprocess import Popen
 from typing import IO, Sequence, Tuple
 
 import numpy as np
@@ -16,7 +17,13 @@ _AMPLIFICATION_WARNING = False
 
 
 class PyHegel(Connector):
+    _process: Popen = None
+
     def _setup_connection(self) -> None:
+
+        # Create
+        self._process = Popen(["/usr/bin/python3"])
+
         # TODO smarter parameters handling
         read_instrument_id = 'USB0::0x2A8D::0x0101::MY57515472::INSTR'
         axes_y_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
@@ -69,14 +76,28 @@ class PyHegel(Connector):
         :param command: The command to send.
         """
 
-        logger.debug(f'Sending command to pyHegel: "{command}"')
+        if self._process is None:
+            raise RuntimeError('No pyHegel process running. Setup connection should be called first.')
+
         mode = settings.interaction_mode.lower().strip()
 
         if mode == 'manual':
             # Wait for the user to run the command himself.
             input(f'[MANUAL]: {command}')
-        else:
-            raise NotImplementedError  # TODO implement sending commands to pyHegel
+            return
+
+        if mode == 'semi-auto':
+            # Wait for the user to validate the command.
+            validation = input(f'[SEMI-AUTO]: {command}\n[Y/n] ').strip().lower()
+            if validation != 'y' and validation != '':
+                raise RuntimeError(f'Command "{command}" rejected by user.')
+
+        # Here if mode auto, or validated semi-auto
+        if mode == 'auto' or mode == 'semi-auto':
+            logger.debug(f'Sending command to pyHegel: "{command}"')
+
+        # Here if mode is not recognized
+        raise ValueError(f'Interaction mode "{mode}" not supported.')
 
     @staticmethod
     def _load_raw_points(file: IO) -> Tuple[Sequence[float], Sequence[float], Tensor]:
