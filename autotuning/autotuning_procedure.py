@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 
 import torch
 
+from utils.logger import logger
 from classes.classifier import Classifier
 from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
 from datasets.diagram import Diagram
@@ -119,6 +120,8 @@ class AutotuningProcedure:
         step_description = self._step_name + decr
         self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
                                                    soft_truth_larger, soft_truth_smaller, step_description))
+
+        logger.debug(f'Patch {self.get_nb_steps():03} classified as {prediction} with confidence {confidence:.2%}')
 
         return prediction, confidence
 

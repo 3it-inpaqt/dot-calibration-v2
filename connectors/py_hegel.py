@@ -1,9 +1,13 @@
 import re
+import queue
+import time
+import threading
 from subprocess import Popen
 from typing import IO, Sequence, Tuple
 
 import numpy as np
 import torch
+import subprocess as sp
 from torch import Tensor
 
 from classes.data_structures import ExperimentalMeasurement
@@ -17,12 +21,23 @@ _AMPLIFICATION_WARNING = False
 
 
 class PyHegel(Connector):
-    _process: Popen = None
+
+    def __init__(self):
+        self._process: Popen = None
+        self._stdout_queue = queue.SimpleQueue()
+        self._stdout_consumer = None
+
 
     def _setup_connection(self) -> None:
 
-        # Create
-        self._process = Popen(["/usr/bin/python3"])
+        # Start the process
+        self._process = Popen("C:\Anaconda3\python.exe C:\Anaconda3\cwp.py C:\Anaconda3\envs\py2 C:\Anaconda3\envs\py2\Scripts\pyHegel.exe".split(), 
+                              stdin=sp.PIPE, stdout=sp.PIPE, text=False, bufsize=0, startupinfo=sp.STARTUPINFO(dwFlags=sp.CREATE_NEW_CONSOLE))
+        # Create a thread to consume the output of the process
+        self._create_stdout_consumer_thread()
+        # Wait the end of the initialisaton
+        self._wait_end_of_command(10)
+
 
         # TODO smarter parameters handling
         read_instrument_id = 'USB0::0x2A8D::0x0101::MY57515472::INSTR'
@@ -34,7 +49,7 @@ class PyHegel(Connector):
             f"dmm = instruments.agilent_multi_34410A('{read_instrument_id}')",
             # X-axes instrument
             f"bilt3 = instruments.iTest_be2102('{axes_x_instrument_id}', 3)",
-            f"G1 = instruments.RampDevice(bilt3, 0.1)"
+            f"G1 = instruments.RampDevice(bilt3, 0.1)",
             # Y-axes instrument
             f"bilt1 = instruments.iTest_be2102('{axes_y_instrument_id}', 1)",
             f"G2 = instruments.RampDevice(bilt1, 0.1)",
@@ -60,8 +75,10 @@ class PyHegel(Connector):
             f"[{nb_measurements_x}, {nb_measurements_y}], "
             f"out=dmm.readval, "
             f"filename=r'{out_file.resolve()}', "
-            f"graph=None, "
-            f"updown=[False,'alternate'])"
+            f"graph=False, "
+            f"updown=[False,'alternate'])",
+            # Wait the answer for a maximum of 1 sec per point
+            max_wait_time=nb_measurements_x * nb_measurements_y
         )
 
         # Parse the output file
@@ -70,10 +87,11 @@ class PyHegel(Connector):
 
         return ExperimentalMeasurement(x, y, values)
 
-    def _send_command(self, command: str) -> None:
+    def _send_command(self, command: str, max_wait_time: float = 10) -> None:
         """
         Send a command to pyHegel process.
         :param command: The command to send.
+        :param max_wait_time: The maximum duration before to stop waiting the answer and fail.
         """
 
         if self._process is None:
@@ -95,9 +113,30 @@ class PyHegel(Connector):
         # Here if mode auto, or validated semi-auto
         if mode == 'auto' or mode == 'semi-auto':
             logger.debug(f'Sending command to pyHegel: "{command}"')
+            self._process.stdin.write(str.encode(command))
+            self._wait_end_of_command(max_wait_time)
+        else:
+            # Here if mode is not recognized
+            raise ValueError(f'Interaction mode "{mode}" not supported.')
 
-        # Here if mode is not recognized
-        raise ValueError(f'Interaction mode "{mode}" not supported.')
+    def _wait_end_of_command(self, max_wait_time: float, refresh_time: float = 0.1):
+
+        start_time = time.time()
+        while True:
+            out = self._read_process_out()
+
+            # If we find this pattern the command should be done. If we don't find it, keep waiting
+            if re.search('^In \[\d+\]: $', out, re.MULTILINE):
+                return
+
+            # Check for time out
+            if time.time() - start_time > max_wait_time:
+                raise RuntimeError(f'No answer from pyHegel process before the current command timeout: {max_wait_time:.2f}s')
+
+
+            # Wait a bit before to start again
+            time.sleep(refresh_time)
+
 
     @staticmethod
     def _load_raw_points(file: IO) -> Tuple[Sequence[float], Sequence[float], Tensor]:
@@ -116,7 +155,7 @@ class PyHegel(Connector):
                 break
             if line[0] != '#':
                 # End of comments, no amplification found
-                amplification = 1
+                amplification = 1e8
                 global _AMPLIFICATION_WARNING
                 if not _AMPLIFICATION_WARNING:
                     logger.warning(f'No amplification found in the measurement file, assuming {amplification} '
@@ -141,4 +180,52 @@ class PyHegel(Connector):
 
         logger.debug(f'Raw measurement data parsed, {len(x)}×{len(y)} points with amplification: {amplification}')
 
-        return x, y, values
+        return x, y, values.rot90()  # Rotate 90° because the origin is top left and we want it bottom left
+
+
+    def _create_stdout_consumer_thread(self):
+
+        def read_th():
+            while True:
+                # Block here until the process write in the pip
+                out = self._process.stdout.read(1024)
+                # Add the output to the queue
+                self._stdout_queue.put_nowait(out)
+                if out == b"":
+                    break
+
+        self._stdout_consumer = threading.Thread(target=read_th, daemon=True)
+        self._stdout_consumer.start()
+
+
+    def _read_process_out(self) -> str:
+
+        out_strs = []
+        # Read the queue
+        while True:
+            try:
+                out_strs.append(self._stdout_queue.get_nowait().decode('utf8'))
+            except queue.Empty:
+                break
+
+        process_out = ''.join(out_strs)
+
+        if process_out != '':
+            logger.debug('[PY_HEGEL OUT]\n' + process_out)
+
+        return process_out
+
+
+    def close(self):
+        if self._process is not None:
+            self._process.send_signal(sp.signal.CTRL_C_EVENT)
+            self._process.write(b'exit\n')
+
+        if self._stdout_consumer is not None:
+            self._stdout_consumer.join(5)
+            self._read_process_out()
+
+        self._process = None
+        self._stdout_consumer = None
+
+        logger.info("Connector closed")
