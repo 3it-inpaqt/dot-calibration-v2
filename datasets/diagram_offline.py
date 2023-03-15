@@ -264,7 +264,7 @@ class DiagramOffline(Diagram):
                 nb_no_label += 1
                 continue
 
-            with diagram_name.open('r') as diagram_file:
+            with diagram_name.open('rb') as diagram_file:
                 # Load values from CSV file
                 x, y, values = DiagramOffline._load_interpolated_csv(gzip.open(diagram_file))
 

@@ -15,11 +15,11 @@ from utils.settings import settings
 class ChargeRegime(Enum):
     """ Charge regime enumeration """
     UNKNOWN = 'unknown'
-    ELECTRON_0 = '0_electron'
-    ELECTRON_1 = '1_electron'
-    ELECTRON_2 = '2_electrons'
-    ELECTRON_3 = '3_electrons'
-    ELECTRON_4_PLUS = '4_electrons'  # The value is no '4+_electrons' because labelbox remove the '+'
+    ELECTRON_0 = '0_electron_1'
+    ELECTRON_1 = '1_electron_1'
+    ELECTRON_2 = '2_electrons_1'
+    ELECTRON_3 = '3_electrons_1'
+    ELECTRON_4_PLUS = '4_electrons_1'  # The value is no '4+_electrons' because labelbox remove the '+'
 
     def __str__(self) -> str:
         """
