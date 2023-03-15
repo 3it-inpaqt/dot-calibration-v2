@@ -147,4 +147,5 @@ class DiagramOnline(Diagram):
 
         :return: The maximum coordinates as (x, y)
         """
-        return self._voltage_to_coord(settings.max_voltage, settings.max_voltage)
+        x_max, y_max = self._voltage_to_coord(settings.max_voltage, settings.max_voltage)
+        return x_max - settings.patch_size_x, y_max - settings.patch_size_y

@@ -2,6 +2,7 @@ import re
 import queue
 import time
 import threading
+import logging
 from subprocess import Popen
 from typing import IO, Sequence, Tuple
 
@@ -75,6 +76,7 @@ class PyHegel(Connector):
             f"[{nb_measurements_x}, {nb_measurements_y}], "
             f"out=dmm.readval, "
             f"filename=r'{out_file.resolve()}', "
+            f"progress={logger.getEffectiveLevel() <= logging.DEBUG}, "
             f"graph=False, "
             f"updown=[False,'alternate'])",
             # Wait the answer for a maximum of 1 sec per point
