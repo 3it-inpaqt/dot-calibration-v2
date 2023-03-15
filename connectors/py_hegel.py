@@ -113,7 +113,7 @@ class PyHegel(Connector):
         # Here if mode auto, or validated semi-auto
         if mode == 'auto' or mode == 'semi-auto':
             logger.debug(f'Sending command to pyHegel: "{command}"')
-            self._process.stdin.write(str.encode(command))
+            self._process.stdin.write(str.encode(command + "\n"))
             self._wait_end_of_command(max_wait_time)
         else:
             # Here if mode is not recognized
