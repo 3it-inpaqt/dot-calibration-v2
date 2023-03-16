@@ -111,7 +111,7 @@ def plot_diagram(x_i, y_i,
                     mask[y - settings.patch_size_y: y, x:x + settings.patch_size_x] = False
                 pixels = np.ma.masked_array(pixels, mask)
 
-            cmap = matplotlib.cm.copper
+            cmap = matplotlib.cm.RdBu_r
             cmap.set_bad(color=NOT_SCANNED_COLOR)
             plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
             if scale_bar:

@@ -13,7 +13,7 @@ class Jump(AutotuningProcedure):
     _max_steps_search_empty: int = 100  # Nb of step
     _max_line_explore_right: int = 5  # Nb detected lines
     _max_steps_validate_left_line: int = 250  # Nb steps
-    _max_nb_line_leftmost: int = 6
+    _max_nb_line_leftmost: int = 4
     _nb_line_found: int = 0
     # Line angle degree (0 = horizontal | 90 = vertical | 45 = slope -1 | 135 = slope 1)
     _line_slope: float = None
@@ -243,17 +243,17 @@ class Jump(AutotuningProcedure):
                         return
                     self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
                     # Step distance relative to the line distance
-                    direction.move(round(self._default_step_y * line_step_distance * 2))
+                    direction.move(round(self._default_step_y * line_step_distance * 2.5))
                     direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                     direction.is_stuck = direction.check_stuck()
                     if direction.is_stuck:
                         break  # We don't scan if we have reached the border
 
-                    # Skip half line distance left
-                    self._move_left_perpendicular_to_line(ceil(self._default_step_x * line_step_distance / 2))
+                    # Skip 1.25 line distance left
+                    self._move_left_perpendicular_to_line(ceil(self._default_step_x * line_step_distance * 0.5))
 
                     # Go left for 2x the line distance (total 2.5x the line distance)
-                    for i in range(ceil(line_step_distance * 2)):
+                    for i in range(ceil(line_step_distance * 3.5)):
                         nb_steps += 1
                         # If new line found and this is the new leftmost one, start again the checking loop
                         if self._is_confirmed_line() and start_point != self._leftmost_line_coord:
