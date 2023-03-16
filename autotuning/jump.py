@@ -51,6 +51,7 @@ class Jump(AutotuningProcedure):
 
         :return: True if we found a line, False if we reach the step limit without detecting a line.
         """
+        logger.debug('Stage (1) - Search first line')
         self._step_name = '1. Search first line'
 
         # First scan at the start position
@@ -88,6 +89,7 @@ class Jump(AutotuningProcedure):
         """
         Estimate the direction of the current line and update the _line_slope attribut if the measurement looks valid.
         """
+        logger.debug('Stage (2) - Search line slope')
         self._step_name = '2. Search line slope'
 
         start_x, start_y = self.x, self.y
@@ -163,6 +165,7 @@ class Jump(AutotuningProcedure):
         """
         Explore the diagram by scanning patch perpendicular to the estimated lines direction.
         """
+        logger.debug(f'Stage ({3 if settings.auto_detect_slope else 2}) - Search empty')
         self._step_name = f'{3 if settings.auto_detect_slope else 2}. Search 0 e-'
 
         # At the beginning of this function we should be on a line.
@@ -218,6 +221,7 @@ class Jump(AutotuningProcedure):
         Try to find a line left by scanning area at regular interval on the left, where we could find a line.
         If a new line is found that way, do the validation again.
         """
+        logger.debug(f'Stage ({4 if settings.auto_detect_slope else 3}) - Validate left line')
         self._step_name = f'{4 if settings.auto_detect_slope else 3}. Validate leftmost line'
         line_step_distance = self._get_avg_line_step_distance()
 
