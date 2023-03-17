@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from classes.data_structures import ExperimentalMeasurement
@@ -25,4 +26,7 @@ class Mock(Connector):
         """
         size_x = round((end_volt_x - start_volt_x) / step_volt_x)
         size_y = round((end_volt_y - start_volt_y) / step_volt_y)
-        return ExperimentalMeasurement(start_volt_x, start_volt_y, torch.rand((size_x, size_y)))
+        return ExperimentalMeasurement(
+            np.linspace(start_volt_x, end_volt_x, size_x),
+            np.linspace(start_volt_y, end_volt_y, size_y),
+            torch.rand((size_x, size_y)))
