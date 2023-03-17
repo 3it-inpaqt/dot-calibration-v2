@@ -7,6 +7,7 @@ import torch
 
 from classes.data_structures import ChargeRegime, ExperimentalMeasurement
 from datasets.diagram import Diagram
+from plots.data import plot_diagram
 from utils.logger import logger
 from utils.output import load_normalization
 from utils.settings import settings
@@ -90,11 +91,18 @@ class DiagramOnline(Diagram):
         # Send the data matrix to the appropriate device (cpu or gpu)
         measurement.data.to(self._torch_device)
 
+        # Plot the diagram with all current measurements
+        if settings.is_named_run() and (settings.save_images or settings.show_images):
+            self.plot()
+
         # Normalize the measurement with the normalization range used during the training, then return it.
         return self.normalize(measurement.data)
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
-        pass
+        values, x_axis, y_axis = self.get_values()
+        if values is not None:
+            plot_diagram(x_axis, y_axis, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
+                         focus_area=focus_area, allow_overwrite=True)
 
     def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
            copy: bool = False):
@@ -142,20 +150,6 @@ class DiagramOnline(Diagram):
             if last_row is None or end_y > last_row:
                 last_row = end_y
 
-        # Crop the nan values from the image (not measured area)
-        # Solution from: https://stackoverflow.com/a/25831190/2666094
-        # nans = np.isnan(values)
-        # nan_cols = np.all(nans, axis=0)  # True where col is all NAN
-        # nan_rows = np.all(nans, axis=1)  # True where row is all NAN
-        #
-        # # The first index where not NAN
-        # first_col = nan_cols.argmin()
-        # first_row = nan_rows.argmin()
-        #
-        # # The last index where not NAN
-        # last_col = len(nan_cols) - nan_cols[::-1].argmin()
-        # last_row = len(nan_rows) - nan_rows[::-1].argmin()
-
         # Apply margins
         margin = settings.patch_size_x
         first_col = max(0, first_col - margin)
@@ -163,6 +157,7 @@ class DiagramOnline(Diagram):
         last_col = min(last_col + margin, len(x_axis))
         last_row = min(last_row + margin, len(y_axis))
 
+        # TODO crop the data to remove the NaN values
         # return values[first_row:last_row,first_col:last_col], x_axis[first_col:last_col], y_axis[first_row:last_row]
         return values, x_axis, y_axis
 

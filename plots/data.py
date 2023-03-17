@@ -17,7 +17,6 @@ from matplotlib.legend_handler import HandlerBase
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
-from datasets.diagram_online import DiagramOnline
 from utils.misc import get_nb_loader_workers
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
@@ -53,7 +52,8 @@ def plot_diagram(x_i, y_i,
                  show_title: Optional[bool] = None,
                  show_crosses: bool = True,
                  vmin: float = None,
-                 vmax: float = None) -> Optional[Union[Path, io.BytesIO]]:
+                 vmax: float = None,
+                 allow_overwrite: bool = False) -> Optional[Union[Path, io.BytesIO]]:
     """
     Plot the interpolated image. This function is a multi-tool nightmare.
 
@@ -350,7 +350,7 @@ def plot_diagram(x_i, y_i,
     if focus_area:
         plt.axis(focus_area)
 
-    return save_plot(f'diagram_{image_name}', save_in_buffer=save_in_buffer)
+    return save_plot(f'diagram_{image_name}', allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer)
 
 
 def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: List["StepHistoryEntry"],
@@ -366,6 +366,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
 
     if settings.is_named_run() and (settings.save_gif or settings.save_video):
         values, x_axes, y_axes = d.get_values()
+        from datasets.diagram_online import DiagramOnline
         is_online = isinstance(d, DiagramOnline)
         # Compute min / max here because numpy doesn't like to do this on multi thread
         vmin = values.min()
