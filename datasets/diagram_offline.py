@@ -186,6 +186,14 @@ class DiagramOffline(Diagram):
         """
         self.values = self.values.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
 
+    def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
+        """
+        Get the values of the diagram and the corresponding axis.
+
+        :return: The values as a tensor, the list of x-axis values, the list of y-axis values
+        """
+        return self.values.detach().cpu(), self.x_axes, self.y_axes
+
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         """
         Plot the diagram with matplotlib (save and/or show it depending on the settings).

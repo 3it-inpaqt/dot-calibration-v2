@@ -17,6 +17,7 @@ from matplotlib.legend_handler import HandlerBase
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
+from datasets.diagram_online import DiagramOnline
 from utils.misc import get_nb_loader_workers
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
@@ -364,7 +365,8 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
     """
 
     if settings.is_named_run() and (settings.save_gif or settings.save_video):
-        values = d.values.detach().cpu()
+        values, x_axes, y_axes = d.get_values()
+        is_online = isinstance(d, DiagramOnline)
         # Compute min / max here because numpy doesn't like to do this on multi thread
         vmin = values.min()
         vmax = values.max()
@@ -382,7 +384,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             # Generate images in parallel for speed. Use partial to set constants arguments.
             # Main animation frames
             async_result_main = pool.map_async(
-                partial(plot_diagram, d.x_axes, d.y_axes, values, d.file_basename, 'nearest', d.x_axes[1] - d.x_axes[0],
+                partial(plot_diagram, x_axes, y_axes, values, d.file_basename, 'nearest', settings.pixel_size,
                         None, None, None, False, save_in_buffer=True, text_stats=True, show_title=False,
                         fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax),
                 (scan_history[0:i] for i in frame_ids)
@@ -392,45 +394,52 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             async_result_end = [
                 # Show diagram with all inference and fog of war
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
                                        'image_name': d.file_basename, 'interpolation_method': 'nearest',
-                                       'pixel_size': d.x_axes[1] - d.x_axes[0], 'scan_history': scan_history,
+                                       'pixel_size': settings.pixel_size, 'scan_history': scan_history,
                                        'show_offset': False, 'save_in_buffer': True, 'text_stats': True,
                                        'show_title': False, 'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
                 # Show diagram with tuning final coordinate and fog of war
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
                                        'image_name': d.file_basename,
-                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                       'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
                                        'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
                                        'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
-                # Show full diagram with tuning final coordinate
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
-                                       'image_name': d.file_basename,
-                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
-                                       'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False, 'vmin': vmin,
-                                       'vmax': vmax}),
-                # Show full diagram with tuning final coordinate + line labels
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
-                                       'image_name': d.file_basename,
-                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
-                                       'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'transition_lines': d.transition_lines, 'vmin': vmin, 'vmax': vmax}),
-                # Show full diagram with tuning final coordinate + line & regime labels
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
-                                       'image_name': d.file_basename,
-                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
-                                       'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
-                                       'vmin': vmin, 'vmax': vmax}),
+                                       'fog_of_war': True, 'vmin': vmin, 'vmax': vmax})
             ]
+
+            # If online, we don't have label to show
+            if is_online:
+                end_durations = [base_fps * 20, base_fps * 60]
+            else:
+                end_durations = [base_fps * 20, base_fps * 20, base_fps * 20, base_fps * 40, base_fps * 60]
+                async_result_end += [
+                    # Show full diagram with tuning final coordinate
+                    pool.apply_async(plot_diagram,
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
+                                           'image_name': d.file_basename, 'interpolation_method': 'nearest',
+                                           'pixel_size': settings.pixel_size, 'scan_history': scan_history,
+                                           'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
+                                           'text_stats': True, 'show_title': False, 'vmin': vmin, 'vmax': vmax}),
+                    # Show full diagram with tuning final coordinate + line labels
+                    pool.apply_async(plot_diagram,
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
+                                           'image_name': d.file_basename, 'interpolation_method': 'nearest',
+                                           'pixel_size': settings.pixel_size, 'scan_history': scan_history,
+                                           'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
+                                           'text_stats': True, 'show_title': False,
+                                           'transition_lines': d.transition_lines, 'vmin': vmin, 'vmax': vmax}),
+                    # Show full diagram with tuning final coordinate + line & regime labels
+                    pool.apply_async(plot_diagram,
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
+                                           'image_name': d.file_basename, 'interpolation_method': 'nearest',
+                                           'pixel_size': settings.pixel_size, 'scan_history': scan_history,
+                                           'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
+                                           'text_stats': True, 'show_title': False,
+                                           'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
+                                           'vmin': vmin, 'vmax': vmax}),
+                ]
 
             # Wait for the processes to finish and get result
             pool.close()
@@ -438,7 +447,6 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             main_frames = async_result_main.get()
             end_frames = [res.get() for res in async_result_end]
 
-        end_durations = [base_fps * 20, base_fps * 20, base_fps * 20, base_fps * 40, base_fps * 60]
         if settings.save_gif:
             # List of image bytes for the animation
             frames_gif = [main_frames[frame_ids.index(f_id)] for f_id in gif_frames_ids] + end_frames

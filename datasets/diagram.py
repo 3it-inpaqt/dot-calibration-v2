@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 import torch
 
@@ -70,6 +70,14 @@ class Diagram:
         Get the maximum coordinates of a patch in this diagram.
 
         :return: The maximum coordinates as (x, y)
+        """
+        raise NotImplementedError
+
+    def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
+        """
+        Get the values of the diagram and the corresponding axis.
+
+        :return: The values as a tensor, the list of x-axis values, the list of y-axis values
         """
         raise NotImplementedError
 

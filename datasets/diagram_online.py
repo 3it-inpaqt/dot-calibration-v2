@@ -1,7 +1,8 @@
 from math import prod
 from random import randrange
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
+import numpy as np
 import torch
 
 from classes.data_structures import ChargeRegime, ExperimentalMeasurement
@@ -106,6 +107,64 @@ class DiagramOnline(Diagram):
         :param copy: Not used for online diagram.
         """
         self._torch_device = device
+
+    def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
+        """
+        Get all measured values of the diagram and the corresponding axis.
+
+        :return: The values as a tensor, the list of x-axis values, the list of y-axis values
+        """
+        if len(self._measurement_history) == 0:
+            return None, [], []
+
+        space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
+        values = torch.full((space_size, space_size), torch.nan)
+        x_axis = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
+        y_axis = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
+
+        # Fill the spaces with the measurements
+        first_col, last_col, first_row, last_row = None, None, None, None
+        for measurement in self._measurement_history:
+            start_x, end_x = measurement.x_axes[0], measurement.x_axes[-1]
+            start_y, end_y = measurement.y_axes[0], measurement.y_axes[-1]
+            start_x, start_y = self._voltage_to_coord(start_x, start_y)
+            end_x, end_y = self._voltage_to_coord(end_x, end_y)
+
+            values[start_x: end_x, start_y: end_y] = measurement.data
+
+            # Keep track of data border to crop later
+            if first_col is None or start_x < first_col:
+                first_col = start_x
+            if last_col is None or end_x > last_col:
+                last_col = end_x
+            if first_row is None or start_y < first_row:
+                first_row = start_y
+            if last_row is None or end_y > last_row:
+                last_row = end_y
+
+        # Crop the nan values from the image (not measured area)
+        # Solution from: https://stackoverflow.com/a/25831190/2666094
+        # nans = np.isnan(values)
+        # nan_cols = np.all(nans, axis=0)  # True where col is all NAN
+        # nan_rows = np.all(nans, axis=1)  # True where row is all NAN
+        #
+        # # The first index where not NAN
+        # first_col = nan_cols.argmin()
+        # first_row = nan_rows.argmin()
+        #
+        # # The last index where not NAN
+        # last_col = len(nan_cols) - nan_cols[::-1].argmin()
+        # last_row = len(nan_rows) - nan_rows[::-1].argmin()
+
+        # Apply margins
+        margin = settings.patch_size_x
+        first_col = max(0, first_col - margin)
+        first_row = max(0, first_row - margin)
+        last_col = min(last_col + margin, len(x_axis))
+        last_row = min(last_row + margin, len(y_axis))
+
+        # return values[first_row:last_row,first_col:last_col], x_axis[first_col:last_col], y_axis[first_row:last_row]
+        return values, x_axis, y_axis
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """

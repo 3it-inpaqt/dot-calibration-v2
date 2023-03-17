@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple
 
 import torch
 
-from utils.logger import logger
 from classes.classifier import Classifier
 from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
 from datasets.diagram import Diagram
@@ -11,6 +10,7 @@ from datasets.diagram_offline import DiagramOffline
 from datasets.diagram_online import DiagramOnline
 from plots.data import plot_diagram, plot_diagram_step_animation
 from runs.run_line_task import get_cuda_device
+from utils.logger import logger
 from utils.misc import get_nb_loader_workers
 from utils.settings import settings
 
@@ -476,38 +476,44 @@ class AutotuningProcedure:
             return  # No need to plot anything
 
         d = self.diagram
-        values = d.values.cpu()
-        name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
+        values, x_axes, y_axes = d.get_values()
+        is_online = isinstance(d, DiagramOnline)
+        transition_lines = None if is_online else d.transition_lines
+
+        if is_online:
+            name = f'Online tuning steps\n{self}'
+        else:
+            name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
 
         # Parallel plotting for speed.
         with Pool(get_nb_loader_workers()) as pool:
             # diagram + label + step with classification color
             pool.apply_async(plot_diagram,
-                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values, 'image_name': name,
-                                   'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
-                                   'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
+                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': name,
+                                   'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                   'transition_lines': transition_lines, 'scan_history': self._scan_history,
                                    'final_coord': final_coord, 'show_offset': False, 'history_uncertainty': False})
             # label + step with classification color and uncertainty
             pool.apply_async(plot_diagram,
-                             kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
+                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
                                    'image_name': name + ' uncertainty', 'interpolation_method': 'nearest',
-                                   'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
+                                   'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
                                    'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
                                    'history_uncertainty': True})
-            if not settings.autotuning_use_oracle:
+            if not settings.autotuning_use_oracle and not is_online:
                 # step with error and soft error color
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None, 'image_name': name + ' errors',
-                                       'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
-                                       'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'image_name': name + ' errors',
+                                       'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                       'transition_lines': transition_lines, 'scan_history': self._scan_history,
                                        'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
                                        'confidence_thresholds': self.model.confidence_thresholds,
                                        'history_uncertainty': False})
                 # step with error color and uncertainty
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
                                        'image_name': name + ' errors uncertainty', 'interpolation_method': 'nearest',
-                                       'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
+                                       'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
                                        'scan_history': self._scan_history, 'final_coord': final_coord,
                                        'show_offset': False, 'scan_errors': True, 'history_uncertainty': True})
 
