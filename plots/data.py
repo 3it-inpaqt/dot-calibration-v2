@@ -276,10 +276,11 @@ def plot_diagram(x_i, y_i,
         focus_x, focus_y = focus_area if focus_area else 0, 0
 
         # Create a Rectangle patch
-        rect = patches.Rectangle((settings.label_offset_x - 0.5, settings.label_offset_y - 0.5),
-                                 focus_x + settings.patch_size_x - 2 * settings.label_offset_x,
-                                 focus_y + settings.patch_size_y - 2 * settings.label_offset_y,
-                                 linewidth=2, edgecolor='fuchsia', facecolor='none')
+        rect = patches.Rectangle((x_i[settings.label_offset_x] - pixel_size * 0.35,
+                                  y_i[settings.label_offset_y] - pixel_size * 0.35),
+                                 (focus_x + settings.patch_size_x - 2 * settings.label_offset_x) * pixel_size,
+                                 (focus_y + settings.patch_size_y - 2 * settings.label_offset_y) * pixel_size,
+                                 linewidth=1.5, edgecolor='fuchsia', facecolor='none')
 
         # Add the patch to the Axes
         plt.gca().add_patch(rect)
