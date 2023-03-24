@@ -1,14 +1,14 @@
-import re
-import queue
-import time
-import threading
 import logging
+import queue
+import re
+import subprocess as sp
+import threading
+import time
 from subprocess import Popen
-from typing import IO, Sequence, Tuple
+from typing import IO, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
-import subprocess as sp
 from torch import Tensor
 
 from classes.data_structures import ExperimentalMeasurement
@@ -17,16 +17,24 @@ from utils.logger import logger
 from utils.output import get_new_measurement_out_file_path
 from utils.settings import settings
 
-# Global variable to show warning only once
-_AMPLIFICATION_WARNING = False
-
 
 class PyHegel(Connector):
 
-    def __init__(self):
-        self._process: Popen = None
+    def __init__(self, amplification: int = None):
+        """
+        Initialize the PyHegel connector.
+
+        :param amplification: The amplification factor used to convert the measured values to real values in Ampere.
+        """
+        self._process: Optional[Popen] = None
         self._stdout_queue = queue.SimpleQueue()
         self._stdout_consumer = None
+
+        if amplification is None:
+            logger.warning(f'No amplification defined, assuming {amplification} for all measurements.')
+            self._amplification = 1e8
+        else:
+            self._amplification = amplification
 
 
     def _setup_connection(self) -> None:
@@ -36,9 +44,8 @@ class PyHegel(Connector):
                               stdin=sp.PIPE, stdout=sp.PIPE, text=False, bufsize=0, startupinfo=sp.STARTUPINFO(dwFlags=sp.CREATE_NEW_CONSOLE))
         # Create a thread to consume the output of the process
         self._create_stdout_consumer_thread()
-        # Wait the end of the initialisaton
+        # Wait the end of the initialization
         self._wait_end_of_command(10)
-
 
         # TODO smarter parameters handling
         read_instrument_id = 'USB0::0x2A8D::0x0101::MY57515472::INSTR'
@@ -85,7 +92,7 @@ class PyHegel(Connector):
 
         # Parse the output file
         with open(out_file) as f:
-            x, y, values = PyHegel._load_raw_points(f)
+            x, y, values = PyHegel._load_raw_points(f, self._amplification)
 
         return ExperimentalMeasurement(x, y, values)
 
@@ -128,7 +135,7 @@ class PyHegel(Connector):
             out = self._read_process_out()
 
             # If we find this pattern the command should be done. If we don't find it, keep waiting
-            if re.search('^In \[\d+\]: $', out, re.MULTILINE):
+            if re.search('^In \[\d+]: $', out, re.MULTILINE):
                 return
 
             # Check for time out
@@ -139,34 +146,15 @@ class PyHegel(Connector):
             # Wait a bit before to start again
             time.sleep(refresh_time)
 
-
     @staticmethod
-    def _load_raw_points(file: IO) -> Tuple[Sequence[float], Sequence[float], Tensor]:
+    def _load_raw_points(file: IO, amplification: int = 1e8) -> Tuple[Sequence[float], Sequence[float], Tensor]:
         """
         Load the raw files with all columns.
 
         :param file: The diagram file to load.
+        :param amplification: The amplification factor used to convert the measured values to real values in Ampere.
         :return: The columns x, y, z according to the selected ones.
         """
-
-        amplification = None
-        for line in file:
-            match = re.match(r'.*:= Ampli(?:fication)?[=:](.+)$', line)
-            if match:
-                amplification = int(float(match[1]))  # Parse exponential notation to integer
-                break
-            if line[0] != '#':
-                # End of comments, no amplification found
-                amplification = 1e8
-                global _AMPLIFICATION_WARNING
-                if not _AMPLIFICATION_WARNING:
-                    logger.warning(f'No amplification found in the measurement file, assuming {amplification} '
-                                   f'for all future measurements.')
-                    _AMPLIFICATION_WARNING = True
-                break
-
-        # Reset the file pointer because we have iterated the first data line
-        file.seek(0)
 
         data = np.loadtxt(file, usecols=(0, 1, 2))
 
@@ -182,7 +170,7 @@ class PyHegel(Connector):
 
         logger.debug(f'Raw measurement data parsed, {len(x)}×{len(y)} points with amplification: {amplification}')
 
-        return x, y, values.rot90()  # Rotate 90° because the origin is top left and we want it bottom left
+        return x, y, values.rot90()  # Rotate 90° because the origin is top left, and we want it bottom left
 
 
     def _create_stdout_consumer_thread(self):
