@@ -34,7 +34,7 @@ NOT_SCANNED_COLOR = 'lightgrey'
 def plot_diagram(x_i, y_i,
                  pixels: Optional,
                  image_name: str,
-                 interpolation_method: str,
+                 interpolation_method: Optional[str],
                  pixel_size: float,
                  charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: Iterable[LineString] = None,
@@ -61,7 +61,8 @@ def plot_diagram(x_i, y_i,
     :param y_i: The y coordinates of the pixels (post interpolation).
     :param pixels: The list of pixels to plot.
     :param image_name: The name of the image, used for plot title and file name.
-    :param interpolation_method: The pixels' interpolation method, used for plot title.
+    :param interpolation_method: The pixels' interpolation method used to process the pixels,
+        used as information in the title.
     :param pixel_size: The size of pixels, in voltage, used for plot title.
     :param charge_regions: The charge region annotations to draw on top of the image.
     :param transition_lines: The transition line annotation to draw on top of the image.
@@ -69,27 +70,27 @@ def plot_diagram(x_i, y_i,
     :param show_offset: If True, draw the offset rectangle (ignored if both offset x and y are 0).
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
     :param scan_errors: If True, and scan_history defined, plot the step error on the diagram. If False plot the class
-     inference instead. Soft errors are shown only if uncertainty is disabled.
+        inference instead. Soft errors are shown only if uncertainty is disabled.
     :param confidence_thresholds: The model confidence threshold values for each class. Only necessary if scan_errors
      and not history_uncertainty enabled (yes, this is very specific).
     :param fog_of_war: If True, and scan_history defined, hide the section of the diagram that was never scanned.
     :param fading_history: The number of scan inference the plot, the latest first. The number set will be plotted with
-     solid color and the same number will fad progressively. Not compatible with history_uncertainty.
+        solid color and the same number will fad progressively. Not compatible with history_uncertainty.
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
-     the uncertainty.
+        the uncertainty.
     :param scale_bar: If True, and pixels provided, plot the pixel color scale at the right of the diagram. If the data
-     are normalized this scale unit doesn't make sense.
+        are normalized this scale unit doesn't make sense.
     :param final_coord: The final tuning coordinates.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
     :param text_stats: If True, add statistics information in the plot.
     :param show_title: If True, plot figure title. If omitted, show title only if not latex format.
     :param show_crosses: If True, plot the crosses representing the start and the end of the tuning if possible.
     :param vmin: Minimal pixel value for color scaling. Set to keep consistant color between plots. If None, the scaling
-     is computed by matplotlib based on pixel currently visible.
-     :param vmax: Maximal pixel value for color scaling. Set to keep consistant color between plots. If None, the
-      scaling is computed by matplotlib based on pixel currently visible.
+        is computed by matplotlib based on pixel currently visible.
+    :param vmax: Maximal pixel value for color scaling. Set to keep consistant color between plots. If None, the
+        scaling is computed by matplotlib based on pixel currently visible.
     :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
-     instead of the path.
+        instead of the path.
     """
 
     legend = False
@@ -328,7 +329,8 @@ def plot_diagram(x_i, y_i,
                  fontfamily='monospace', transform=plt.gca().transAxes)
 
     if show_title:
-        plt.title(f'{image_name}\ninterpolated ({interpolation_method}) - pixel size {round(pixel_size, 10) * 1_000}mV')
+        interpolation_str = f'interpolated ({interpolation_method}) - ' if interpolation_method is not None else ''
+        plt.title(f'{image_name}\n{interpolation_str}pixel size {round(pixel_size, 10) * 1_000}mV')
 
     plt.xlabel('G1 (V)')
     plt.xticks(rotation=30)
