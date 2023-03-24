@@ -119,7 +119,8 @@ class Settings:
     # Should be available in the dataset folder.
     pixel_size: float = 0.001
 
-    # The name of the research group who provide the data (currently: 'louis_gaudreau' or 'michel_pioro_ladriere').
+    # The name of the research group who provide the data.
+    # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier'
     # Should be available in the dataset folder.
     research_group: str = 'michel_pioro_ladriere'
 
@@ -361,6 +362,8 @@ class Settings:
             f"Invalid file log level '{self.logger_file_level}'"
 
         # Dataset
+        assert self.research_group in ['louis_gaudreau', 'michel_pioro_ladriere', 'eva_dupont_ferrier'], \
+            f'Unknown dataset research group: "{self.research_group}"'
         assert self.patch_size_x > 0, 'Patch size should be higher than 0'
         assert self.patch_size_y > 0, 'Patch size should be higher than 0'
         assert self.patch_overlap_x >= 0, 'Patch overlapping should be 0 or more'

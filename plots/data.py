@@ -116,7 +116,8 @@ def plot_diagram(x_i, y_i,
             cmap.set_bad(color=NOT_SCANNED_COLOR)
             plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
             if scale_bar:
-                if settings.research_group == 'michel_pioro_ladriere':
+                if settings.research_group == 'michel_pioro_ladriere' or \
+                        settings.research_group == 'eva_dupont_ferrier':
                     measuring = r'$\mathregular{I_{SET}}$'
                 elif settings.research_group == 'louis_gaudreau':
                     measuring = r'$\mathregular{I_{QPC}}$'

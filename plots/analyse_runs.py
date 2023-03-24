@@ -17,9 +17,9 @@ from utils.settings import settings
 LATEX_FORMAT = False
 
 if LATEX_FORMAT:
-    DATASET_NAMES = {'michel_pioro_ladriere': 'Si-QD', 'louis_gaudreau': 'GaAs-QD'}
+    DATASET_NAMES = {'michel_pioro_ladriere': 'Si-QD', 'louis_gaudreau': 'GaAs-QD', 'eva_dupont_ferrier': 'TODO'}
 else:
-    DATASET_NAMES = {'michel_pioro_ladriere': 'Michel', 'louis_gaudreau': 'Louis'}
+    DATASET_NAMES = {'michel_pioro_ladriere': 'Michel', 'louis_gaudreau': 'Louis', 'eva_dupont_ferrier': 'Eva'}
 
 PALETTE_MODELS = {'random': 'lightgrey',
                   'FF': 'tab:green',

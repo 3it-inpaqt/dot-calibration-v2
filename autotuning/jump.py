@@ -419,7 +419,7 @@ class Jump(AutotuningProcedure):
             self._line_slope = 45  # Prior assumption about line direction
             self._line_distances = [3]  # Prior assumption about distance between lines
 
-        elif settings.research_group == 'eva_dupont_ferrier_gen3':
+        elif settings.research_group == 'eva_dupont_ferrier':
             self._line_slope = 10  # Prior assumption about line direction
             self._line_distances = [3]  # Prior assumption about distance between lines
 
