@@ -7,9 +7,18 @@ from utils.logger import logger
 
 
 class Mock(Connector):
+    """
+    Fake connector for testing purposes.
+    Will generate random values for the measurement.
+    """
+
     def _setup_connection(self) -> None:
         self._is_connected = True
         logger.info('Mock connector ready.')
+
+    def _close_connection(self) -> None:
+        self._is_connected = False
+        logger.info('Mock connector closed.')
 
     def _measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float, start_volt_y: float,
                      end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:

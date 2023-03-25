@@ -13,7 +13,6 @@ def start_tuning_online_task() -> None:
     """
     Start an online tuning task. The model has to be pretrained.
     """
-
     check_settings()
 
     # Instantiate the model according to the settings
@@ -24,8 +23,8 @@ def start_tuning_online_task() -> None:
 
     # Get the connector to measure online data from experimental setup.
     # Then instantiate an online diagram with this connector.
-    with SectionTimer('setup connection'):
-        diagram = Connector.get_connector().get_diagram()
+    with SectionTimer('setup connection'), Connector.get_connector() as connector:
+        diagram = connector.get_diagram()
 
     # Run the autotuning task with one online diagram
     run_autotuning(model, [diagram])

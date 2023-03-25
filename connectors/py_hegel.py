@@ -1,9 +1,9 @@
 import logging
-import queue
 import re
 import subprocess as sp
 import threading
 import time
+from queue import Empty, SimpleQueue
 from subprocess import Popen
 from typing import IO, Optional, Sequence, Tuple
 
@@ -27,27 +27,31 @@ class PyHegel(Connector):
         :param amplification: The amplification factor used to convert the measured values to real values in Ampere.
         """
         self._process: Optional[Popen] = None
-        self._stdout_queue = queue.SimpleQueue()
+        self._stdout_queue = SimpleQueue()
         self._stdout_consumer = None
 
-        if amplification is None:
-            logger.warning(f'No amplification defined, assuming {amplification} for all measurements.')
+        if amplification is None or amplification <= 0:
             self._amplification = 1e8
+            logger.warning(f'No amplification defined, assuming {self._amplification} for all measurements.')
         else:
             self._amplification = amplification
-
 
     def _setup_connection(self) -> None:
 
         # Start the process
-        self._process = Popen("C:\Anaconda3\python.exe C:\Anaconda3\cwp.py C:\Anaconda3\envs\py2 C:\Anaconda3\envs\py2\Scripts\pyHegel.exe".split(), 
-                              stdin=sp.PIPE, stdout=sp.PIPE, text=False, bufsize=0, startupinfo=sp.STARTUPINFO(dwFlags=sp.CREATE_NEW_CONSOLE))
+        self._process = Popen([
+            'C:\Anaconda3\python.exe',
+            'C:\Anaconda3\cwp.py',
+            'C:\Anaconda3\envs\py2',
+            'C:\Anaconda3\envs\py2\Scripts\pyHegel.exe'
+        ],
+            stdin=sp.PIPE, stdout=sp.PIPE, text=False, bufsize=0,
+            startupinfo=sp.STARTUPINFO(dwFlags=sp.CREATE_NEW_CONSOLE))
         # Create a thread to consume the output of the process
         self._create_stdout_consumer_thread()
         # Wait the end of the initialization
         self._wait_end_of_command(10)
 
-        # TODO smarter parameters handling
         read_instrument_id = 'USB0::0x2A8D::0x0101::MY57515472::INSTR'
         axes_y_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
         axes_x_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
@@ -65,6 +69,24 @@ class PyHegel(Connector):
 
         for command in commands:
             self._send_command(command)
+
+        logger.info('PyHegel connector ready.')
+
+    def _close_connection(self):
+        if self._process is not None:
+            self._process.send_signal(sp.signal.CTRL_C_EVENT)
+            self._process.stdin.write(str.encode("exit\n"))
+
+        if self._stdout_consumer is not None:
+            self._stdout_consumer.join(5)
+            self._read_process_out()
+
+        self._process = None
+        self._stdout_consumer = None
+        self._stdout_queue = SimpleQueue()
+        self._is_connected = False
+
+        logger.info('PyHegel connector closed.')
 
     def _measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float, start_volt_y: float,
                      end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
@@ -140,8 +162,8 @@ class PyHegel(Connector):
 
             # Check for time out
             if time.time() - start_time > max_wait_time:
-                raise RuntimeError(f'No answer from pyHegel process before the current command timeout: {max_wait_time:.2f}s')
-
+                raise RuntimeError(f'No answer from pyHegel process before the current command timeout: '
+                                   f'{max_wait_time:.2f}s')
 
             # Wait a bit before to start again
             time.sleep(refresh_time)
@@ -172,7 +194,6 @@ class PyHegel(Connector):
 
         return x, y, values.rot90()  # Rotate 90° because the origin is top left, and we want it bottom left
 
-
     def _create_stdout_consumer_thread(self):
 
         def read_th():
@@ -187,7 +208,6 @@ class PyHegel(Connector):
         self._stdout_consumer = threading.Thread(target=read_th, daemon=True)
         self._stdout_consumer.start()
 
-
     def _read_process_out(self) -> str:
 
         out_strs = []
@@ -195,27 +215,12 @@ class PyHegel(Connector):
         while True:
             try:
                 out_strs.append(self._stdout_queue.get_nowait().decode('utf8'))
-            except queue.Empty:
+            except Empty:
                 break
 
         process_out = ''.join(out_strs)
 
         if process_out != '':
-            logger.debug('[PY_HEGEL OUT]\n' + process_out)
+            logger.debug('[PY_HEGEL OUT]\n' + process_out.strip())
 
         return process_out
-
-
-    def close(self):
-        if self._process is not None:
-            self._process.send_signal(sp.signal.CTRL_C_EVENT)
-            self._process.write(b'exit\n')
-
-        if self._stdout_consumer is not None:
-            self._stdout_consumer.join(5)
-            self._read_process_out()
-
-        self._process = None
-        self._stdout_consumer = None
-
-        logger.info("Connector closed")

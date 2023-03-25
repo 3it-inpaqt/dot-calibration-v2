@@ -16,6 +16,12 @@ class Connector:
         """
         raise NotImplementedError
 
+    def _close_connection(self) -> None:
+        """
+        Close the connection to the experimental setup.
+        """
+        raise NotImplementedError
+
     def measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float,
                     start_volt_y: float, end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
         """
@@ -63,13 +69,20 @@ class Connector:
 
     def get_diagram(self) -> "DiagramOnline":
         """
-        Connect to the experimental setup if not already done and return an online diagram linked to this connector.
-
-        :return: An online diagram linked to this connector
+        :return: An online diagram linked to this connector.
         """
         if not self._is_connected:
-            self._setup_connection()
+            raise RuntimeError('The connector should be connected before to get an online diagram.')
         return DiagramOnline('online_diagram', self)
+
+    def __enter__(self):
+        """ Method called when entering the context manager. """
+        self._setup_connection()
+        return self
+
+    def __exit__(self, *args):
+        """ Method called when quitting the context manager. """
+        self._close_connection()
 
     def __str__(self):
         return self.__class__.__name__
