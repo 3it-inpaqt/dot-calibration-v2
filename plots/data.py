@@ -114,7 +114,8 @@ def plot_diagram(x_i, y_i,
 
             cmap = matplotlib.cm.copper
             cmap.set_bad(color=NOT_SCANNED_COLOR)
-            plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
+            plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax,
+                       origin='lower')
             if scale_bar:
                 if settings.research_group == 'michel_pioro_ladriere':
                     measuring = r'$\mathregular{I_{SET}}$'
