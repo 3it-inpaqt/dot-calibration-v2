@@ -1,10 +1,10 @@
 import argparse
 import re
 from dataclasses import asdict, dataclass
-from math import isnan
 from typing import Sequence, Union
 
 import configargparse
+from math import isnan
 from numpy.distutils.misc_util import is_sequence
 
 from utils.logger import logger
@@ -153,6 +153,12 @@ class Settings:
     # The percentage of gaussian noise to add in the test set.
     # Used to test uncertainty.
     test_noise: float = 0.0
+
+    # Number of dot in the stability diagram
+    dot_number: int = 1
+
+    # List of the diagram that have to be excluded
+    black_list: Sequence = ()
 
     # ==================================================================================================================
     # ===================================================== Model ======================================================
@@ -374,6 +380,7 @@ class Settings:
                                                                          '"test diagram" should be set'
         assert self.test_ratio + self.validation_ratio < 1, 'test_ratio + validation_ratio should be less than 1 to' \
                                                             ' have training data'
+        assert self.dot_number > 0, 'Number of dot in the diagram should be superior than 0'
 
         # Networks
         assert isinstance(self.model_type, str) and self.model_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN'], \

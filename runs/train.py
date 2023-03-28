@@ -1,8 +1,8 @@
-from math import ceil
 from typing import List, Optional
 
 import numpy as np
 import torch
+from math import ceil
 from torch.utils.data import DataLoader, Dataset
 from torchsampler import ImbalancedDatasetSampler
 
@@ -38,9 +38,15 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
 
     sampler = None
     if settings.balance_class_sampling:
-        sampler = ImbalancedDatasetSampler(train_dataset,
-                                           # Convert boolean to int
-                                           callback_get_label=lambda dataset: list(map(int, dataset.get_labels())))
+        if settings.dot_number > 1:
+            sampler = ImbalancedDatasetSampler(train_dataset,
+                                               # Convert boolean to int
+                                               callback_get_label=lambda dataset: [map(int, label) for label in
+                                                                                   dataset.get_labels()])
+        else:
+            sampler = ImbalancedDatasetSampler(train_dataset,
+                                               # Convert boolean to int
+                                               callback_get_label=lambda dataset: list(map(int, dataset.get_labels())))
 
     # Use the pyTorch data loader
     train_loader = DataLoader(train_dataset, batch_size=settings.batch_size,

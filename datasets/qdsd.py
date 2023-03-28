@@ -2,6 +2,7 @@ from pathlib import Path
 from random import shuffle
 from typing import Callable, Iterable, List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 
@@ -18,11 +19,18 @@ class QDSDLines(Dataset):
     Quantum Dots Stability Diagrams (QDSD) dataset.
     Transition line classification task.
     """
-
-    classes = [
-        'no line',  # False (0)
-        'line'  # True (1)
-    ]
+    classes = []
+    for nb in range(settings.dot_number + 2):
+        if nb == 0:
+            classes.append('no line')  # First class, all parameters in the label is False
+        elif settings.dot_number == 1:
+            classes.append('line 1')  # Last class, all parameters in the label is True
+            break
+        elif nb != 2 + settings.dot_number - 1:
+            classes.append(f'line {nb}')  # Class of the line {nb}, column {nb} is True
+        else:
+            classes.append(f'crosspoint')  # Last class for the case of dot_number is superior at 1
+            # All parameters in the label is True
 
     def __init__(self, patches: List[Tuple], role: str, transform: Optional[List[Callable]] = None):
         """
@@ -125,7 +133,6 @@ class QDSDLines(Dataset):
     def build_split_datasets(pixel_size,
                              research_group,
                              test_ratio_or_names: Union[float, List[str]],
-                             single_dot: bool = True,
                              validation_ratio: float = 0,
                              patch_size: Tuple[int, int] = (10, 10),
                              overlap: Tuple[int, int] = (0, 0),
@@ -137,7 +144,6 @@ class QDSDLines(Dataset):
 
         :param pixel_size: The dataset pixel size to load
         :param research_group: The dataset research group to load
-        :param single_dot: The dataset number of quantum dot to load
         :param test_ratio_or_names: The ratio of patches reserved for test data or the list of diagram names to include
          in test data.
         :param validation_ratio: The ratio of patches reserved for validation data (ignored if 0)
@@ -148,6 +154,12 @@ class QDSDLines(Dataset):
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
 
+        if settings.dot_number == 2:
+            single_dot = False
+        elif settings.dot_number == 1:
+            single_dot = True
+        else:
+            single_dot = False
         use_test_ratio = isinstance(test_ratio_or_names, float)
         test_patches = []
         patches = []

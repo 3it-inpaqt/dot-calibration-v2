@@ -15,11 +15,20 @@ from utils.settings import settings
 class ChargeRegime(Enum):
     """ Charge regime enumeration """
     UNKNOWN = 'unknown'
-    ELECTRON_0 = '0_electron_1'
-    ELECTRON_1 = '1_electron_1'
-    ELECTRON_2 = '2_electrons_1'
-    ELECTRON_3 = '3_electrons_1'
-    ELECTRON_4_PLUS = '4_electrons_1'  # The value is no '4+_electrons' because labelbox remove the '+'
+    # First quantum dot #
+    ELECTRON_0_1 = '0_electron_1'
+    ELECTRON_1_1 = '1_electron_1'
+    ELECTRON_2_1 = '2_electrons_1'
+    ELECTRON_3_1 = '3_electrons_1'
+    ELECTRON_4_PLUS_1 = '4_electrons_1'  # The value is no '4+_electrons' because labelbox remove the '+'
+    # Second quantum dot #
+    ELECTRON_0_2 = '0_electron_2'
+    ELECTRON_1_2 = '1_electron_2'
+    ELECTRON_2_2 = '2_electrons_2'
+    ELECTRON_3_2 = '3_electrons_2'
+    ELECTRON_4_PLUS_2 = '4_electrons_2'  # The value is no '4+_electrons' because labelbox remove the '+'
+
+    # TODO add Ndots class
 
     def __str__(self) -> str:
         """
@@ -27,8 +36,16 @@ class ChargeRegime(Enum):
 
         :return: Short string name.
         """
-        short_map = {ChargeRegime.UNKNOWN: 'unk.', ChargeRegime.ELECTRON_0: '0', ChargeRegime.ELECTRON_1: '1',
-                     ChargeRegime.ELECTRON_2: '2', ChargeRegime.ELECTRON_3: '3', ChargeRegime.ELECTRON_4_PLUS: '4+'}
+        short_map = {ChargeRegime.UNKNOWN: 'unk.', ChargeRegime.ELECTRON_0_1: '0_1', ChargeRegime.ELECTRON_1: '1_1',
+                     ChargeRegime.ELECTRON_2_1: '2_1', ChargeRegime.ELECTRON_3_1: '3_1',
+                     ChargeRegime.ELECTRON_4_PLUS_1: '4+_1',
+                     ChargeRegime.ELECTRON_0_2: '0_2', ChargeRegime.ELECTRON_1_2: '1_2',
+                     ChargeRegime.ELECTRON_2_2: '2_2',
+                     ChargeRegime.ELECTRON_3_2: '3_2', ChargeRegime.ELECTRON_4_PLUS_2: '4+_2'
+                     }
+
+        # TODO add Ndots class
+
         return short_map[self]
 
 

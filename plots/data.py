@@ -125,18 +125,21 @@ def plot_diagram(x_i, y_i,
 
     charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
-        for regime, polygon in charge_regions:
-            polygon_x, polygon_y = polygon.exterior.coords.xy
-            plt.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
-            label_x, label_y = list(polygon.centroid.coords)[0]
-            charge_text = plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b', weight='bold',
-                                   bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
+        for charge_regions_number in charge_regions:
+            for regime, polygon in charge_regions_number:
+                polygon_x, polygon_y = polygon.exterior.coords.xy
+                plt.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
+                label_x, label_y = list(polygon.centroid.coords)[0]
+                charge_text = plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b',
+                                       weight='bold',
+                                       bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
 
     if transition_lines is not None:
-        for i, line in enumerate(transition_lines):
-            line_x, line_y = line.coords.xy
-            plt.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
-            legend = True
+        for line_number in transition_lines:
+            for i, line in enumerate(line_number):
+                line_x, line_y = line.coords.xy
+                plt.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
+                legend = True
 
     if scan_history is not None and len(scan_history) > 0:
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import
@@ -458,6 +461,18 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             frame.close()
 
 
+def list_to_str(list_to_transform: List):
+    """
+    Transform a list of bool into a list of str
+
+    :param list_to_transform: The list to transform into a bits
+    :return: the corresponding list of str
+    """
+    nb = ''
+    for n in list_to_transform:
+        nb += str(int(n))
+    return nb
+
 def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool = True) -> None:
     """
     Plot randomly sampled patches grouped by class.
@@ -476,14 +491,33 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
     data_per_class = [list() for _ in range(nb_classes)]
 
     # Random sample
-    for data, label in data_loader:
-        label = int(label)  # Convert boolean to integer
-        if len(data_per_class[label]) < number_per_class:
-            data_per_class[label].append(data)
+    for data, labels in data_loader:
 
-            # Stop of we sampled enough data
-            if all([len(cl) == number_per_class for cl in data_per_class]):
-                break
+        # Not single dot
+        if settings.dot_number != 1:
+            labels_list = [[int(bool) for bool in label] for label in labels][0]  # Convert boolean to integer list
+            labels_str = list_to_str(labels_list)  # Convert list to str
+
+            if labels_str == list_to_str(np.zeros(settings.dot_number)):  # First class: No line
+                if len(data_per_class[0]) < number_per_class:
+                    data_per_class[0].append(data)
+            elif labels_str == list_to_str(np.ones(settings.dot_number)):  # Last class: Crosspoint
+                if len(data_per_class[-1]) < number_per_class:
+                    data_per_class[-1].append(data)
+            else:
+                for label_num in range(settings.dot_number):  # Intermediary class
+                    if labels_list[label_num] == 1:
+                        if len(data_per_class[label_num + 1]) < number_per_class:
+                            data_per_class[label_num + 1].append(data)
+        # Single dot
+        else:
+            labels = int(labels)
+            if len(data_per_class[labels]) < number_per_class:
+                data_per_class[labels].append(data)
+
+        # Stop of we sampled enough data
+        if all([len(cl) == number_per_class for cl in data_per_class]):
+            break
 
     # Create subplots
     fig, axs = plt.subplots(nrows=nb_classes, ncols=number_per_class,

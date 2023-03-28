@@ -1,6 +1,6 @@
-import math
 from typing import Any, List, Tuple
 
+import math
 import torch
 import torch.nn as nn
 from torch import optim
@@ -55,7 +55,7 @@ class CNN(ClassifierNN):
         # eg: input_size, hidden size 1, hidden size 2, ..., nb_classes
         fc_layer_sizes = [math.prod(calc_out_conv_layers(input_shape, self.conv_layers))]
         fc_layer_sizes.extend(settings.hidden_layers_size)
-        fc_layer_sizes.append(1)
+        fc_layer_sizes.append(settings.dot_number)
 
         # Create fully connected linear layers
         self.fc_layers = nn.ModuleList()

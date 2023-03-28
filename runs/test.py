@@ -1,12 +1,13 @@
-from math import ceil
 from typing import List, Optional
 
 import numpy as np
 import torch
+from math import ceil
 from torch.utils.data import DataLoader, Dataset
 
 from classes.classifier_nn import ClassifierNN
 from classes.data_structures import ClassificationMetrics
+from datasets.qdsd import QDSDLines
 from plots.train_results import plot_classification_sample, plot_confidence, plot_reliability_diagram, \
     plot_confusion_matrix
 from utils.logger import logger
@@ -84,6 +85,9 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             # Process each item of the batch to gather stats
             for patch, label, pred, conf in zip(inputs, labels, predicted, confidences):
                 # Count the number of prediction for each label
+                label = QDSDLines.label_mapping(label)
+                pred = QDSDLines.label_mapping(pred)
+
                 nb_labels_predictions[label][pred] += 1
 
                 if network.confidence_thresholds and conf < network.confidence_thresholds[pred]:
