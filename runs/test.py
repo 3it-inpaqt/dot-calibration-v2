@@ -84,10 +84,13 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
 
             # Process each item of the batch to gather stats
             for patch, label, pred, conf in zip(inputs, labels, predicted, confidences):
-                # Count the number of prediction for each label
-                label = QDSDLines.label_mapping(label)
-                pred = QDSDLines.label_mapping(pred)
 
+                # Transfor for array of N bool into corresponding class for each patch
+                if settings.dot_number != 1:
+                    label = QDSDLines.label_mapping(label)
+                    pred = QDSDLines.label_mapping(pred)
+
+                # Count the number of prediction for each label
                 nb_labels_predictions[label][pred] += 1
 
                 if network.confidence_thresholds and conf < network.confidence_thresholds[pred]:
