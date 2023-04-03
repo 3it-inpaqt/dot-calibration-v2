@@ -277,7 +277,7 @@ class Settings:
     # ==================================================================================================================
 
     # List of autotuning procedure names to use.
-    # Have to be in the implemented list: random, shift, shift_u, jump, jump_u, full
+    # Have to be in the implemented list: random, shift, shift_u, jump, jump_u, full, sanity_check
     autotuning_procedures: Sequence = ('jump_u',)
 
     # If True the line classification model cheat by using the diagram labels (no neural network loaded).
@@ -412,7 +412,7 @@ class Settings:
         assert self.checkpoints_after_updates >= 0, 'The number of updates per checkpoints should be >= 0'
 
         # Autotuning
-        procedures_allow = ('random', 'shift', 'shift_u', 'jump', 'jump_u', 'full')
+        procedures_allow = ('random', 'shift', 'shift_u', 'jump', 'jump_u', 'full', 'sanity_check')
         for procedure in self.autotuning_procedures:
             assert isinstance(procedure, str) and procedure.lower() in procedures_allow, \
                 f'Invalid autotuning procedure name {procedure}'

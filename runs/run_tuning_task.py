@@ -9,6 +9,7 @@ from autotuning.full_scan import FullScan
 from autotuning.jump import Jump
 from autotuning.jump_uncertainty import JumpUncertainty
 from autotuning.random_baseline import RandomBaseline
+from autotuning.sanity_check import SanityCheck
 from autotuning.shift import Shift
 from autotuning.shift_uncertainty import ShiftUncertainty
 from classes.classifier import Classifier
@@ -113,6 +114,8 @@ def init_procedure(model: Optional[Classifier], procedure_name: str) -> Autotuni
         return JumpUncertainty(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'full':
         return FullScan(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'sanity_check':
+        return SanityCheck(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     else:
         raise ValueError(f'Unknown autotuning procedure name "{procedure_name}".')
 

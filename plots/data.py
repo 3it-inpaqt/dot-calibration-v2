@@ -359,7 +359,7 @@ def plot_diagram(x_i, y_i,
 
 
 def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: List["StepHistoryEntry"],
-                                final_coord: Tuple[int, int]) -> None:
+                                final_coord: Tuple[int, int], show_crosses: bool = True) -> None:
     """
     Plot an animation of the tuning procedure.
 
@@ -367,6 +367,8 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
     :param image_name: The name of the image, used for plot title and file name
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass)
     :param final_coord: The final tuning coordinates
+    :param show_crosses: If True, show the starting and ending crosses on the diagram during the step by step animation.
+        They are shown anyway during the final steps.
     """
 
     if settings.is_named_run() and (settings.save_gif or settings.save_video):
@@ -392,7 +394,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             async_result_main = pool.map_async(
                 partial(plot_diagram, x_axes, y_axes, values, d.file_basename, 'nearest', settings.pixel_size,
                         None, None, None, False, save_in_buffer=True, text_stats=True, show_title=False,
-                        fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax),
+                        fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax, show_crosses=show_crosses),
                 (scan_history[0:i] for i in frame_ids)
             )
 

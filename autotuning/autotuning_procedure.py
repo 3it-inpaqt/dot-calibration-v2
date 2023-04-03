@@ -479,6 +479,7 @@ class AutotuningProcedure:
         values, x_axes, y_axes = d.get_values()
         is_online = isinstance(d, DiagramOnline)
         transition_lines = None if is_online else d.transition_lines
+        interpolation_method = None if is_online else 'nearest'
 
         if is_online:
             name = f'Online tuning steps\n{self}'
@@ -490,13 +491,13 @@ class AutotuningProcedure:
             # diagram + label + step with classification color
             pool.apply_async(plot_diagram,
                              kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': name,
-                                   'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                   'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
                                    'transition_lines': transition_lines, 'scan_history': self._scan_history,
                                    'final_coord': final_coord, 'show_offset': False, 'history_uncertainty': False})
             # label + step with classification color and uncertainty
             pool.apply_async(plot_diagram,
                              kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                   'image_name': name + ' uncertainty', 'interpolation_method': 'nearest',
+                                   'image_name': name + ' uncertainty', 'interpolation_method': interpolation_method,
                                    'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
                                    'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
                                    'history_uncertainty': True})
@@ -504,7 +505,7 @@ class AutotuningProcedure:
                 # step with error and soft error color
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'image_name': name + ' errors',
-                                       'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                       'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
                                        'transition_lines': transition_lines, 'scan_history': self._scan_history,
                                        'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
                                        'confidence_thresholds': self.model.confidence_thresholds,
@@ -512,10 +513,11 @@ class AutotuningProcedure:
                 # step with error color and uncertainty
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                       'image_name': name + ' errors uncertainty', 'interpolation_method': 'nearest',
-                                       'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
-                                       'scan_history': self._scan_history, 'final_coord': final_coord,
-                                       'show_offset': False, 'scan_errors': True, 'history_uncertainty': True})
+                                       'image_name': name + ' errors uncertainty',
+                                       'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
+                                       'transition_lines': transition_lines, 'scan_history': self._scan_history,
+                                       'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
+                                       'history_uncertainty': True})
 
             # Wait for the processes to finish
             pool.close()
