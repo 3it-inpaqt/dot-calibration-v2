@@ -89,6 +89,7 @@ def plot_diagram(x_i, y_i,
         is computed by matplotlib based on pixel currently visible.
     :param vmax: Maximal pixel value for color scaling. Set to keep consistant color between plots. If None, the
         scaling is computed by matplotlib based on pixel currently visible.
+    :param allow_overwrite: If True, allow to overwrite existing plot.
     :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
         instead of the path.
     """
@@ -115,8 +116,7 @@ def plot_diagram(x_i, y_i,
 
             cmap = matplotlib.cm.copper
             cmap.set_bad(color=NOT_SCANNED_COLOR)
-            plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax,
-                       origin='lower')
+            plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
             if scale_bar:
                 if settings.research_group == 'michel_pioro_ladriere' or \
                         settings.research_group == 'eva_dupont_ferrier':
