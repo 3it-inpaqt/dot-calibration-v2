@@ -421,6 +421,7 @@ class Jump(AutotuningProcedure):
     def reset_procedure(self):
         super().reset_procedure()
 
+        # TODO move in settings
         if settings.research_group == 'michel_pioro_ladriere':
             self._line_slope = 75  # Prior assumption about line direction
             self._line_distances = [5]  # Prior assumption about distance between lines
