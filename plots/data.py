@@ -55,7 +55,7 @@ def plot_diagram(x_i, y_i,
                  vmax: float = None,
                  allow_overwrite: bool = False) -> Optional[Union[Path, io.BytesIO]]:
     """
-    Plot the interpolated image. This function is a multi-tool nightmare.
+    Plot the diagram or a part of it. This is a multi-function matplotlib nightmare.
 
     :param x_i: The x coordinates of the pixels (post interpolation).
     :param y_i: The y coordinates of the pixels (post interpolation).

@@ -72,8 +72,61 @@ class ClassificationMetrics(ClassMetrics):
         return self.classes[i]
 
     def __repr__(self):
-        return f'nb: {self.nb} | accuracy:  {self.accuracy} | precision: {self.precision:.2%} |' \
-               f' recall: {self.recall:.2%} | f1: {self.f1:.2%}\n' + '\n\t- '.join([cls.__repr__() for cls in self])
+        return f'nb: {self.nb} | accuracy:  {self.accuracy} | precision: {self.precision:.2%} |' + \
+            f' recall: {self.recall:.2%} | f1: {self.f1:.2%}\n\t- ' + \
+            ''.join(['\n\t- ' + cls.__repr__() for cls in self])
+
+
+@dataclass(frozen=True)
+class CalibrationClassMetric:
+    """ Store calibration metrics for one class. """
+    # Expected Calibration Error
+    ece: float
+    # adaptive Expected Calibration Error
+    aece: float
+
+    @property
+    def main(self):
+        # Return adaptive ECE if the main metric is adaptative.
+        if settings.main_calibration_metric.lower().startswith('a'):
+            return self.aece
+        else:
+            return self.ece
+
+    def __repr__(self):
+        return f'ECE: {self.ece:.2f} | aECE: {self.aece:.2f}'
+
+
+@dataclass(frozen=True)
+class CalibrationMetrics:
+    """ Store calibration metrics. """
+    # Expected Calibration Error
+    ece: float
+    # adaptive Expected Calibration Error
+    aece: float
+    # Static Calibration Error
+    sce: float
+    # adaptive Static Calibration Error
+    asce: float
+    # Expected Calibration Error per class
+    classes: List[CalibrationClassMetric]
+
+    @property
+    def main(self):
+        return getattr(self, settings.main_calibration_metric)
+
+    def __str__(self):
+        return f'{settings.main_calibration_metric}: {self.main:.2f}'
+
+    def __iter__(self):
+        return iter(self.classes)
+
+    def __getitem__(self, i):
+        return self.classes[i]
+
+    def __repr__(self):
+        return f'ECE: {self.ece:.2f} | aECE: {self.aece:.2f} | SCE: {self.sce:.2f} | aSCE: {self.asce:.2f}' + \
+            f''.join(['\n\t- ' + cls.__repr__() for cls in self])
 
 
 @dataclass(frozen=True)
@@ -96,7 +149,7 @@ class StepHistoryEntry:
          line and all lines are almost outside the active area.
         """
         return (self.model_classification and self.soft_truth_larger) or \
-               (not self.model_classification and not self.soft_truth_smaller)
+            (not self.model_classification and not self.soft_truth_smaller)
 
     def is_under_confidence_threshold(self, confidence_thresholds: List[float]) -> bool:
         """

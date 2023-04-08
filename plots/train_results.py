@@ -11,6 +11,7 @@ from matplotlib.ticker import FuncFormatter
 from classes.data_structures import ClassificationMetrics
 from datasets.qdsd import QDSDLines
 from plots.data import plot_samples
+from utils.metrics import confidence_bins
 from utils.output import save_plot
 from utils.settings import settings
 
@@ -311,25 +312,7 @@ def plot_reliability_diagram(confidence_per_case: List[List[List[float]]], datas
     :param bins: The number of bins in the plot.
     """
 
-    good_pred_bin_count = [0] * bins
-    bad_pred_bin_count = [0] * bins
-    success_rate = [0] * bins
-
-    # Group confidence by prediction success
-    for label in range(len(confidence_per_case)):
-        for prediction in range(len(confidence_per_case[label])):
-            for confidence in confidence_per_case[label][prediction]:
-                # Get the index of the bin for this confidence
-                confidence_group = int(confidence * 100 / bins) if confidence < 1 else bins - 1
-                if label == prediction:
-                    good_pred_bin_count[confidence_group] += 1
-                else:
-                    bad_pred_bin_count[confidence_group] += 1
-
-    # Compute the success rate for each bin
-    for i in range(bins):
-        total = good_pred_bin_count[i] + bad_pred_bin_count[i]
-        success_rate[i] = good_pred_bin_count[i] / (good_pred_bin_count[i] + bad_pred_bin_count[i]) if total > 0 else 0
+    mean_confidence_per_bin, mean_accuracy_per_bin, bins, _ = confidence_bins()
 
     with sns.axes_style("ticks"):
         # Bar plot

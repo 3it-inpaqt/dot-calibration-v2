@@ -228,6 +228,13 @@ class Settings:
     # Used only if the confidence threshold is not defined (<0)
     auto_confidence_threshold_tau: float = 0.2
 
+    # The metric to use for the uncertainty calibration.
+    # Possible values: ECE, aECE, SCE, aSCE.
+    main_calibration_metric: str = 'aSCE'
+
+    # The number of bins used to compute the uncertainty calibration metric.
+    calibration_nb_bins: int = 10
+
     # The number of sample used to compute the loss of bayesian networks.
     bayesian_nb_sample_train: int = 3
 
@@ -406,6 +413,9 @@ class Settings:
         assert self.bayesian_nb_sample_test > 0, 'The number of bayesian sample should be at least 1'
         assert self.bayesian_confidence_metric in ['std', 'norm_std', 'entropy', 'norm_entropy'], \
             f'Invalid bayesian confidence metric value "{self.bayesian_confidence_metric}"'
+        assert self.main_calibration_metric.lower() in ['ece', 'aece', 'sce', 'asce'], \
+            f'Unknown calibration metric "{self.main_calibration_metric}"'
+        assert self.calibration_nb_bins > 2, 'At least 2 bins required for calibration'
 
         # Checkpoints
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints per epoch should be >= 0'
@@ -512,7 +522,7 @@ class Settings:
         :return: Human readable description of the settings.
         """
         return 'Settings:\n\t' + \
-               '\n\t'.join([f'{name}: {str(value)}' for name, value in asdict(self).items()])
+            '\n\t'.join([f'{name}: {str(value)}' for name, value in asdict(self).items()])
 
 
 # Singleton setting object

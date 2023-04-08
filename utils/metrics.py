@@ -1,24 +1,104 @@
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
 import torch
 from torch.nn import Module
 from torchinfo import summary
 
-from classes.data_structures import ClassMetrics, ClassificationMetrics
+from classes.data_structures import CalibrationClassMetric, CalibrationMetrics, ClassMetrics, ClassificationMetrics
 from utils.logger import logger
 from utils.output import save_network_info
 from utils.settings import settings
 
 
-def calibration_metrics(confidence_per_case: List[List[List[float]]], nb_bins: int = 10, adaptative: bool = True,
-                        cls: Optional[int] = None):
+def confidence_bins(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptative: bool = True) \
+        -> (pd.Series, pd.Series, pd.Series, pd.Series):
+    """
+    Split the confidence score in bins and compute the mean confidence and accuracy for each bin.
 
-    # Convert to matrix
-    # Sort by confidence
+    :param confidence_results: The classification success and the confidence of each inference.
+    :param nb_bins: The number of bins to consider.
+    :param adaptative: If True, the bins will be adaptative (same number of elements in each bin) otherwise the bins
+        will have a fixed confidence range (same confidence range in each bin).
+    :return: The mean confidence per bin, the mean accuracy per bin, the bins boundaries, and the count per bin.
+    """
+
     # Split in bins (fixed or adaptative)
+    if adaptative:
+        # Create N bins with the same number of elements (variable confidence range)
+        bins = pd.qcut(confidence_results['confidence'], q=nb_bins)
+    else:
+        # Create N bins with fixed confidence range (variable number of elements)
+        bins = pd.cut(confidence_results['confidence'], bins=nb_bins)
+
+    grouped_by_bins = confidence_results.groupby(bins)
+
     # Compute the mean of the confidence in each bin
-    pass
+    mean_confidence_per_bin = grouped_by_bins['confidence'].mean()
+
+    # Compute the accuracy in each bin
+    mean_accuracy_per_bin = grouped_by_bins['correct'].mean()
+
+    return mean_confidence_per_bin, mean_accuracy_per_bin, bins, grouped_by_bins['confidence'].count()
+
+
+def expected_calibration_error(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptative: bool = True) -> float:
+    """
+    Expected Calibration Error (ECE) is a metric to quantify the calibration quality of a classifier.
+    See https://doi.org/10.48550/arXiv.1902.06977 and https://doi.org/10.48550/arXiv.2107.03342 (5.B)
+
+    :param confidence_results: The classification success and the confidence of each inference.
+    :param nb_bins: The number of bins to consider.
+    :param adaptative: If True, the bins will be adaptative (same number of elements in each bin) otherwise the bins
+        will have a fixed confidence range (same confidence range in each bin).
+    :return: The expected calibration error.
+    """
+    mean_confidence_per_bin, mean_accuracy_per_bin, _, count = confidence_bins(confidence_results, nb_bins, adaptative)
+    # Compute the calibration error as the sum of the absolute difference between the mean confidence and accuracy
+    if adaptative:
+        calibration_error = np.abs(mean_confidence_per_bin - mean_accuracy_per_bin).sum()
+    else:
+        # Weight by the number of elements in each bin if fixed size bins
+        weights = count / count.sum()
+        calibration_error = np.abs(weights * (mean_confidence_per_bin - mean_accuracy_per_bin)).sum()
+
+    return calibration_error
+
+
+def calibration_metrics(confidence_per_case: List[List[List[float]]]) -> CalibrationMetrics:
+    """
+    Compute different metrics to quantify the uncertainty calibration quality.
+
+    :param confidence_per_case: The confidence of each prediction for each case (confusion matrix table).
+    :return: The calibration metrics.
+    """
+    # Convert confidence array to dataframe
+    flat_results = []
+    for label in range(len(confidence_per_case)):
+        for prediction in range(len(confidence_per_case[label])):
+            for confidence in confidence_per_case[label][prediction]:
+                flat_results.append((confidence, label == prediction, prediction))
+
+    df = pd.DataFrame(flat_results, columns=['confidence', 'correct', 'prediction'])
+
+    # Compute the metrics for each class
+    metrics_per_class = []
+    for i in range(len(confidence_per_case)):
+        metrics_per_class.append(CalibrationClassMetric(
+            ece=expected_calibration_error(df[df['prediction'] == i], settings.calibration_nb_bins, adaptative=False),
+            aece=expected_calibration_error(df[df['prediction'] == i], settings.calibration_nb_bins, adaptative=True)
+        ))
+
+    return CalibrationMetrics(
+        ece=expected_calibration_error(df, settings.calibration_nb_bins, adaptative=False),
+        aece=expected_calibration_error(df, settings.calibration_nb_bins, adaptative=True),
+        # Static Calibration Error as the average of the ECE of each predicted class
+        sce=sum([m_cls.ece for m_cls in metrics_per_class]) / len(metrics_per_class),
+        # Adaptative Static Calibration Error as the average of the aECE of each predicted class
+        asce=sum([m_cls.aece for m_cls in metrics_per_class]) / len(metrics_per_class),
+        classes=metrics_per_class
+    )
 
 
 def classification_metrics(confusion_matrix: np.ndarray) -> ClassificationMetrics:
@@ -57,7 +137,7 @@ def classification_metrics(confusion_matrix: np.ndarray) -> ClassificationMetric
     classes_nb_predictions = confusion_matrix.sum(0)
     classes_nb_good_predictions = confusion_matrix.diagonal()
 
-    # Division by 0 give 0
+    # Division by 0 gives 0
     # Precision
     classes_precision = np.zeros(classes_nb_labels.shape, dtype=float)
     np.divide(classes_nb_good_predictions, classes_nb_predictions,

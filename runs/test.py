@@ -1,16 +1,16 @@
 from math import ceil
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
 from classes.classifier_nn import ClassifierNN
-from classes.data_structures import ClassificationMetrics
-from plots.train_results import plot_classification_sample, plot_confidence, plot_reliability_diagram, \
-    plot_confusion_matrix
+from classes.data_structures import CalibrationMetrics, ClassificationMetrics
+from plots.train_results import plot_classification_sample, plot_confidence, plot_confusion_matrix, \
+    plot_reliability_diagram
 from utils.logger import logger
-from utils.metrics import classification_metrics
+from utils.metrics import calibration_metrics, classification_metrics
 from utils.misc import get_nb_loader_workers
 from utils.output import save_results
 from utils.progress_bar import ProgressBar, ProgressBarMetrics
@@ -20,7 +20,7 @@ from utils.timer import SectionTimer
 
 def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
          limit: int = 0, confidence_per_case: List[List[List]] = None) \
-        -> ClassificationMetrics:
+        -> Tuple[ClassificationMetrics, CalibrationMetrics]:
     """
     Start testing the network on a dataset.
 
@@ -31,7 +31,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     :param final: If true this is the final test, will show in log info and save results in file.
     :param limit: Limit of item from the dataset to evaluate during this testing (0 to run process the whole dataset).
     :param confidence_per_case: If set the confidence results will be saved in this list.
-    :return: The different classification result metrics.
+    :return: The different classification and calibration metrics.
     """
 
     if test_name:
@@ -99,15 +99,20 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
                         samples_per_case[label][pred].append((patch.cpu(), conf))
 
             metrics = classification_metrics(nb_labels_predictions)
-            progress.update(**{'acc': metrics.accuracy, settings.main_metric: metrics.main})
+            cal_metrics = calibration_metrics(confidence_per_case)
+            progress.update(**{'acc': metrics.accuracy,
+                               settings.main_metric: metrics.main,
+                               settings.main_calibration_metric: cal_metrics.main})
 
     # Give more information for the final test
     if final:
-        logger.info(f'Test overall {metrics} (accuracy: {metrics.accuracy:.2%})')
-        logger.info(f'Test {settings.main_metric} per classes:\n\t' +
-                    "\n\t".join([f'{test_dataset.classes[i]}: {m.main:05.2%}' for i, m in enumerate(metrics)]))
+        logger.info(f'Test overall {metrics} (accuracy: {metrics.accuracy:.2%}) - '
+                    f'Uncertainty calibration {cal_metrics}')
+        logger.info(f'Test {settings.main_metric} & {settings.main_calibration_metric} per classes:\n\t' +
+                    "\n\t".join([f'{test_dataset.classes[i]}: {m.main:05.2%} - {c.main:05.2%}' for
+                                 i, (m, c) in enumerate(zip(metrics, cal_metrics))]))
 
-        save_results(final_classification_results=metrics)
+        save_results(final_classification_results=metrics, calibration_results=cal_metrics)
         plot_confusion_matrix(nb_labels_predictions, metrics, class_names=test_dataset.classes)
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
         plot_confidence(confidence_per_case, network.confidence_thresholds, 'test', per_classes=True)
@@ -131,7 +136,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             plot_confusion_matrix(nb_labels_predictions, threshold_metrics, nb_labels_unknown_predictions,
                                   class_names=test_dataset.classes, plot_name='confusion_matrix_unknown')
 
-    return metrics
+    return metrics, cal_metrics
 
 
 class ProgressBarTesting(ProgressBar):
@@ -144,5 +149,7 @@ class ProgressBarTesting(ProgressBar):
                          metrics=(
                              ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}', evolution_indicator=False),
                              ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}',
+                                                evolution_indicator=False),
+                             ProgressBarMetrics(settings.main_calibration_metric, print_value=lambda x: f'{x:<4.2f}',
                                                 evolution_indicator=False)
                          ))

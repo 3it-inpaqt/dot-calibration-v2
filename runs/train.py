@@ -237,5 +237,6 @@ class ProgressBarTraining(ProgressBar):
                          metrics=(
                              ProgressBarMetrics('loss', more_is_good=False),
                              ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}'),
-                             ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}')
+                             ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}'),
+                             ProgressBarMetrics(settings.main_calibration_metric, print_value=lambda x: f'{x:<4.2f}')
                          ))
