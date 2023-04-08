@@ -16,7 +16,7 @@ from models.cnn import CNN
 from models.feed_forward import FeedForward
 from models.gap_baseline import GapBaseline
 from models.std_baseline import StdBaseline
-from plots.train_results import plot_confidence, plot_reliability_diagram, plot_confidence_threshold_tuning
+from plots.train_results import plot_confidence, plot_confidence_threshold_tuning, plot_reliability_diagram
 from runs.test import test
 from runs.train import train
 from utils.logger import logger
@@ -107,8 +107,8 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
     save_results(baseline_gap_test_metrics=gap_metrics)
 
     logger.info(f'Baselines {settings.main_metric}:'
-                f'\n\tstd: {std_metrics.main:.2%}'
-                f'\n\tgap: {gap_metrics.main:.2%}')
+                f'\n\tstd: {std_metrics.classification}'
+                f'\n\tgap: {gap_metrics.classification}')
 
 
 def train_data_augmentation(train_dataset: QDSDLines, test_dataset: QDSDLines,

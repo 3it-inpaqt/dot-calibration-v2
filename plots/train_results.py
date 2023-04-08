@@ -1,5 +1,5 @@
 from copy import copy
-from typing import List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -8,7 +8,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter
 
-from classes.data_structures import ClassificationMetrics
+from classes.data_structures import ClassificationMetrics, TestMetrics
 from datasets.qdsd import QDSDLines
 from plots.data import plot_samples
 from utils.metrics import confidence_bins
@@ -17,7 +17,7 @@ from utils.settings import settings
 
 
 def plot_train_progress(loss_evolution: List[float],
-                        metrics_evolution: List[dict] = None,
+                        metrics_evolution: List[Dict[str, Union[TestMetrics, None, int]]] = None,
                         batch_per_epoch: int = 0,
                         best_checkpoint: dict = None) -> None:
     """
@@ -58,18 +58,18 @@ def plot_train_progress(loss_evolution: List[float],
             ax2 = plt.twinx()
             checkpoint_batches = [a['batch_num'] for a in metrics_evolution]
             # Train evolution
-            train_main_metric = [a['train'].main for a in metrics_evolution]
+            train_main_metric = [a['train'].classification.main for a in metrics_evolution]
             ax2.plot(checkpoint_batches, train_main_metric, label=f'train {settings.main_metric}',
                      color='limegreen', linestyle=(0, (2, 1)), alpha=0.5)
 
             # Testing evolution
             if 'test' in metrics_evolution[0] and metrics_evolution[0]['test'] is not None:
-                test_main_metric = [a['test'].main for a in metrics_evolution]
+                test_main_metric = [a['test'].classification.main for a in metrics_evolution]
                 ax2.plot(checkpoint_batches, test_main_metric, label=f'test {settings.main_metric}',
                          color='darkolivegreen')
             # Validation evolution
             if 'validation' in metrics_evolution[0] and metrics_evolution[0]['validation'] is not None:
-                valid_main_metric = [a['validation'].main for a in metrics_evolution]
+                valid_main_metric = [a['validation'].classification.main for a in metrics_evolution]
                 ax2.plot(checkpoint_batches, valid_main_metric, label=f'validation {settings.main_metric}',
                          color='green')
 

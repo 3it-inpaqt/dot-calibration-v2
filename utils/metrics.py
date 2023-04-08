@@ -13,7 +13,7 @@ from utils.settings import settings
 
 
 def confidence_bins(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptative: bool = True) \
-        -> (pd.Series, pd.Series, pd.Series, pd.Series):
+        -> (Optional[pd.Series], Optional[pd.Series], Optional[pd.Series], int):
     """
     Split the confidence score in bins and compute the mean confidence and accuracy for each bin.
 
@@ -27,7 +27,10 @@ def confidence_bins(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptat
     # Split in bins (fixed or adaptative)
     if adaptative:
         # Create N bins with the same number of elements (variable confidence range)
-        bins = pd.qcut(confidence_results['confidence'], q=nb_bins)
+        bins = pd.qcut(confidence_results['confidence'], q=nb_bins, duplicates='drop')
+        # It could be less than N bins if there is not enough diversity, then return None
+        if len(bins) != nb_bins:
+            return None, None, None, 0
     else:
         # Create N bins with fixed confidence range (variable number of elements)
         bins = pd.cut(confidence_results['confidence'], bins=nb_bins)
@@ -40,7 +43,7 @@ def confidence_bins(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptat
     # Compute the accuracy in each bin
     mean_accuracy_per_bin = grouped_by_bins['correct'].mean()
 
-    return mean_confidence_per_bin, mean_accuracy_per_bin, bins, grouped_by_bins['confidence'].count()
+    return mean_confidence_per_bin, mean_accuracy_per_bin, bins, confidence_results['confidence'].count()
 
 
 def expected_calibration_error(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptative: bool = True) -> float:
@@ -55,6 +58,11 @@ def expected_calibration_error(confidence_results: pd.DataFrame, nb_bins: int = 
     :return: The expected calibration error.
     """
     mean_confidence_per_bin, mean_accuracy_per_bin, _, count = confidence_bins(confidence_results, nb_bins, adaptative)
+
+    # If count is 0 or the number of bins is too small, return NaN
+    if count == 0:
+        return float('nan')
+
     # Compute the calibration error as the sum of the absolute difference between the mean confidence and accuracy
     if adaptative:
         calibration_error = np.abs(mean_confidence_per_bin - mean_accuracy_per_bin).sum()

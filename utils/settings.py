@@ -196,7 +196,7 @@ class Settings:
     # Dropout rate for every dropout layers defined in networks.
     # If a network model doesn't have a dropout layer this setting will have no effect.
     # 0 skip dropout layers
-    dropout: int = 0.4
+    dropout: int = 0
 
     # The size of the mini-batch for the training and testing.
     batch_size: int = 512

@@ -1,5 +1,6 @@
 import gzip
 import json
+import platform
 import zipfile
 from pathlib import Path
 from random import randrange
@@ -272,7 +273,9 @@ class DiagramOffline(Diagram):
                 nb_no_label += 1
                 continue
 
-            with diagram_name.open('rb') as diagram_file:
+            # Windows needs the 'b' option
+            open_options = 'rb' if platform.system() == 'Windows' else 'r'
+            with diagram_name.open(open_options) as diagram_file:
                 # Load values from CSV file
                 x, y, values = DiagramOffline._load_interpolated_csv(gzip.open(diagram_file))
 

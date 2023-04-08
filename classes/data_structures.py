@@ -113,7 +113,7 @@ class CalibrationMetrics:
 
     @property
     def main(self):
-        return getattr(self, settings.main_calibration_metric)
+        return getattr(self, settings.main_calibration_metric.lower())
 
     def __str__(self):
         return f'{settings.main_calibration_metric}: {self.main:.2f}'
@@ -127,6 +127,19 @@ class CalibrationMetrics:
     def __repr__(self):
         return f'ECE: {self.ece:.2f} | aECE: {self.aece:.2f} | SCE: {self.sce:.2f} | aSCE: {self.asce:.2f}' + \
             f''.join(['\n\t- ' + cls.__repr__() for cls in self])
+
+
+@dataclass(frozen=True)
+class TestMetrics:
+    """ Aggregate every metrics computed during a test. """
+    classification: ClassificationMetrics
+    calibration: CalibrationMetrics
+
+    def __str__(self):
+        return f'{self.classification} | {self.calibration}'
+
+    def __repr__(self):
+        return f'Classification: {self.classification.__repr__()}\nCalibration: {self.calibration.__repr__()}'
 
 
 @dataclass(frozen=True)

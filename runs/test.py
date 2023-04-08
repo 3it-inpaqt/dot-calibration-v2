@@ -1,12 +1,12 @@
 from math import ceil
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
 from classes.classifier_nn import ClassifierNN
-from classes.data_structures import CalibrationMetrics, ClassificationMetrics
+from classes.data_structures import CalibrationMetrics, ClassificationMetrics, TestMetrics
 from plots.train_results import plot_classification_sample, plot_confidence, plot_confusion_matrix, \
     plot_reliability_diagram
 from utils.logger import logger
@@ -19,8 +19,7 @@ from utils.timer import SectionTimer
 
 
 def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
-         limit: int = 0, confidence_per_case: List[List[List]] = None) \
-        -> Tuple[ClassificationMetrics, CalibrationMetrics]:
+         limit: int = 0, confidence_per_case: List[List[List]] = None) -> TestMetrics:
     """
     Start testing the network on a dataset.
 
@@ -50,6 +49,8 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     nb_classes = len(test_dataset.classes)
 
     metrics: Optional[ClassificationMetrics] = None
+    cal_metrics: Optional[CalibrationMetrics] = None
+
     # All prediction count
     nb_labels_predictions = np.zeros((nb_classes, nb_classes), dtype=int)
     if network.confidence_thresholds:
@@ -99,10 +100,11 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
                         samples_per_case[label][pred].append((patch.cpu(), conf))
 
             metrics = classification_metrics(nb_labels_predictions)
-            cal_metrics = calibration_metrics(confidence_per_case)
-            progress.update(**{'acc': metrics.accuracy,
-                               settings.main_metric: metrics.main,
-                               settings.main_calibration_metric: cal_metrics.main})
+            displayed_metrics = {'acc': metrics.accuracy, settings.main_metric: metrics.main}
+            if confidence_per_case is not None:
+                cal_metrics = calibration_metrics(confidence_per_case)
+                displayed_metrics[settings.main_calibration_metric] = cal_metrics.main
+            progress.update(**displayed_metrics)
 
     # Give more information for the final test
     if final:
@@ -136,7 +138,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             plot_confusion_matrix(nb_labels_predictions, threshold_metrics, nb_labels_unknown_predictions,
                                   class_names=test_dataset.classes, plot_name='confusion_matrix_unknown')
 
-    return metrics, cal_metrics
+    return TestMetrics(metrics, cal_metrics)
 
 
 class ProgressBarTesting(ProgressBar):

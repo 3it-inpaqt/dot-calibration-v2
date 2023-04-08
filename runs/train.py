@@ -1,5 +1,5 @@
 from math import ceil
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 import numpy as np
 import torch
@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchsampler import ImbalancedDatasetSampler
 
 from classes.classifier_nn import ClassifierNN
+from classes.data_structures import TestMetrics
 from plots.train_results import plot_train_progress
 from runs.test import test
 from utils.logger import logger
@@ -85,9 +86,9 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
                     timer.pause()
                     check_metrics = _checkpoint(network, epoch * nb_batch + i, train_dataset, validation_dataset,
                                                 test_dataset, best_checkpoint, device)
-                    progress.update(
-                        **{'acc': check_metrics['validation' if validation_dataset else 'train'].accuracy,
-                           settings.main_metric: check_metrics['validation' if validation_dataset else 'train'].main})
+                    used_set = 'validation' if validation_dataset else 'train'
+                    progress.update(**{'acc': check_metrics[used_set].classification.accuracy,
+                                       settings.main_metric: check_metrics[used_set].classification.main})
                     metrics_evolution.append(check_metrics)
                     timer.resume()
 
@@ -122,7 +123,8 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
 
 
 def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Optional[Dataset],
-                test_dataset: Optional[Dataset], best_checkpoint: dict, device: torch.device) -> dict:
+                test_dataset: Optional[Dataset], best_checkpoint: dict, device: torch.device) \
+        -> Dict[str, Union[TestMetrics, None, int]]:
     """
     Pause the training to do some jobs, like intermediate testing and network backup.
 
@@ -143,9 +145,9 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
     if validation_dataset and settings.checkpoint_validation:
         validation_metrics = test(network, validation_dataset, device, test_name='checkpoint validation')
         # Check if this is the new best score
-        if validation_metrics.main > best_checkpoint['score']:
-            logger.debug(f'New best validation {validation_metrics}')
-            best_checkpoint['score'] = validation_metrics.main
+        if validation_metrics.classification.main > best_checkpoint['score']:
+            logger.debug(f'New best validation {validation_metrics.classification}')
+            best_checkpoint['score'] = validation_metrics.classification.main
             best_checkpoint['batch_num'] = batch_num
             # Save new best parameters
             if settings.early_stopping:
@@ -164,7 +166,9 @@ def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, v
     # Set it back to train because it was switched during tests
     network.train()
 
-    logger.debug(f'Checkpoint {batch_num:<6n} | validation {validation_metrics} | train {train_metrics}')
+    logger.debug(f'Checkpoint {batch_num:<6n} | validation {validation_metrics} '
+                 f'| train {train_metrics} '
+                 f'| test {test_metrics}')
 
     return {'batch_num': batch_num, 'validation': validation_metrics, 'train': train_metrics, 'test': test_metrics}
 
@@ -237,6 +241,5 @@ class ProgressBarTraining(ProgressBar):
                          metrics=(
                              ProgressBarMetrics('loss', more_is_good=False),
                              ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}'),
-                             ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}'),
-                             ProgressBarMetrics(settings.main_calibration_metric, print_value=lambda x: f'{x:<4.2f}')
+                             ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}')
                          ))
