@@ -29,7 +29,7 @@ def confidence_bins(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptat
         # Create N bins with the same number of elements (variable confidence range)
         bins = pd.qcut(confidence_results['confidence'], q=nb_bins, duplicates='drop')
         # It could be less than N bins if there is not enough diversity, then return None
-        if len(bins) != nb_bins:
+        if len(bins.values.categories) != nb_bins:
             return None, None, None, 0
     else:
         # Create N bins with fixed confidence range (variable number of elements)

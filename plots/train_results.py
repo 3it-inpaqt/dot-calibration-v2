@@ -14,6 +14,7 @@ from plots.data import plot_samples
 from utils.metrics import confidence_bins
 from utils.output import save_plot
 from utils.settings import settings
+from utils.str_formatting import short_number
 
 
 def plot_train_progress(loss_evolution: List[float],
@@ -301,24 +302,38 @@ def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sam
 
     save_plot(f'threshold_tuning_{dataset_role}')
 
-def plot_reliability_diagram(confidence_per_case: List[List[List[float]]], dataset_role: str,
-                             bins: int = 10, adaptative_bins: bool = False) -> None:
+
+def plot_reliability_diagrams(confidence_per_case: List[List[List[float]]],
+                              dataset_role: str, nb_bins: int = 10) -> None:
     """
-    Plot the confidence calibration as a bar plot.
+    Represent the confidence calibration with several bar plots.
 
     :param confidence_per_case: The list of confidence score per classification case
       as [label class index][prediction class index]
     :param dataset_role: The role of the dataset (train, validation, test)
-    :param bins: The number of bins in the plot.
+    :param nb_bins: The number of bins in the plot.
     """
+    flat_results = []
+    for label in range(len(confidence_per_case)):
+        for prediction in range(len(confidence_per_case[label])):
+            for confidence in confidence_per_case[label][prediction]:
+                flat_results.append((confidence, label == prediction, prediction))
 
-    mean_confidence_per_bin, mean_accuracy_per_bin, bins, _ = confidence_bins()
+    df = pd.DataFrame(flat_results, columns=['confidence', 'correct', 'prediction'])
 
+    _, mean_accuracy_per_bin, bins, count = confidence_bins(df, nb_bins, True)
+
+    if count > 0:
+        plot_reliability_diagram(mean_accuracy_per_bin, count, dataset_role)
+
+
+def plot_reliability_diagram(mean_accuracy_per_bin, count, dataset_role) -> None:
     with sns.axes_style("ticks"):
         # Bar plot
-        plt.bar([(b / bins) + (1 / (2 * bins)) for b in range(bins)], success_rate, width=0.1)
+        plt.bar(x=[b.mid for b in mean_accuracy_per_bin.index], height=mean_accuracy_per_bin.values,
+                width=[b.length for b in mean_accuracy_per_bin.index])
         # Reference x=y line
-        plt.axline((0, 0), slope=1, color='black', linestyle='--', label='Perfect calibration')
+        plt.axline((0, 0.5), slope=0.5, color='black', linestyle='--', label='Perfect calibration')
 
         # Limit axis to 100%
         plt.xlim(0, 1)
@@ -329,6 +344,6 @@ def plot_reliability_diagram(confidence_per_case: List[List[List[float]]], datas
         plt.xlabel('Confidence')
         plt.ylabel('Accuracy')
         plt.legend()
-        plt.title(f'Reliability diagram\nfrom {dataset_role} dataset')
+        plt.title(f'Reliability diagram\nfrom {short_number(count)} {dataset_role} samples')
 
-        save_plot(f'reliability_diagram_{dataset_role}')
+        save_plot(f'reliability_diagram_{dataset_role.replace(" ", "_")}')

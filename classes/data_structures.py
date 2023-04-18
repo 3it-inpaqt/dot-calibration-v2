@@ -88,7 +88,7 @@ class CalibrationClassMetric:
     @property
     def main(self):
         # Return adaptive ECE if the main metric is adaptative.
-        if settings.main_calibration_metric.lower().startswith('a'):
+        if settings.is_main_calibration_adaptive():
             return self.aece
         else:
             return self.ece

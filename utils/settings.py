@@ -221,7 +221,7 @@ class Settings:
 
     # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
     # Negative threshold means automatic value selection using tau.
-    confidence_threshold: float = -1
+    confidence_threshold: float = -1.0
 
     # Relative importance of model error compare to model uncertainty for automatic confidence threshold tuning.
     # Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
@@ -350,6 +350,10 @@ class Settings:
     def is_saved_run(self) -> bool:
         """ Return True only if the name of the run is set and is NOT temporary name. """
         return self.is_named_run() and not self.is_temporary_run()
+
+    def is_main_calibration_adaptive(self) -> bool:
+        """ Return True only if the main calibration is adaptive. """
+        return self.main_calibration_metric.lower().startswith('a')
 
     def validate(self):
         """
