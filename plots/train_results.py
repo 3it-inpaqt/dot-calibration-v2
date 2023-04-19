@@ -8,10 +8,9 @@ import pandas as pd
 import seaborn as sns
 from matplotlib.ticker import FuncFormatter
 
-from classes.data_structures import ClassificationMetrics, TestMetrics
+from classes.data_structures import CalibrationMetrics, ClassificationMetrics, TestMetrics
 from datasets.qdsd import QDSDLines
 from plots.data import plot_samples
-from utils.metrics import confidence_bins
 from utils.output import save_plot
 from utils.settings import settings
 from utils.str_formatting import short_number
@@ -73,7 +72,6 @@ def plot_train_progress(loss_evolution: List[float],
                 valid_main_metric = [a['validation'].classification.main for a in metrics_evolution]
                 ax2.plot(checkpoint_batches, valid_main_metric, label=f'validation {settings.main_metric}',
                          color='green')
-
 
                 # Star marker for best validation metric
                 if best_checkpoint and best_checkpoint['batch_num'] is not None:
@@ -303,47 +301,87 @@ def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sam
     save_plot(f'threshold_tuning_{dataset_role}')
 
 
-def plot_reliability_diagrams(confidence_per_case: List[List[List[float]]],
-                              dataset_role: str, nb_bins: int = 10) -> None:
+def plot_reliability_diagrams(cal_metrics: CalibrationMetrics, dataset_role: str, nb_sample: int, classes: List[str]) \
+        -> None:
     """
     Represent the confidence calibration with several bar plots.
 
-    :param confidence_per_case: The list of confidence score per classification case
-      as [label class index][prediction class index]
+    :param cal_metrics: The calibration metrics (include the error and the bins)
     :param dataset_role: The role of the dataset (train, validation, test)
-    :param nb_bins: The number of bins in the plot.
+    :param nb_sample: The number of samples used to compute the calibration metrics
     """
-    flat_results = []
-    for label in range(len(confidence_per_case)):
-        for prediction in range(len(confidence_per_case[label])):
-            for confidence in confidence_per_case[label][prediction]:
-                flat_results.append((confidence, label == prediction, prediction))
 
-    df = pd.DataFrame(flat_results, columns=['confidence', 'correct', 'prediction'])
+    # Plot the main calibration metric
+    if cal_metrics.main_bins is not None:
+        fig, ax = plt.subplots()
+        plot_reliability_diagram(ax, cal_metrics.main, cal_metrics.main_bins, settings.main_calibration_metric,
+                                 dataset_role, nb_sample, is_subplot=False)
+        save_plot(f'reliability_diagram_{dataset_role.replace(" ", "_")}_{settings.main_calibration_metric}')
 
-    _, mean_accuracy_per_bin, bins, count = confidence_bins(df, nb_bins, True)
+    # Plot every non-adaptative reliability diagrams plots
+    fig = plt.figure(figsize=(10, 6))
+    gs = fig.add_gridspec(1, 1 + len(classes))
+    axes = gs.subplots(sharex=False, sharey=True)
+    plot_reliability_diagram(axes[0], cal_metrics.ece, cal_metrics.ece_bins, 'ECE', dataset_role, nb_sample)
+    for i, cls_str in enumerate(classes):
+        plot_reliability_diagram(axes[1 + i], cal_metrics[i].ece, cal_metrics[i].ece_bins,
+                                 f'ECE {cls_str}', dataset_role, nb_sample)
+    axes[0].set_ylabel('Accuracy')
+    fig.suptitle(f'Reliability diagram from {short_number(nb_sample)} {dataset_role} samples')
+    save_plot(f'reliability_diagram_{dataset_role.replace(" ", "_")}_non_adaptative')
 
-    if count > 0:
-        plot_reliability_diagram(mean_accuracy_per_bin, count, dataset_role)
+    # Plot every adaptative reliability diagrams plots
+    fig = plt.figure(figsize=(10, 6))
+    gs = fig.add_gridspec(1, 1 + len(classes))
+    axes = gs.subplots(sharex=False, sharey=True)
+    plot_reliability_diagram(axes[0], cal_metrics.aece, cal_metrics.aece_bins, 'aECE', dataset_role, nb_sample)
+    for i, cls_str in enumerate(classes):
+        plot_reliability_diagram(axes[1 + i], cal_metrics[i].aece, cal_metrics[i].aece_bins,
+                                 f'aECE {cls_str}', dataset_role, nb_sample)
+    axes[0].set_ylabel('Accuracy')
+    fig.suptitle(f'Reliability diagram from {short_number(nb_sample)} {dataset_role} samples')
+    save_plot(f'reliability_diagram_{dataset_role.replace(" ", "_")}_adaptative')
 
 
-def plot_reliability_diagram(mean_accuracy_per_bin, count, dataset_role) -> None:
+def plot_reliability_diagram(ax, error_score: float, mean_accuracy_per_bin: pd.Series, error_name: str,
+                             dataset_role: str, nb_sample: int, is_subplot: bool = True) -> None:
+    """
+    Plot one reliability diagram.
+
+    :param ax: The plot axis to plot on.
+    :param error_score: The value of the error score.
+    :param mean_accuracy_per_bin: The mean accuracy per bin.
+    :param error_name: The name of the error score.
+    :param dataset_role: The role of the dataset use to compute these bins and error (train, validation, test).
+    :param nb_sample: The number of samples used to compute these bins and error.
+    :param is_subplot: If this plot is a subplot or not.
+    """
+    # It is possible that there is no bin (if there is enough diversity)
+    if mean_accuracy_per_bin is None:
+        return
+
+    random_guess = 0.5  # 1 / nb classes
     with sns.axes_style("ticks"):
         # Bar plot
-        plt.bar(x=[b.mid for b in mean_accuracy_per_bin.index], height=mean_accuracy_per_bin.values,
-                width=[b.length for b in mean_accuracy_per_bin.index])
+        ax.bar(x=[b.mid for b in mean_accuracy_per_bin.index], height=mean_accuracy_per_bin.values,
+               width=[b.length for b in mean_accuracy_per_bin.index])
         # Reference x=y line
-        plt.axline((0, 0.5), slope=0.5, color='black', linestyle='--', label='Perfect calibration')
+        ax.axline((0, random_guess), slope=1 - random_guess, color='black', linestyle='--', label='Perfect calibration')
 
-        # Limit axis to 100%
-        plt.xlim(0, 1)
-        plt.ylim(0, 1)
-        plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
-        plt.gca().yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+        # Limit x-axis from 0% to 100%
+        ax.set_xlim(0, 1)
+        # Limit y-axis from random guess to 100%
+        ax.set_ylim(max(0.0, random_guess * 0.95), 1)
+        ax.xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
+        ax.yaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
 
-        plt.xlabel('Confidence')
-        plt.ylabel('Accuracy')
-        plt.legend()
-        plt.title(f'Reliability diagram\nfrom {short_number(count)} {dataset_role} samples')
+        ax.set_xlabel('Confidence')
+        if not is_subplot:
+            ax.set_ylabel('Accuracy')
+            ax.legend()
 
-        save_plot(f'reliability_diagram_{dataset_role.replace(" ", "_")}')
+        if is_subplot:
+            ax.set_title(f'{error_name}: {error_score:.2f}')
+        else:
+            ax.set_title(f'Reliability diagram ({error_name}: {error_score:.2f})\n'
+                         f'from {short_number(nb_sample)} {dataset_role} samples')

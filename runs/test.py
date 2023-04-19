@@ -110,15 +110,15 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     if final:
         logger.info(f'Test overall {metrics} (accuracy: {metrics.accuracy:.2%}) - '
                     f'Uncertainty calibration {cal_metrics}')
-        logger.info(f'Test {settings.main_metric} & {settings.main_calibration_metric} per classes:\n\t' +
-                    "\n\t".join([f'{test_dataset.classes[i]}: {m.main:05.2%} - {c.main:05.2%}' for
+        logger.info(f'Test {settings.main_metric} per classes:\n\t' +
+                    "\n\t".join([f'{test_dataset.classes[i]}: {m.main:05.2%} - {c}' for
                                  i, (m, c) in enumerate(zip(metrics, cal_metrics))]))
 
         save_results(final_classification_results=metrics, calibration_results=cal_metrics)
         plot_confusion_matrix(nb_labels_predictions, metrics, class_names=test_dataset.classes)
         plot_classification_sample(samples_per_case, test_dataset.classes, nb_labels_predictions)
         plot_confidence(confidence_per_case, network.confidence_thresholds, 'test', per_classes=True)
-        plot_reliability_diagrams(confidence_per_case, 'test', settings.calibration_nb_bins)
+        plot_reliability_diagrams(cal_metrics, 'test', len(test_dataset), test_dataset.classes)
 
         # Final test results but with confidence threshold
         if network.confidence_thresholds:

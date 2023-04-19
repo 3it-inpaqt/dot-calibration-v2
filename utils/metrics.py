@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ from utils.settings import settings
 
 
 def confidence_bins(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptative: bool = True) \
-        -> (Optional[pd.Series], Optional[pd.Series], Optional[pd.Series], int):
+        -> (Optional[pd.Series], Optional[pd.Series], Optional[pd.Series]):
     """
     Split the confidence score in bins and compute the mean confidence and accuracy for each bin.
 
@@ -28,9 +28,9 @@ def confidence_bins(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptat
     if adaptative:
         # Create N bins with the same number of elements (variable confidence range)
         bins = pd.qcut(confidence_results['confidence'], q=nb_bins, duplicates='drop')
-        # It could be less than N bins if there is not enough diversity, then return None
-        if len(bins.values.categories) != nb_bins:
-            return None, None, None, 0
+        # It could be less than 2 bins if there is not enough diversity, then return None
+        if len(bins.values.categories) <= 1:
+            return None, None, None
     else:
         # Create N bins with fixed confidence range (variable number of elements)
         bins = pd.cut(confidence_results['confidence'], bins=nb_bins)
@@ -43,10 +43,11 @@ def confidence_bins(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptat
     # Compute the accuracy in each bin
     mean_accuracy_per_bin = grouped_by_bins['correct'].mean()
 
-    return mean_confidence_per_bin, mean_accuracy_per_bin, bins, confidence_results['confidence'].count()
+    return mean_confidence_per_bin, mean_accuracy_per_bin, grouped_by_bins['confidence'].count()
 
 
-def expected_calibration_error(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptative: bool = True) -> float:
+def expected_calibration_error(confidence_results: pd.DataFrame, nb_bins: int = 10, adaptative: bool = True) \
+        -> Tuple[float, Optional[pd.Series]]:
     """
     Expected Calibration Error (ECE) is a metric to quantify the calibration quality of a classifier.
     See https://doi.org/10.48550/arXiv.1902.06977 and https://doi.org/10.48550/arXiv.2107.03342 (5.B)
@@ -55,13 +56,17 @@ def expected_calibration_error(confidence_results: pd.DataFrame, nb_bins: int = 
     :param nb_bins: The number of bins to consider.
     :param adaptative: If True, the bins will be adaptative (same number of elements in each bin) otherwise the bins
         will have a fixed confidence range (same confidence range in each bin).
-    :return: The expected calibration error.
+    :return: The expected calibration error and the mean accuracy per bin to keep record of the bins repartition.
     """
-    mean_confidence_per_bin, mean_accuracy_per_bin, _, count = confidence_bins(confidence_results, nb_bins, adaptative)
+    mean_confidence_per_bin, mean_accuracy_per_bin, count = confidence_bins(confidence_results, nb_bins, adaptative)
 
-    # If count is 0 or the number of bins is too small, return NaN
-    if count == 0:
-        return float('nan')
+    # If we can't compute the bins, return NaN (probably not enough diversity to create the target number of bins)
+    if mean_confidence_per_bin is None:
+        return float('nan'), None
+
+    # If the number of bins is less that the target, return NaN to avoid misleading error values.
+    if len(count) != nb_bins:
+        return float('nan'), mean_accuracy_per_bin
 
     # Compute the calibration error as the sum of the absolute difference between the mean confidence and accuracy
     if adaptative:
@@ -71,7 +76,7 @@ def expected_calibration_error(confidence_results: pd.DataFrame, nb_bins: int = 
         weights = count / count.sum()
         calibration_error = np.abs(weights * (mean_confidence_per_bin - mean_accuracy_per_bin)).sum()
 
-    return calibration_error
+    return calibration_error, mean_accuracy_per_bin
 
 
 def calibration_metrics(confidence_per_case: List[List[List[float]]]) -> CalibrationMetrics:
@@ -93,14 +98,16 @@ def calibration_metrics(confidence_per_case: List[List[List[float]]]) -> Calibra
     # Compute the metrics for each class
     metrics_per_class = []
     for i in range(len(confidence_per_case)):
-        metrics_per_class.append(CalibrationClassMetric(
-            ece=expected_calibration_error(df[df['prediction'] == i], settings.calibration_nb_bins, adaptative=False),
-            aece=expected_calibration_error(df[df['prediction'] == i], settings.calibration_nb_bins, adaptative=True)
-        ))
+        ece, ece_bins = expected_calibration_error(df[df['prediction'] == i], settings.calibration_nb_bins,
+                                                   adaptative=False)
+        aece, aece_bins = expected_calibration_error(df[df['prediction'] == i], settings.calibration_nb_bins,
+                                                     adaptative=True)
+        metrics_per_class.append(CalibrationClassMetric(ece=ece, ece_bins=ece_bins, aece=aece, aece_bins=aece_bins))
 
+    ece, ece_bins = expected_calibration_error(df, settings.calibration_nb_bins, adaptative=False)
+    aece, aece_bins = expected_calibration_error(df, settings.calibration_nb_bins, adaptative=True)
     return CalibrationMetrics(
-        ece=expected_calibration_error(df, settings.calibration_nb_bins, adaptative=False),
-        aece=expected_calibration_error(df, settings.calibration_nb_bins, adaptative=True),
+        ece=ece, ece_bins=ece_bins, aece=aece, aece_bins=aece_bins,
         # Static Calibration Error as the average of the ECE of each predicted class
         sce=sum([m_cls.ece for m_cls in metrics_per_class]) / len(metrics_per_class),
         # Adaptative Static Calibration Error as the average of the aECE of each predicted class

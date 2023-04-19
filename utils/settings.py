@@ -233,7 +233,7 @@ class Settings:
     main_calibration_metric: str = 'aSCE'
 
     # The number of bins used to compute the uncertainty calibration metric.
-    calibration_nb_bins: int = 10
+    calibration_nb_bins: int = 15
 
     # The number of sample used to compute the loss of bayesian networks.
     bayesian_nb_sample_train: int = 3

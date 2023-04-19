@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from enum import Enum, unique
 from typing import Callable, Deque, Iterable, List, Optional, Sequence, Tuple
 
+import pandas as pd
 import torch
 
 from utils.settings import settings
@@ -82,8 +83,10 @@ class CalibrationClassMetric:
     """ Store calibration metrics for one class. """
     # Expected Calibration Error
     ece: float
+    ece_bins: pd.Series
     # adaptive Expected Calibration Error
     aece: float
+    aece_bins: pd.Series
 
     @property
     def main(self):
@@ -92,6 +95,10 @@ class CalibrationClassMetric:
             return self.aece
         else:
             return self.ece
+
+    def __str__(self):
+        main_metric_str = 'aECE' if settings.is_main_calibration_adaptive() else 'ECE'
+        return f'{main_metric_str}: {self.main:.2f}'
 
     def __repr__(self):
         return f'ECE: {self.ece:.2f} | aECE: {self.aece:.2f}'
@@ -102,8 +109,10 @@ class CalibrationMetrics:
     """ Store calibration metrics. """
     # Expected Calibration Error
     ece: float
+    ece_bins: pd.Series
     # adaptive Expected Calibration Error
     aece: float
+    aece_bins: pd.Series
     # Static Calibration Error
     sce: float
     # adaptive Static Calibration Error
@@ -114,6 +123,13 @@ class CalibrationMetrics:
     @property
     def main(self):
         return getattr(self, settings.main_calibration_metric.lower())
+
+    @property
+    def main_bins(self):
+        if settings.is_main_calibration_adaptive():
+            return self.aece_bins
+        else:
+            return self.ece_bins
 
     def __str__(self):
         return f'{settings.main_calibration_metric}: {self.main:.2f}'
