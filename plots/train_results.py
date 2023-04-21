@@ -204,7 +204,11 @@ def plot_confidence(confidence_per_case: List[List[List[float]]], unknown_thresh
 
     # Legend color
     palette = {True: "tab:green", False: "tab:red"}
-    threshold_colors = ['tab:purple', 'tab:olive']
+
+    # Generate N color for each class
+
+    cmap = plt.get_cmap('tab10')
+    threshold_colors = [cmap(i) for i in range(len(QDSDLines.classes))]
 
     # Plot the combined confidence distribution (all classes)
     if combined:

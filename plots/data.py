@@ -1,7 +1,6 @@
 import io
 from copy import copy
 from functools import partial
-from math import ceil, sqrt
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence, Tuple, Union
@@ -10,6 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from math import ceil, sqrt
 from matplotlib import patches
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, Normalize
@@ -495,25 +495,13 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
 
         # Not single dot
         if settings.dot_number != 1:
-            labels_list = [[int(bool) for bool in label] for label in labels][0]  # Convert boolean to integer list
-            labels_str = list_to_str(labels_list)  # Convert list to str
-
-            if labels_str == list_to_str(np.zeros(settings.dot_number)):  # First class: No line
-                if len(data_per_class[0]) < number_per_class:
-                    data_per_class[0].append(data)
-            elif labels_str == list_to_str(np.ones(settings.dot_number)):  # Last class: Crosspoint
-                if len(data_per_class[-1]) < number_per_class:
-                    data_per_class[-1].append(data)
-            else:
-                for label_num in range(settings.dot_number):  # Intermediary class
-                    if labels_list[label_num] == 1:
-                        if len(data_per_class[label_num + 1]) < number_per_class:
-                            data_per_class[label_num + 1].append(data)
+            labels = QDSDLines.label_mapping(labels[0])
         # Single dot
         else:
             labels = int(labels)
-            if len(data_per_class[labels]) < number_per_class:
-                data_per_class[labels].append(data)
+
+        if len(data_per_class[labels]) < number_per_class:
+            data_per_class[labels].append(data)
 
         # Stop of we sampled enough data
         if all([len(cl) == number_per_class for cl in data_per_class]):

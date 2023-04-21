@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchsampler import ImbalancedDatasetSampler
 
 from classes.classifier_nn import ClassifierNN
+from datasets.qdsd import QDSDLines
 from plots.train_results import plot_train_progress
 from runs.test import test
 from utils.logger import logger
@@ -41,8 +42,8 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
         if settings.dot_number > 1:
             sampler = ImbalancedDatasetSampler(train_dataset,
                                                # Convert boolean to int
-                                               callback_get_label=lambda dataset: [map(int, label) for label in
-                                                                                   dataset.get_labels()])
+                                               callback_get_label=lambda dataset: list(
+                                                   map(QDSDLines.label_mapping, dataset.get_labels())))
         else:
             sampler = ImbalancedDatasetSampler(train_dataset,
                                                # Convert boolean to int
