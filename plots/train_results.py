@@ -19,7 +19,8 @@ from utils.str_formatting import short_number
 def plot_train_progress(loss_evolution: List[float],
                         metrics_evolution: List[Dict[str, Union[TestMetrics, None, int]]] = None,
                         batch_per_epoch: int = 0,
-                        best_checkpoint: dict = None) -> None:
+                        best_checkpoint: dict = None,
+                        calibration_progress: bool = False) -> None:
     """
     Plot the evolution of the loss and the main metric during the training.
 
@@ -28,6 +29,7 @@ def plot_train_progress(loss_evolution: List[float],
     :param batch_per_epoch: The number of batch per epoch to plot x ticks.
     :param best_checkpoint: A dictionary containing information about the best version of the network according to
         validation score processed during checkpoints.
+    :param calibration_progress: If True and the metric evolution is provided, the calibration progress will be plotted.
     """
     with sns.axes_style("ticks"):
         fig, ax1 = plt.subplots()
@@ -79,6 +81,20 @@ def plot_train_progress(loss_evolution: List[float],
                              marker='*', markeredgecolor='k', markersize=10,
                              label=f'best valid. {settings.main_metric}')
                     legend_y_anchor -= 0.1
+
+                if calibration_progress:
+                    calibration_main_metric = [a['validation'].calibration.main for a in metrics_evolution if
+                                               a and a != float('nan')]
+                    if len(calibration_main_metric) > 0:
+                        ax3 = plt.twinx()
+                        ax3.plot(checkpoint_batches, calibration_main_metric,
+                                 label=settings.main_calibration_metric, color='blueviolet')
+                        ax3.set_ylim(bottom=0)
+                        ax3.set_ylabel(settings.main_calibration_metric, color='blueviolet', fontweight='bold')
+                        ax3.tick_params(axis='y', labelcolor='blueviolet')
+                        # Position the calibration axis on the right
+                        ax3.spines['right'].set_position(('outward', 70))
+                        ax2.yaxis.tick_right()
 
             ax2.yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.0%}'.format(y)))
             ax2.set_ylim(bottom=0, top=1)
@@ -324,8 +340,9 @@ def plot_reliability_diagrams(cal_metrics: CalibrationMetrics, dataset_role: str
     axes = gs.subplots(sharex=False, sharey=True)
     plot_reliability_diagram(axes[0], cal_metrics.ece, cal_metrics.ece_bins, 'ECE', dataset_role, nb_sample)
     for i, cls_str in enumerate(classes):
-        plot_reliability_diagram(axes[1 + i], cal_metrics[i].ece, cal_metrics[i].ece_bins,
-                                 f'ECE {cls_str}', dataset_role, nb_sample)
+        if cal_metrics[i] is not None:
+            plot_reliability_diagram(axes[1 + i], cal_metrics[i].ece, cal_metrics[i].ece_bins,
+                                     f'ECE {cls_str}', dataset_role, nb_sample)
     axes[0].set_ylabel('Accuracy')
     fig.suptitle(f'Reliability diagram from {short_number(nb_sample)} {dataset_role} samples')
     save_plot(f'reliability_diagram_{dataset_role.replace(" ", "_")}_non_adaptative')
@@ -336,8 +353,9 @@ def plot_reliability_diagrams(cal_metrics: CalibrationMetrics, dataset_role: str
     axes = gs.subplots(sharex=False, sharey=True)
     plot_reliability_diagram(axes[0], cal_metrics.aece, cal_metrics.aece_bins, 'aECE', dataset_role, nb_sample)
     for i, cls_str in enumerate(classes):
-        plot_reliability_diagram(axes[1 + i], cal_metrics[i].aece, cal_metrics[i].aece_bins,
-                                 f'aECE {cls_str}', dataset_role, nb_sample)
+        if cal_metrics[i] is not None:
+            plot_reliability_diagram(axes[1 + i], cal_metrics[i].aece, cal_metrics[i].aece_bins,
+                                     f'aECE {cls_str}', dataset_role, nb_sample)
     axes[0].set_ylabel('Accuracy')
     fig.suptitle(f'Reliability diagram from {short_number(nb_sample)} {dataset_role} samples')
     save_plot(f'reliability_diagram_{dataset_role.replace(" ", "_")}_adaptative')

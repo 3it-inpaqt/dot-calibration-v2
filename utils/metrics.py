@@ -98,20 +98,23 @@ def calibration_metrics(confidence_per_case: List[List[List[float]]]) -> Calibra
     # Compute the metrics for each class
     metrics_per_class = []
     for i in range(len(confidence_per_case)):
-        ece, ece_bins = expected_calibration_error(df[df['prediction'] == i], settings.calibration_nb_bins,
-                                                   adaptative=False)
-        aece, aece_bins = expected_calibration_error(df[df['prediction'] == i], settings.calibration_nb_bins,
-                                                     adaptative=True)
-        metrics_per_class.append(CalibrationClassMetric(ece=ece, ece_bins=ece_bins, aece=aece, aece_bins=aece_bins))
+        df_class = df[df['prediction'] == i]
+        if len(df_class) > 0:
+            ece, ece_bins = expected_calibration_error(df_class, settings.calibration_nb_bins, adaptative=False)
+            aece, aece_bins = expected_calibration_error(df_class, settings.calibration_nb_bins, adaptative=True)
+            metrics_per_class.append(CalibrationClassMetric(ece=ece, ece_bins=ece_bins, aece=aece, aece_bins=aece_bins))
+        else:
+            # No prediction for this class, add None
+            metrics_per_class.append(None)
 
     ece, ece_bins = expected_calibration_error(df, settings.calibration_nb_bins, adaptative=False)
     aece, aece_bins = expected_calibration_error(df, settings.calibration_nb_bins, adaptative=True)
     return CalibrationMetrics(
         ece=ece, ece_bins=ece_bins, aece=aece, aece_bins=aece_bins,
         # Static Calibration Error as the average of the ECE of each predicted class
-        sce=sum([m_cls.ece for m_cls in metrics_per_class]) / len(metrics_per_class),
+        sce=sum([m_cls.ece for m_cls in metrics_per_class if m_cls is not None]) / len(metrics_per_class),
         # Adaptative Static Calibration Error as the average of the aECE of each predicted class
-        asce=sum([m_cls.aece for m_cls in metrics_per_class]) / len(metrics_per_class),
+        asce=sum([m_cls.aece for m_cls in metrics_per_class if m_cls is not None]) / len(metrics_per_class),
         classes=metrics_per_class
     )
 

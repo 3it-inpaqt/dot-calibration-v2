@@ -117,8 +117,8 @@ class CalibrationMetrics:
     sce: float
     # adaptive Static Calibration Error
     asce: float
-    # Expected Calibration Error per class
-    classes: List[CalibrationClassMetric]
+    # Expected Calibration Error per class (None if not enough data)
+    classes: List[Optional[CalibrationClassMetric]]
 
     @property
     def main(self):

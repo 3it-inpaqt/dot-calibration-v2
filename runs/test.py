@@ -19,7 +19,8 @@ from utils.timer import SectionTimer
 
 
 def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
-         limit: int = 0, confidence_per_case: List[List[List]] = None) -> TestMetrics:
+         limit: int = 0, confidence_per_case: List[List[List]] = None,
+         compute_calibration: bool = True) -> TestMetrics:
     """
     Start testing the network on a dataset.
 
@@ -59,8 +60,8 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     nb_samples_per_case = 16
     if final:
         samples_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
-        if confidence_per_case is None:
-            confidence_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
+    if (final or compute_calibration) and confidence_per_case is None:
+        confidence_per_case = [[list() for _ in range(nb_classes)] for _ in range(nb_classes)]
     else:
         samples_per_case = None
 
@@ -74,13 +75,8 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             if limit and i * settings.batch_size >= limit:
                 break
 
-            # Number of inference (will have no effect if the model is not Bayesian)
-            if confidence_per_case is None:
-                nb_sample = settings.bayesian_nb_sample_valid
-            else:
-                nb_sample = settings.bayesian_nb_sample_test
             # Forward
-            predicted, confidences = network.infer(inputs, nb_sample)
+            predicted, confidences = network.infer(inputs, settings.bayesian_nb_sample_test)
 
             # Process each item of the batch to gather stats
             for patch, label, pred, conf in zip(inputs, labels, predicted, confidences):

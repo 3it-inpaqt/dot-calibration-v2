@@ -88,7 +88,8 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
                                                 test_dataset, best_checkpoint, device)
                     used_set = 'validation' if validation_dataset else 'train'
                     progress.update(**{'acc': check_metrics[used_set].classification.accuracy,
-                                       settings.main_metric: check_metrics[used_set].classification.main})
+                                       settings.main_metric: check_metrics[used_set].classification.main,
+                                       settings.main_calibration_metric: check_metrics[used_set].calibration.main})
                     metrics_evolution.append(check_metrics)
                     timer.resume()
 
@@ -119,7 +120,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
             _apply_early_stopping(network, best_checkpoint, nb_batch, nb_epoch, device)
 
     # Post train plots
-    plot_train_progress(loss_evolution, metrics_evolution, nb_batch, best_checkpoint)
+    plot_train_progress(loss_evolution, metrics_evolution, nb_batch, best_checkpoint, calibration_progress=True)
 
 
 def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Optional[Dataset],
@@ -241,5 +242,7 @@ class ProgressBarTraining(ProgressBar):
                          metrics=(
                              ProgressBarMetrics('loss', more_is_good=False),
                              ProgressBarMetrics('acc', print_value=lambda x: f'{x:<6.2%}'),
-                             ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}')
+                             ProgressBarMetrics(settings.main_metric, print_value=lambda x: f'{x:<6.2%}'),
+                             ProgressBarMetrics(settings.main_calibration_metric, print_value=lambda x: f'{x:<4.2f}',
+                                                more_is_good=False)
                          ))

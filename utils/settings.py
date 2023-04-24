@@ -238,9 +238,6 @@ class Settings:
     # The number of sample used to compute the loss of bayesian networks.
     bayesian_nb_sample_train: int = 3
 
-    # The number of sample used to compute model inference during the validation.
-    bayesian_nb_sample_valid: int = 3
-
     # The number of sample used to compute model inference during the testing.
     bayesian_nb_sample_test: int = 10
 
@@ -413,7 +410,6 @@ class Settings:
         assert not (self.nb_epoch > 0 and self.nb_train_update > 0), 'Exactly one should be set between' \
                                                                      ' number of epoch and number of train step'
         assert self.bayesian_nb_sample_train > 0, 'The number of bayesian sample should be at least 1'
-        assert self.bayesian_nb_sample_valid > 0, 'The number of bayesian sample should be at least 1'
         assert self.bayesian_nb_sample_test > 0, 'The number of bayesian sample should be at least 1'
         assert self.bayesian_confidence_metric in ['std', 'norm_std', 'entropy', 'norm_entropy'], \
             f'Invalid bayesian confidence metric value "{self.bayesian_confidence_metric}"'

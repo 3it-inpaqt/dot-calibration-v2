@@ -97,13 +97,13 @@ def run_baselines(train_dataset: Dataset, test_dataset: Dataset, device: torch.d
     # Standard deviation baseline
     std = StdBaseline()
     std.train(train_dataset)
-    std_metrics = test(std, test_dataset, device)
+    std_metrics = test(std, test_dataset, device, compute_calibration=False)
     save_results(baseline_std_test_metrics=std_metrics)
 
     # Gap baseline (Max - Min)
     gap = GapBaseline()
     gap.train(train_dataset)
-    gap_metrics = test(gap, test_dataset, device)
+    gap_metrics = test(gap, test_dataset, device, compute_calibration=False)
     save_results(baseline_gap_test_metrics=gap_metrics)
 
     logger.info(f'Baselines {settings.main_metric}:'
