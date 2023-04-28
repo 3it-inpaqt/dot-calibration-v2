@@ -19,27 +19,6 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 
 
-def label_to_class(labels):
-    """
-    Transform the list of label to the corresponding class
-    :param label: list of int
-    :return:corresponding class
-    """
-    nb_class = None
-
-    if settings.dot_number == 1:
-        return labels
-    else:
-        if all(labels) == False:  # First Class (No line)
-            return 0
-        elif all(labels) == True:  # Last Class (Crosspoint)
-            return -1
-        else:
-            for label_num in range(settings.dot_number):  # Intermediary class
-                if labels[label_num] == 1:
-                    return 1 + label_num
-
-
 def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
          limit: int = 0, confidence_per_case: List[List[List]] = None) \
         -> ClassificationMetrics:
@@ -107,11 +86,11 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
             for patch, label, pred, conf in zip(inputs, labels, predicted, confidences):
 
                 if settings.dot_number != 1:
-                    # Transform an array of N int into corresponding coord class for each patch
-                    label = QDSDLines.label_mapping(label)
-                    pred = QDSDLines.label_mapping(pred)
-                    # TODO discution about confidence
-                    conf = np.array(np.mean(np.array(conf)))
+                    # Convert label, pred and conf (list of N param) for the corresponding class for each patch
+                    label = QDSDLines.class_mapping(label)
+                    pred = QDSDLines.class_mapping(pred)
+                    # TODO discussion about confidence & class
+                    conf = QDSDLines.conf_mapping(conf, pred)
 
                 # Count the number of prediction for each label
                 nb_labels_predictions[label][pred] += 1

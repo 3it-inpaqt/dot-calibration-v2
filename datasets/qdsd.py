@@ -20,18 +20,15 @@ class QDSDLines(Dataset):
     Quantum Dots Stability Diagrams (QDSD) dataset.
     Transition line classification task.
     """
-    classes = []
-    for nb in range(settings.dot_number + 2):
-        if nb == 0:
-            classes.append('no line')  # First class, all parameters in the label is False
-        elif settings.dot_number == 1:
-            classes.append('line 1')  # Last class, all parameters in the label is True
-            break
-        elif nb != 2 + settings.dot_number - 1:
-            classes.append(f'line {nb}')  # Class of the line {nb}, column {nb} is True
-        else:
-            classes.append(f'crosspoint')  # Last class for the case of dot_number is superior at 1
-            # All parameters in the label is True
+    classes = ['No Line']  # Common class for any dot number
+    if settings.dot_number == 1:  # Single dot
+        classes.append('Line')  # Class line for single dot
+    else:
+        for nb in range(settings.dot_number):
+            # Class of the line with an angle of 180/nb_line.nb, column {nb} is True
+            classes.append(f'Line {180 / settings.dot_number * nb}')
+        classes.append(f'Crosspoint')  # Last class for the case of dot_number is superior at 1
+        # All parameters in the label is True
 
     def __init__(self, patches: List[Tuple], role: str, transform: Optional[List[Callable]] = None):
         """
@@ -266,6 +263,41 @@ class QDSDLines(Dataset):
         for dataset in (d for d in datasets if d):  # Skip None datasets
             dataset._patches -= ref_min
             dataset._patches /= (ref_max - ref_min)
+
+    def class_mapping(labels: torch.Tensor) -> int:
+        """
+        Convert the output of the NN (the predition) or the label of the diagram into an int witch is the position
+        in the list QDSDLines.classes
+
+        :param labels: A list of N (dot_number) int witch is the output of the NN
+        :return: Position of the corresponding class in the list QDSDLines.classes
+        """
+        if (labels == torch.zeros(settings.dot_number, dtype=int, device=labels.device)).all():
+            return 0  # No line
+        else:
+            if (labels == torch.ones(settings.dot_number, dtype=int, device=labels.device)).all():
+                return len(QDSDLines.classes) - 1  # Crosspoint
+            else:
+                count = 1
+                for label in labels:
+                    if label:
+                        return count  # Line [count]
+                    count += 1
+            raise argparse.ArgumentTypeError('ERROR no class found')
+
+    def conf_mapping(confidence: torch.Tensor, prediction: int) -> type(np.array(1)):
+        """
+        Convert the confidence output of the NN into the confidence for the prediction
+
+        :param prediction: Confidence for each output of the NN
+        :return: The confidence for the prediction
+        """
+        if prediction == 0 or prediction == len(QDSDLines.classes) - 1:
+            return np.array(np.mean(np.array(confidence)))  # No line & Crosspoint
+        else:
+            # Line [prediction]
+            return np.array(max(confidence[prediction]
+                                - np.sum([confidence[i] for i in range(len(confidence)) if i != prediction]), 0))
 
 
 class AddGaussianNoise(object):

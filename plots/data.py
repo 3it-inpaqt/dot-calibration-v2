@@ -495,7 +495,7 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
 
         # Not single dot
         if settings.dot_number != 1:
-            labels = QDSDLines.label_mapping(labels[0])
+            labels = QDSDLines.class_mapping(labels[0])
         # Single dot
         else:
             labels = int(labels)
