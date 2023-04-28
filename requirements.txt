@@ -2,18 +2,18 @@ numpy~=1.23
 matplotlib~=3.6
 seaborn~=0.12
 configargparse~=1.5
-torchinfo
+torchinfo~=1.7.2
 pyyaml~=6.0
 pandas~=1.5
 codetiming~=1.4
 shapely==1.7.1
-blitz-bayesian-pytorch
+blitz-bayesian-pytorch~=0.2.8
 scipy~=1.9
 tabulate~=0.9
 pillow~=9.0
 imageio~=2.23
 imageio-ffmpeg~=0.4
-torchsampler
+torchsampler~=0.1.2
 torch==2.0.0+cu118
 torchvision==0.15.1+cu118
 
