@@ -3,14 +3,15 @@ from typing import List, Optional, Tuple
 
 import torch
 
-from utils.logger import logger
 from classes.classifier import Classifier
 from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
 from datasets.diagram import Diagram
 from datasets.diagram_offline import DiagramOffline
 from datasets.diagram_online import DiagramOnline
+from datasets.qdsd import QDSDLines
 from plots.data import plot_diagram, plot_diagram_step_animation
 from runs.run_line_task import get_cuda_device
+from utils.logger import logger
 from utils.misc import get_nb_loader_workers
 from utils.settings import settings
 
@@ -112,16 +113,20 @@ class AutotuningProcedure:
                 # Send to the model for inference
                 prediction, confidence = self.model.infer(patch, settings.bayesian_nb_sample_test)
                 # Extract data from pytorch tensor
-                prediction = prediction.item()
-                confidence = confidence.item()
-
+                if settings.dot_number == 1:
+                    prediction = prediction.item()
+                    confidence = confidence.item()
+                else:
+                    prediction = QDSDLines.class_mapping(prediction)
+                    confidence = QDSDLines.conf_mapping(confidence, prediction)
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
         self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
                                                    soft_truth_larger, soft_truth_smaller, step_description))
 
-        logger.debug(f'Patch {self.get_nb_steps():03} classified as {prediction} with confidence {confidence:.2%}')
+        logger.debug(f'Patch {self.get_nb_steps():03} classified as {QDSDLines.classes[prediction]} with confidence '
+                     f'{confidence:.2%}')
 
         return prediction, confidence
 
@@ -485,13 +490,13 @@ class AutotuningProcedure:
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values, 'image_name': name,
                                    'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
-                                   'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
+                                   'transition_lines': d.transition_lines_list, 'scan_history': self._scan_history,
                                    'final_coord': final_coord, 'show_offset': False, 'history_uncertainty': False})
             # label + step with classification color and uncertainty
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
                                    'image_name': name + ' uncertainty', 'interpolation_method': 'nearest',
-                                   'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
+                                   'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines_list,
                                    'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
                                    'history_uncertainty': True})
             if not settings.autotuning_use_oracle:
@@ -499,7 +504,7 @@ class AutotuningProcedure:
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None, 'image_name': name + ' errors',
                                        'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
-                                       'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
+                                       'transition_lines': d.transition_lines_list, 'scan_history': self._scan_history,
                                        'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
                                        'confidence_thresholds': self.model.confidence_thresholds,
                                        'history_uncertainty': False})
@@ -507,7 +512,8 @@ class AutotuningProcedure:
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
                                        'image_name': name + ' errors uncertainty', 'interpolation_method': 'nearest',
-                                       'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
+                                       'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                       'transition_lines': d.transition_lines_list,
                                        'scan_history': self._scan_history, 'final_coord': final_coord,
                                        'show_offset': False, 'scan_errors': True, 'history_uncertainty': True})
 
@@ -551,15 +557,33 @@ class AutotuningProcedure:
         """
         raise NotImplementedError
 
+    def _tune_Ndots(self) -> Tuple[int, int]:
+        """
+        Start the tuning procedure on a diagram for Ndots.
+
+        :return: The coordinates (not the gate voltage) in the diagram that is 1 electron regime,
+         according to this tuning procedure.
+        """
+        raise NotImplementedError
+
+    def charge_areas_coord(self, charge_area):
+        """
+
+        :param charge_area:
+        :return:
+        """
+        return
+
     def run_tuning(self) -> AutotuningResult:
         """
         Run the tuning procedure and collect stats for results.
 
         :return: Tuning information and result.
         """
-
-        tuned_x, tuned_y = self._tune()
-
+        if settings.dot_number == 1:
+            tuned_x, tuned_y = self._tune()
+        else:
+            tuned_x, tuned_y = self._tune_Ndots()
         return AutotuningResult(diagram_name=self.diagram.file_basename,
                                 procedure_name=str(self),
                                 model_name=str(self.model),

@@ -297,6 +297,7 @@ class Settings:
     # If True the Jump algorithm will validate the leftmost line at different Y-position to avoid mistake in the case of
     # fading lines.
     validate_left_line: bool = True
+    validate_line: bool = True
 
     # If the oracle is enabled, these numbers corrupt its precision.
     # 0.0 = all predictions are based on the ground truth (labels), means 100% precision

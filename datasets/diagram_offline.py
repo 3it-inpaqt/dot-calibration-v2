@@ -33,18 +33,18 @@ class DiagramOffline(Diagram):
     transition_lines_list: Optional[List[List[LineString]]]
 
     # The charge area lines annotations
-    charge_areas_list: Optional[List[List[Tuple[ChargeRegime, Polygon]]]]
+    charge_areas: Optional[List[Tuple[dict, Polygon]]]
 
     def __init__(self, file_basename: str, x_axes: Sequence[float], y_axes: Sequence[float], values: torch.Tensor,
                  transition_lines_list: Optional[List[List[LineString]]],
-                 charge_areas_list: Optional[List[List[Tuple[ChargeRegime, Polygon]]]]):
+                 charge_areas: Optional[List[Tuple[dict, Polygon]]]):
         super().__init__(file_basename)
 
         self.x_axes = x_axes
         self.y_axes = y_axes
         self.values = values
         self.transition_lines_list = transition_lines_list
-        self.charge_areas_list = charge_areas_list
+        self.charge_areas = charge_areas
 
     def get_random_starting_point(self) -> Tuple[int, int]:
         """
@@ -141,13 +141,18 @@ class DiagramOffline(Diagram):
         volt_y = self.y_axes[coord_y]
         point = Point(volt_x, volt_y)
 
-        # Check coordinates in each labeled area
-        for regime, area in self.charge_areas:
-            if area.contains(point):
-                return regime
-
         # Coordinates not found in labeled areas. The charge area in this location is thus unknown.
-        return ChargeRegime.UNKNOWN
+        regime = [ChargeRegime['UNKNOWN']] * settings.dot_number
+
+        # Check coordinates in each labeled area
+        dot, count = 0, 0
+        for diagram_regime, area in self.charge_areas:
+            if count % 5 == 0:
+                dot += 1
+            if area.contains(point):
+                regime[dot - 1] = diagram_regime
+            count += 1
+        return regime
 
     def is_line_in_patch(self, coordinate: Tuple[int, int],
                          patch_size: Tuple[int, int],
@@ -178,7 +183,7 @@ class DiagramOffline(Diagram):
                                (start_x_v, end_y_v)])
 
         # Label is True if any line intersect the patch shape
-        return any([line.intersects(patch_shape) for line in self.transition_lines])
+        return any([[line.intersects(patch_shape) for line in nb_line] for nb_line in self.transition_lines_list])
 
     def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
            copy: bool = False):
@@ -200,7 +205,7 @@ class DiagramOffline(Diagram):
         """
         plot_diagram(self.x_axes, self.y_axes, self.values, self.file_basename + label_extra, 'nearest',
                      self.x_axes[1] - self.x_axes[0], transition_lines=self.transition_lines_list,
-                     charge_regions=self.charge_areas_list, focus_area=focus_area, show_offset=False, scale_bar=True)
+                     charge_regions=self.charge_areas, focus_area=focus_area, show_offset=False, scale_bar=True)
 
     def get_max_patch_coordinates(self) -> Tuple[int, int]:
         """
@@ -294,7 +299,7 @@ class DiagramOffline(Diagram):
                                                      current_labels['classifications']))['answer'])
 
                 transition_lines_list = []
-                charge_areas_list = []
+                charge_areas = None
 
                 if load_lines:
                     for nb in range(1, settings.dot_number + 1):
@@ -313,22 +318,18 @@ class DiagramOffline(Diagram):
                         continue
 
                 if load_areas:
-                    for nb in range(1, settings.dot_number + 1):
-                        charge_area = None
-                        # Load charge area annotations
-                        charge_area = DiagramOffline._load_charge_annotations(
-                            filter(lambda l: l['title'] != f'line_{nb}', current_labels['objects']), x, y,
-                            pixel_size=label_pixel_size,
-                            snap=1)
+                    # Load charge area annotations
+                    charge_areas = DiagramOffline._load_charge_annotations(filter(lambda l: l['title']
+                                                                                            in ChargeRegime.keys(),
+                                                                                  current_labels['objects']), x, y,
+                                                                           pixel_size=label_pixel_size, snap=1)
 
-                        charge_areas_list.append(charge_area)
-
-                    if len(charge_areas_list) != len(np.zeros(settings.dot_number)):
+                    if not charge_areas:
                         logger.debug(f'No charge label found for {file_basename}')
                         nb_no_label += 1
                         continue
 
-                diagram = DiagramOffline(file_basename, x, y, values, transition_lines_list, charge_areas_list)
+                diagram = DiagramOffline(file_basename, x, y, values, transition_lines_list, charge_areas)
                 diagrams.append(diagram)
                 if settings.plot_diagrams:
                     diagram.plot()
@@ -395,7 +396,7 @@ class DiagramOffline(Diagram):
 
     @staticmethod
     def _load_charge_annotations(charge_areas: Iterable, x, y, pixel_size: float, snap: int = 1) \
-            -> List[Tuple[ChargeRegime, Polygon]]:
+            -> List[Tuple[dict, Polygon]]:
         """
         Load regions annotation for an image.
 
@@ -415,8 +416,7 @@ class DiagramOffline(Diagram):
                                                    True)
 
             area_obj = Polygon(zip(area_x, area_y))
-            processed_areas.append((ChargeRegime(area['value']), area_obj))
-
+            processed_areas.append((ChargeRegime[area['title']], area_obj))
         return processed_areas
 
     @staticmethod

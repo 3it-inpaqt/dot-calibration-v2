@@ -10,43 +10,19 @@ import torch
 
 from utils.settings import settings
 
-
-@unique
-class ChargeRegime(Enum):
-    """ Charge regime enumeration """
-    UNKNOWN = 'unknown'
-    # First quantum dot #
-    ELECTRON_0_1 = '0_electron_1'
-    ELECTRON_1_1 = '1_electron_1'
-    ELECTRON_2_1 = '2_electrons_1'
-    ELECTRON_3_1 = '3_electrons_1'
-    ELECTRON_4_PLUS_1 = '4_electrons_1'  # The value is no '4+_electrons' because labelbox remove the '+'
-    # Second quantum dot #
-    ELECTRON_0_2 = '0_electron_2'
-    ELECTRON_1_2 = '1_electron_2'
-    ELECTRON_2_2 = '2_electrons_2'
-    ELECTRON_3_2 = '3_electrons_2'
-    ELECTRON_4_PLUS_2 = '4_electrons_2'  # The value is no '4+_electrons' because labelbox remove the '+'
-
-    # TODO add Ndots class
-
-    def __str__(self) -> str:
-        """
-        Convert a charge regime to short string representation.
-
-        :return: Short string name.
-        """
-        short_map = {ChargeRegime.UNKNOWN: 'unk.', ChargeRegime.ELECTRON_0_1: '0_1', ChargeRegime.ELECTRON_1: '1_1',
-                     ChargeRegime.ELECTRON_2_1: '2_1', ChargeRegime.ELECTRON_3_1: '3_1',
-                     ChargeRegime.ELECTRON_4_PLUS_1: '4+_1',
-                     ChargeRegime.ELECTRON_0_2: '0_2', ChargeRegime.ELECTRON_1_2: '1_2',
-                     ChargeRegime.ELECTRON_2_2: '2_2',
-                     ChargeRegime.ELECTRON_3_2: '3_2', ChargeRegime.ELECTRON_4_PLUS_2: '4+_2'
-                     }
-
-        # TODO add Ndots class
-
-        return short_map[self]
+# Enumerate all regime for each quantum dot
+# for example ChargeRegime = {'0_electron_1': '0_1', '1_electron_1': '1_1', '2_electron_1': '2_1',
+# '3_electron_1': '3_1', '4+_electron_1': '4_1', 'UNKNOWN': 'unknown'} for a single dot
+regimes = ["0", "1", "2", "3", "4+"]
+ChargeRegime = {'UNKNOWN': 'unknown'}
+for dot in range(1, settings.dot_number + 1):
+    count = 0
+    for regime in regimes:
+        if count <= 1:
+            ChargeRegime[f'{regime}_electron_{dot}'] = f'{regime}_{dot}'
+        else:
+            ChargeRegime[f'{regime}_electrons_{dot}'] = f'{regime}_{dot}'
+        count += 1
 
 
 @unique
@@ -153,7 +129,8 @@ class AutotuningResult:
 
     @property
     def is_success_tuning(self):
-        return self.charge_area is ChargeRegime.ELECTRON_1
+        success_list = [ChargeRegime[f'1_electron_{dot}'] for dot in range(1, settings.dot_number + 1)]
+        return self.charge_area is success_list
 
     @property
     def success_rate(self):
