@@ -296,8 +296,8 @@ class QDSDLines(Dataset):
             return np.array(np.mean(np.array(confidence)))  # No line & Crosspoint
         else:
             # Line [prediction]
-            return np.array(max(confidence[prediction]
-                                - np.sum([confidence[i] for i in range(len(confidence)) if i != prediction]), 0))
+            delta = [confidence[prediction - 1] - confidence[i] for i in range(len(confidence)) if i != prediction]
+            return np.array(max(confidence[prediction - 1] - np.mean(delta), 0))
 
 
 class AddGaussianNoise(object):

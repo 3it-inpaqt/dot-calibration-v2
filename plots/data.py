@@ -126,19 +126,24 @@ def plot_diagram(x_i, y_i,
     charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
         for charge_regions_number in charge_regions:
-            for regime, polygon in charge_regions_number:
-                polygon_x, polygon_y = polygon.exterior.coords.xy
-                plt.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
-                label_x, label_y = list(polygon.centroid.coords)[0]
-                charge_text = plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b',
-                                       weight='bold',
-                                       bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
+            regime = charge_regions_number[0]
+            polygon = charge_regions_number[1]
+            polygon_x, polygon_y = polygon.exterior.coords.xy
+            plt.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
+            label_x, label_y = list(polygon.centroid.coords)[0]
+            charge_text = plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b',
+                                   weight='bold',
+                                   bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
 
     if transition_lines is not None:
-        for line_number in transition_lines:
+        for nb, line_number in enumerate(transition_lines):
+            color = np.random.rand(3)
             for i, line in enumerate(line_number):
                 line_x, line_y = line.coords.xy
-                plt.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
+                # Import here because of a loop
+                from datasets.qdsd import QDSDLines
+                plt.plot(line_x, line_y, color=color,
+                         label=f'Line {QDSDLines.classes[nb + 1]} annotation' if i == 0 else None)
                 legend = True
 
     if scan_history is not None and len(scan_history) > 0:
@@ -423,7 +428,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                                        'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
                                        'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
                                        'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'transition_lines': d.transition_lines, 'vmin': vmin, 'vmax': vmax}),
+                                       'transition_lines': d.transition_lines_list, 'vmin': vmin, 'vmax': vmax}),
                 # Show full diagram with tuning final coordinate + line & regime labels
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values,
@@ -431,7 +436,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                                        'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
                                        'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
                                        'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
+                                       'transition_lines': d.transition_lines_list, 'charge_regions': d.charge_areas,
                                        'vmin': vmin, 'vmax': vmax}),
             ]
 
@@ -559,7 +564,7 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
 
     for i, s in enumerate(samples):
         ax = axs[i // plot_length, i % plot_length]
-        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='nearest', cmap='copper')
+        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='nearest', cmap='RdBu_r')
 
         if confidences:
             # If it's a tuple we assume it is: mean, std, entropy

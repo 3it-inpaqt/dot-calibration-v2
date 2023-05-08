@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict
-from itertools import chain
 from typing import Dict, List, Optional, Tuple
 
+from itertools import chain
 from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
@@ -162,13 +162,15 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
     headers = ['Procedure'] if len(settings.autotuning_procedures) > 1 else []
     headers += ['Diagram', 'Steps', 'Model Success'] + list(map(str, ChargeRegime)) + ['Good', 'Bad', 'Tuning Success']
     results_table = [headers]
+    target_regime = str([ChargeRegime[f'1_electron_{dot}'] for dot in range(1, settings.dot_number + 1)])
 
     # Process counter of each diagram
     for (procedure_name, diagram_name), tuning_results in autotuning_results.items():
         # Count total final regimes
         regimes = Counter()
+        regime_area = list()
         for result in tuning_results:
-            regimes[result.charge_area] += 1
+            regimes[str(result.charge_area)] += 1
         overall += regimes
 
         # Count total steps
@@ -180,8 +182,7 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
             model_success = 0
         overall['steps'] += nb_steps
         overall['good'] += nb_good_inference
-
-        nb_good_regime = regimes[ChargeRegime.ELECTRON_1]
+        nb_good_regime = regimes[target_regime]
         nb_total = len(tuning_results)
         nb_bad_regime = nb_total - nb_good_regime
 
@@ -197,7 +198,7 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
     plot_autotuning_results(results_table, overall)
 
     # Overall row
-    nb_good_regime = overall[ChargeRegime.ELECTRON_1]
+    nb_good_regime = overall[target_regime]
     nb_total = sum((overall.get(charge, 0) for charge in ChargeRegime))
     total_success_rate = nb_good_regime / nb_total if nb_total > 0 else 0
     if len(autotuning_results) > 1 and len(settings.autotuning_procedures) == 1:
