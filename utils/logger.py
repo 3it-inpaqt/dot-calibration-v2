@@ -154,6 +154,8 @@ class SexyLogger(logging.Logger):
             # Set global log level to the minimum value between the two handler
             self.setLevel(min(self.console_handler.level, self.file_handler.level))
 
+        self._cache.clear()  # Hot fix for https://bugs.python.org/issue37258
+
     def set_file_level(self, level: Union[int, str]) -> None:
         """
         Set the file log minimum level to save.
@@ -170,6 +172,7 @@ class SexyLogger(logging.Logger):
         self.file_handler.setLevel(level)
         # Set global log level to the minimum value between the two handler
         self.setLevel(min(self.console_handler.level, self.file_handler.level))
+        self._cache.clear()  # Hot fix for https://bugs.python.org/issue37258
 
     def set_formatter(self,
                       console_log_color: bool = True,

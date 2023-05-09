@@ -221,7 +221,7 @@ class Settings:
 
     # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
     # Negative threshold means automatic value selection using tau.
-    confidence_threshold: float = -1
+    confidence_threshold: float = -1.0
 
     # Relative importance of model error compare to model uncertainty for automatic confidence threshold tuning.
     # Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
