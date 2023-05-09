@@ -328,6 +328,18 @@ class Settings:
     start_range_voltage_x: Sequence = (float('nan'), float('nan'))
     start_range_voltage_y: Sequence = (float('nan'), float('nan'))
 
+    # ==================================================================================================================
+    # ============================================= Circuit Simulation =================================================
+    # ==================================================================================================================
+
+    # Whether the inference of the ML model should be simulated on Xyce or not.
+    simulate_circuit = True
+
+    # If set and greater than 0, the model's parameters will be clipped between
+    # [-parameters_clipping, parameters_clipping] after each training batch.
+    parameters_clipping = 2
+
+
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
         return len(self.run_name) > 0

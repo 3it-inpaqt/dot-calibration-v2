@@ -24,6 +24,7 @@ from utils.metrics import network_metrics
 from utils.output import init_out_directory, save_results, save_timers, set_plot_style
 from utils.settings import settings
 from utils.timer import SectionTimer
+from circuit_simulation.analog_tester import test_analog
 
 
 def preparation() -> None:
@@ -277,3 +278,8 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
 
     # Arrived to the end successfully (no error)
     save_results(success_run=True)
+
+    if settings.simulate_circuit:
+        # Test the simulated circuit on Xyce
+        # TODO: add parameters, implement function
+        test_analog(network, test_dataset)

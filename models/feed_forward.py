@@ -42,7 +42,10 @@ class FeedForward(ClassifierNN):
                 if settings.batch_norm_layers[i]:
                     layer.append(nn.BatchNorm1d(layer_sizes[i + 1]))
                 # Activation function
-                layer.append(nn.ReLU())
+                if settings.simulate_circuit:
+                    layer.append(nn.Sigmoid())
+                else:
+                    layer.append(nn.ReLU())
                 # Dropout
                 if settings.dropout > 0:
                     layer.append(nn.Dropout(settings.dropout))
@@ -89,6 +92,11 @@ class FeedForward(ClassifierNN):
         loss = self._criterion(outputs, labels.float())
         loss.backward()
         self._optimizer.step()
+        # If the parameters_clipping is set, clip every parameter of the model
+        if settings.parameters_clipping is not None and settings.parameters_clipping > 0:
+            with torch.no_grad():
+                for param in self.parameters():
+                    param.clamp_(-settings.parameters_clipping, settings.parameters_clipping)
 
         return loss.item()
 
