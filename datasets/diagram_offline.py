@@ -1,5 +1,6 @@
 import gzip
 import json
+import platform
 import zipfile
 from pathlib import Path
 from random import randrange
@@ -214,6 +215,29 @@ class DiagramOffline(Diagram):
         """
         return len(self.x_axes) - settings.patch_size_x - 1, len(self.y_axes) - settings.patch_size_y - 1
 
+    def voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
+        """
+        Convert a voltage to a coordinate in the diagram according to the discret axes closed match.
+
+        :param x: The voltage (x axes) to convert.
+        :param y: The voltage (y axes) to convert.
+        :return: The coordinate (x, y) in the diagram.
+        """
+        # Search the closest value in the x and y axes
+        x_index = np.abs(np.array(self.x_axes) - x).argmin()
+        y_index = np.abs(np.array(self.y_axes) - y).argmin()
+        return x_index, y_index
+
+    def coord_to_voltage(self, x: int, y: int) -> Tuple[float, float]:
+        """
+        Convert a coordinate in the diagram to a voltage using the axis.
+
+        :param x: The coordinate (x axes) to convert.
+        :param y: The coordinate (y axes) to convert.
+        :return: The voltage (x, y) in this diagram.
+        """
+        return self.x_axes[x], self.y_axes[y]
+
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'
 
@@ -272,7 +296,9 @@ class DiagramOffline(Diagram):
                 nb_no_label += 1
                 continue
 
-            with diagram_name.open('rb') as diagram_file:
+            # Windows needs the 'b' option
+            open_options = 'rb' if platform.system() == 'Windows' else 'r'
+            with diagram_name.open(open_options) as diagram_file:
                 # Load values from CSV file
                 x, y, values = DiagramOffline._load_interpolated_csv(gzip.open(diagram_file))
 

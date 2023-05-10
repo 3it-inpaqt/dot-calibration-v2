@@ -15,7 +15,9 @@ class SanityCheck(AutotuningProcedure):
         """
 
         expected_number_of_steps = 1 + (self._sequence_size * 4) + (self._sequence_size * 8 + 4)
-        logger.info(f'Auto-tuning sanity check. Expected number of steps: {expected_number_of_steps}')
+        x_v, y_v = self.diagram.coord_to_voltage(self.x, self.y)
+        logger.info(f'Auto-tuning sanity check. Start from ({x_v:.2f}V, {y_v:.2f}V). '
+                    f'Expected number of steps: {expected_number_of_steps}')
 
         # First scan the starting position
         logger.debug(f'Debug stage (0) - Scan the starting position')

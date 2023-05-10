@@ -81,6 +81,26 @@ class Diagram:
         """
         raise NotImplementedError
 
+    def voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
+        """
+        Convert a voltage to a coordinate in the diagram relatively to the origin chosen.
+
+        :param x: The voltage (x axes) to convert.
+        :param y: The voltage (y axes) to convert.
+        :return: The coordinate (x, y) in the diagram.
+        """
+        raise NotImplementedError
+
+    def coord_to_voltage(self, x: int, y: int) -> Tuple[float, float]:
+        """
+        Convert a coordinate in the diagram to a voltage.
+
+        :param x: The coordinate (x axes) to convert.
+        :param y: The coordinate (y axes) to convert.
+        :return: The voltage (x, y) in this diagram.
+        """
+        raise NotImplementedError
+
     def __str__(self):
         return self.file_basename
 

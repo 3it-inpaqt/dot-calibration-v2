@@ -41,8 +41,8 @@ class DiagramOnline(Diagram):
         min_y_v, max_y_v = settings.start_range_voltage_y
 
         # Convert the voltage to coordinates
-        min_x, min_y = self._voltage_to_coord(min_x_v, min_y_v)
-        max_x, max_y = self._voltage_to_coord(max_x_v, max_y_v)
+        min_x, min_y = self.voltage_to_coord(min_x_v, min_y_v)
+        max_x, max_y = self.voltage_to_coord(max_x_v, max_y_v)
 
         # Make sure the patch is fully inside the starting range
         max_x = max_x - settings.patch_size_x
@@ -63,23 +63,21 @@ class DiagramOnline(Diagram):
         :param patch_size: The size of the patch to extract (in number of pixel)
         :return: The patch.
         """
+        x_patch, y_patch = patch_size
+        x_start, y_start = coordinate
+        x_end = x_start + x_patch
+        y_end = y_start + y_patch
 
         # Convert the coordinate to voltage
-        x, y = coordinate
-        min_x_v, min_y_v = settings.min_voltage, settings.min_voltage
-        max_x_v, max_y_v = settings.max_voltage, settings.max_voltage
-        x_patch, y_patch = patch_size
-        x_range_coord = [x, x + x_patch]
-        y_range_coord = [y, y + y_patch]
-        x_range_volt = Diagram._coord_to_volt(x_range_coord, min_x_v, max_x_v, settings.pixel_size)
-        y_range_volt = Diagram._coord_to_volt(y_range_coord, min_y_v, max_y_v, settings.pixel_size)
+        x_start_v, y_start_v = self.coord_to_voltage(x_start, y_start)
+        x_end_v, y_end_v = self.coord_to_voltage(x_end, y_end)
 
         # Request a new measurement to the connector
         logger.debug(f'Requesting measurement ({prod(patch_size):,d} points) to the {self._connector} connector: '
-                     f'|X|{x_range_coord[0]}->{x_range_coord[1]}| ({x_range_volt[0]:.3f}V->{x_range_volt[1]:.3f}V) '
-                     f'|Y|{y_range_coord[0]}->{y_range_coord[1]}| ({y_range_volt[0]:.3f}V->{y_range_volt[1]:.3f}V)')
-        measurement = self._connector.measurement(x_range_volt[0], x_range_volt[1], settings.pixel_size,
-                                                  y_range_volt[0], y_range_volt[1], settings.pixel_size)
+                     f'|X|{x_start}->{x_end}| ({x_start_v:.3f}V->{x_end_v:.3f}V) '
+                     f'|Y|{y_start}->{y_end}| ({y_start_v:.3f}V->{y_end_v:.3f}V)')
+        measurement = self._connector.measurement(x_start_v, x_end_v, settings.pixel_size,
+                                                  y_start_v, y_end_v, settings.pixel_size)
 
         # Validate the measurement size
         if tuple(measurement.data.shape) != patch_size:
@@ -135,8 +133,8 @@ class DiagramOnline(Diagram):
         for measurement in self._measurement_history:
             start_x, end_x = measurement.x_axes[0], measurement.x_axes[-1]
             start_y, end_y = measurement.y_axes[0], measurement.y_axes[-1]
-            start_x, start_y = self._voltage_to_coord(start_x, start_y)
-            end_x, end_y = self._voltage_to_coord(end_x, end_y)
+            start_x, start_y = self.voltage_to_coord(start_x, start_y)
+            end_x, end_y = self.voltage_to_coord(end_x, end_y)
 
             values[start_x: end_x, start_y: end_y] = measurement.data
 
@@ -184,7 +182,7 @@ class DiagramOnline(Diagram):
         measurement /= self._norm_max_value - self._norm_min_value
         return measurement
 
-    def _voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
+    def voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
         """
         Convert a voltage to a coordinate in the diagram relatively to the origin chosen.
 
@@ -195,11 +193,24 @@ class DiagramOnline(Diagram):
         origin_x, origin_y = self._origin_voltage
         return round(((x - origin_x) / settings.pixel_size)), round(((y - origin_y) / settings.pixel_size))
 
+    def coord_to_voltage(self, x: int, y: int) -> Tuple[float, float]:
+        """
+        Convert a coordinate in the diagram to a voltage.
+
+        :param x: The coordinate (x axes) to convert.
+        :param y: The coordinate (y axes) to convert.
+        :return: The voltage (x, y) in this diagram.
+        """
+        min_x_v, min_y_v = self._origin_voltage
+        x_volt = min_x_v + x * settings.pixel_size
+        y_volt = min_y_v + y * settings.pixel_size
+        return x_volt, y_volt
+
     def get_max_patch_coordinates(self) -> Tuple[int, int]:
         """
         Get the maximum coordinates of a patch in this diagram.
 
         :return: The maximum coordinates as (x, y)
         """
-        x_max, y_max = self._voltage_to_coord(settings.max_voltage, settings.max_voltage)
+        x_max, y_max = self.voltage_to_coord(settings.max_voltage, settings.max_voltage)
         return x_max - settings.patch_size_x, y_max - settings.patch_size_y

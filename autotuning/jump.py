@@ -409,14 +409,10 @@ class Jump(AutotuningProcedure):
         if self._leftmost_line_coord is None:
             return 'None'
 
-        return 'FIXME'
+        x, y = self._leftmost_line_coord
+        x_volt, y_volt = self.diagram.coord_to_voltage(x, y)
 
-        # FIXME volt conversion
-        # x, y = self._leftmost_line_coord
-        # x_volt = self.diagram.x_axes[x]
-        # y_volt = self.diagram.y_axes[y]
-        #
-        # return f'{x_volt:.2f}V,{y_volt:.2f}V'
+        return f'{x_volt:.2f}V,{y_volt:.2f}V'
 
     def reset_procedure(self):
         super().reset_procedure()
