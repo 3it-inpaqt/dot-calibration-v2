@@ -181,9 +181,18 @@ class SearchLineSlope:
         return None
 
 
-@dataclass(frozen=True)
+@dataclass
 class ExperimentalMeasurement:
     """ Data class to keep track of experimental measurement at each step. """
     x_axes: Sequence[float]
     y_axes: Sequence[float]
     data: torch.Tensor
+
+    def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
+           copy: bool = False):
+        """
+        Send the data to a specific device (cpu or cuda) and/or a convert it to a different type. Modification in place.
+        The arguments correspond to the torch tensor "to" signature.
+        See https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to.
+        """
+        self.data = self.data.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)

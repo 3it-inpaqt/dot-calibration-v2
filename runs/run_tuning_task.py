@@ -77,7 +77,7 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
                     result = procedure.run_tuning()
 
                     # Save result and log
-                    autotuning_results[(procedure_name, diagram.file_basename)].append(result)
+                    autotuning_results[(procedure_name, diagram.name)].append(result)
                     nb_error_to_plot = save_show_results(result, procedure, i == 0, nb_error_to_plot)
 
                     progress.incr()
@@ -137,7 +137,7 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
     is_full_scan = isinstance(procedure, FullScan)
 
     # Log information
-    logger.debug(f'End tuning {procedure.diagram.file_basename} in {autotuning_result.nb_steps} steps '
+    logger.debug(f'End tuning {procedure.diagram.name} in {autotuning_result.nb_steps} steps '
                  f'({autotuning_result.success_rate:.1%} success). '
                  f'Final coordinates: {autotuning_result.final_coord} => {autotuning_result.charge_area} e '
                  f'{"[Good]" if success else "[Bad]"}')

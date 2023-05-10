@@ -175,7 +175,7 @@ class QDSDLines(Dataset):
 
             for diagram in diagrams:
                 diagram_patches = diagram.get_patches(patch_size, overlap, label_offset)
-                if not use_test_ratio and diagram.file_basename in test_ratio_or_names:
+                if not use_test_ratio and diagram.name in test_ratio_or_names:
                     test_patches.extend(diagram_patches)
                 else:
                     patches.extend(diagram_patches)

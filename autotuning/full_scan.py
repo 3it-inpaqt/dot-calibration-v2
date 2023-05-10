@@ -42,7 +42,7 @@ class FullScan(AutotuningProcedure):
             """
         d = self.diagram
         values = d.values.cpu()
-        name = f'{self.diagram.file_basename} steps\n{self}'
+        name = f'{self.diagram.name} steps\n{self}'
 
         # Parallel plotting for speed.
         with Pool(get_nb_loader_workers()) as pool:

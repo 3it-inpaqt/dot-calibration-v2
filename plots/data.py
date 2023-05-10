@@ -392,7 +392,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             # Generate images in parallel for speed. Use partial to set constants arguments.
             # Main animation frames
             async_result_main = pool.map_async(
-                partial(plot_diagram, x_axes, y_axes, values, d.file_basename, 'nearest', settings.pixel_size,
+                partial(plot_diagram, x_axes, y_axes, values, d.name, 'nearest', settings.pixel_size,
                         None, None, None, False, save_in_buffer=True, text_stats=True, show_title=False,
                         fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax, show_crosses=show_crosses),
                 (scan_history[0:i] for i in frame_ids)
@@ -403,14 +403,14 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                 # Show diagram with all inference and fog of war
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                       'image_name': d.file_basename, 'interpolation_method': 'nearest',
+                                       'image_name': d.name, 'interpolation_method': 'nearest',
                                        'pixel_size': settings.pixel_size, 'scan_history': scan_history,
                                        'show_offset': False, 'save_in_buffer': True, 'text_stats': True,
                                        'show_title': False, 'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
                 # Show diagram with tuning final coordinate and fog of war
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                       'image_name': d.file_basename,
+                                       'image_name': d.name,
                                        'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
                                        'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
                                        'save_in_buffer': True, 'text_stats': True, 'show_title': False,
@@ -426,14 +426,14 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                     # Show full diagram with tuning final coordinate
                     pool.apply_async(plot_diagram,
                                      kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                           'image_name': d.file_basename, 'interpolation_method': 'nearest',
+                                           'image_name': d.name, 'interpolation_method': 'nearest',
                                            'pixel_size': settings.pixel_size, 'scan_history': scan_history,
                                            'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
                                            'text_stats': True, 'show_title': False, 'vmin': vmin, 'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line labels
                     pool.apply_async(plot_diagram,
                                      kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                           'image_name': d.file_basename, 'interpolation_method': 'nearest',
+                                           'image_name': d.name, 'interpolation_method': 'nearest',
                                            'pixel_size': settings.pixel_size, 'scan_history': scan_history,
                                            'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
                                            'text_stats': True, 'show_title': False,
@@ -441,7 +441,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                     # Show full diagram with tuning final coordinate + line & regime labels
                     pool.apply_async(plot_diagram,
                                      kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                           'image_name': d.file_basename, 'interpolation_method': 'nearest',
+                                           'image_name': d.name, 'interpolation_method': 'nearest',
                                            'pixel_size': settings.pixel_size, 'scan_history': scan_history,
                                            'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
                                            'text_stats': True, 'show_title': False,

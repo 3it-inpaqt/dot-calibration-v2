@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from classes.data_structures import ExperimentalMeasurement
 from datasets.diagram_online import DiagramOnline
 from plots.data import plot_diagram
@@ -10,12 +12,14 @@ class Connector:
     _is_connected: bool = False
     _nb_measurement: int = 0
 
+    @abstractmethod
     def _setup_connection(self) -> None:
         """
         Set up the connection to the experimental setup.
         """
         raise NotImplementedError
 
+    @abstractmethod
     def _close_connection(self) -> None:
         """
         Close the connection to the experimental setup.
@@ -51,6 +55,7 @@ class Connector:
 
         return result
 
+    @abstractmethod
     def _measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float,
                      start_volt_y: float, end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
         """

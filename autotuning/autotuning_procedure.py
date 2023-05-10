@@ -484,7 +484,7 @@ class AutotuningProcedure:
         if is_online:
             name = f'Online tuning steps\n{self}'
         else:
-            name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
+            name = f'{self.diagram.name} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
 
         # Parallel plotting for speed.
         with Pool(get_nb_loader_workers()) as pool:
@@ -531,7 +531,7 @@ class AutotuningProcedure:
         :param success_tuning: Result of the tuning (True = Success)
         """
 
-        name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}'
+        name = f'{self.diagram.name} steps {"GOOD" if success_tuning else "FAIL"}'
         # Generate a gif image
         plot_diagram_step_animation(self.diagram, name, self._scan_history, final_coord)
 
@@ -568,7 +568,7 @@ class AutotuningProcedure:
 
         tuned_x, tuned_y = self._tune()
 
-        return AutotuningResult(diagram_name=self.diagram.file_basename,
+        return AutotuningResult(diagram_name=self.diagram.name,
                                 procedure_name=str(self),
                                 model_name=str(self.model),
                                 nb_steps=self.get_nb_steps(),

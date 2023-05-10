@@ -124,6 +124,6 @@ class SanityCheck(AutotuningProcedure):
         :param success_tuning: Result of the tuning (True = Success)
         """
 
-        name = f'{self.diagram.file_basename} steps'
+        name = f'{self.diagram.name} steps'
         # Generate a gif image
         plot_diagram_step_animation(self.diagram, name, self._scan_history, final_coord, False)

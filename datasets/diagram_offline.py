@@ -21,15 +21,6 @@ from utils.settings import settings
 class DiagramOffline(Diagram):
     """ Handle the diagram data and its annotations. """
 
-    # The list of voltage for the first gate
-    x_axes: Sequence[float]
-
-    # The list of voltage for the second gate
-    y_axes: Sequence[float]
-
-    # The list of measured voltage according to the 2 gates
-    values: torch.Tensor
-
     # The transition lines annotations
     transition_lines: Optional[List[LineString]]
 
@@ -39,6 +30,16 @@ class DiagramOffline(Diagram):
     def __init__(self, file_basename: str, x_axes: Sequence[float], y_axes: Sequence[float], values: torch.Tensor,
                  transition_lines: Optional[List[LineString]],
                  charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]):
+        """
+        Creat an instance of DiagramOffline based on a diagram file.
+
+        :param file_basename: The name of the diagram file (without extension).
+        :param x_axes: The list of voltage for the X axis (corresponding with the Gate 1).
+        :param y_axes: The list of voltage for the Y axis (corresponding with the Gate 2).
+        :param values: The list of current values for each voltage combination.
+        :param transition_lines: The labels of transition line.
+        :param charge_areas: The labels of charge areas.
+        """
         super().__init__(file_basename)
 
         self.x_axes = x_axes
@@ -121,7 +122,7 @@ class DiagramOffline(Diagram):
                 # Verification plots
                 # plot_diagram(self.x[start_x:end_x], self.y[start_y:end_y],
                 #              self.values[diagram_size_y-end_y:diagram_size_y-start_y, start_x:end_x],
-                #              self.file_basename + f' - patch {i:n} - line {label} - REAL',
+                #              self.name + f' - patch {i:n} - line {label} - REAL',
                 #              'nearest', self.x[1] - self.x[0])
                 # self.plot((start_x_v, end_x_v, start_y_v, end_y_v), f' - patch {i:n} - line {label}')
                 yield patch, label
@@ -177,24 +178,6 @@ class DiagramOffline(Diagram):
         # Label is True if any line intersect the patch shape
         return any([line.intersects(patch_shape) for line in self.transition_lines])
 
-    def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
-           copy: bool = False):
-        """
-        Send the dataset to a specific device (cpu or cuda) and/or a convert it to a different type.
-        Modification in place.
-        The arguments correspond to the torch tensor "to" signature.
-        See https://pytorch.org/docs/stable/tensors.html#torch.Tensor.to.
-        """
-        self.values = self.values.to(device=device, dtype=dtype, non_blocking=non_blocking, copy=copy)
-
-    def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
-        """
-        Get the values of the diagram and the corresponding axis.
-
-        :return: The values as a tensor, the list of x-axis values, the list of y-axis values
-        """
-        return self.values.detach().cpu(), self.x_axes, self.y_axes
-
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         """
         Plot the diagram with matplotlib (save and/or show it depending on the settings).
@@ -203,40 +186,9 @@ class DiagramOffline(Diagram):
         :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
         :param label_extra: Optional extra information for the plot label.
         """
-        plot_diagram(self.x_axes, self.y_axes, self.values, self.file_basename + label_extra, 'nearest',
-                     self.x_axes[1] - self.x_axes[0], transition_lines=self.transition_lines,
-                     charge_regions=self.charge_areas, focus_area=focus_area, show_offset=False, scale_bar=True)
-
-    def get_max_patch_coordinates(self) -> Tuple[int, int]:
-        """
-        Get the maximum coordinates of a patch in this diagram.
-
-        :return: The maximum coordinates as (x, y)
-        """
-        return len(self.x_axes) - settings.patch_size_x - 1, len(self.y_axes) - settings.patch_size_y - 1
-
-    def voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
-        """
-        Convert a voltage to a coordinate in the diagram according to the discret axes closed match.
-
-        :param x: The voltage (x axes) to convert.
-        :param y: The voltage (y axes) to convert.
-        :return: The coordinate (x, y) in the diagram.
-        """
-        # Search the closest value in the x and y axes
-        x_index = np.abs(np.array(self.x_axes) - x).argmin()
-        y_index = np.abs(np.array(self.y_axes) - y).argmin()
-        return x_index, y_index
-
-    def coord_to_voltage(self, x: int, y: int) -> Tuple[float, float]:
-        """
-        Convert a coordinate in the diagram to a voltage using the axis.
-
-        :param x: The coordinate (x axes) to convert.
-        :param y: The coordinate (y axes) to convert.
-        :return: The voltage (x, y) in this diagram.
-        """
-        return self.x_axes[x], self.y_axes[y]
+        plot_diagram(self.x_axes, self.y_axes, self.values, self.name + label_extra, 'nearest',
+                     settings.pixel_size, transition_lines=self.transition_lines, charge_regions=self.charge_areas,
+                     focus_area=focus_area, show_offset=False, scale_bar=True)
 
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'

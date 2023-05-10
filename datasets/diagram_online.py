@@ -1,6 +1,6 @@
 from math import prod
 from random import randrange
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -14,22 +14,30 @@ from utils.settings import settings
 
 
 class DiagramOnline(Diagram):
-    _torch_device: torch.device = None
     _measurement_history: List[ExperimentalMeasurement]
-    _origin_voltage: Tuple[float, float]
     _norm_min_value: float
     _norm_max_value: float
 
     def __init__(self, name: str, connector: "Connector"):
+        """
+        Create an instance of a DiagramOnline associated with a connector (interface to the measurement tool).
+
+        :param name: The name of the diagram.
+        :param connector: The connector to the measurement tool.
+        """
         super().__init__(name)
         self._connector = connector
         self._measurement_history = []
 
-        # Arbitrary define the mapping between the voltage and the coordinate at the origin (0, 0)
-        self._origin_voltage = settings.min_voltage, settings.min_voltage
-
         # Fetch the normalization values used during the training
         self._norm_min_value, self._norm_max_value = load_normalization()
+
+        # Create a virtual axes and discret grid that represent the voltage space to explore.
+        # Where NaN values represent the voltage that have not been measured yet.
+        space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
+        self.x_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
+        self.y_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
+        self.values = torch.full((space_size, space_size), torch.nan)
 
     def get_random_starting_point(self) -> Tuple[int, int]:
         """
@@ -86,8 +94,10 @@ class DiagramOnline(Diagram):
 
         # Save the measurement in the history to keep track of it
         self._measurement_history.append(measurement)
-        # Send the data matrix to the appropriate device (cpu or gpu)
-        measurement.data.to(self._torch_device)
+        # Send the data matrix to the same device as the values
+        measurement.to(self.values.device)
+        # Save the measurement in the grid
+        self.values[x_start: x_end, y_start: y_end] = measurement.data
 
         # Plot the diagram with all current measurements
         if settings.is_named_run() and (settings.save_images or settings.show_images):
@@ -97,67 +107,9 @@ class DiagramOnline(Diagram):
         return self.normalize(measurement.data)
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
-        values, x_axis, y_axis = self.get_values()
-        if values is not None:
-            plot_diagram(x_axis, y_axis, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
-                         focus_area=focus_area, allow_overwrite=True)
-
-    def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
-           copy: bool = False):
-        """
-        Save the torch device to use. Every new data will be sent to this device after being fetched from the connector.
-
-        :param device: A valid torch device.
-        :param dtype: Not used for online diagram.
-        :param non_blocking: Not used for online diagram.
-        :param copy: Not used for online diagram.
-        """
-        self._torch_device = device
-
-    def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
-        """
-        Get all measured values of the diagram and the corresponding axis.
-
-        :return: The values as a tensor, the list of x-axis values, the list of y-axis values
-        """
-        if len(self._measurement_history) == 0:
-            return None, [], []
-
-        space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
-        values = torch.full((space_size, space_size), torch.nan)
-        x_axis = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
-        y_axis = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
-
-        # Fill the spaces with the measurements
-        first_col, last_col, first_row, last_row = None, None, None, None
-        for measurement in self._measurement_history:
-            start_x, end_x = measurement.x_axes[0], measurement.x_axes[-1]
-            start_y, end_y = measurement.y_axes[0], measurement.y_axes[-1]
-            start_x, start_y = self.voltage_to_coord(start_x, start_y)
-            end_x, end_y = self.voltage_to_coord(end_x, end_y)
-
-            values[start_x: end_x, start_y: end_y] = measurement.data
-
-            # Keep track of data border to crop later
-            if first_col is None or start_x < first_col:
-                first_col = start_x
-            if last_col is None or end_x > last_col:
-                last_col = end_x
-            if first_row is None or start_y < first_row:
-                first_row = start_y
-            if last_row is None or end_y > last_row:
-                last_row = end_y
-
-        # Apply margins
-        margin = settings.patch_size_x
-        first_col = max(0, first_col - margin)
-        first_row = max(0, first_row - margin)
-        last_col = min(last_col + margin, len(x_axis))
-        last_row = min(last_row + margin, len(y_axis))
-
-        # TODO crop the data to remove the NaN values
-        # return values[first_row:last_row,first_col:last_col], x_axis[first_col:last_col], y_axis[first_row:last_row]
-        return values, x_axis, y_axis
+        x_axes, y_axes, values = self.get_values()
+        plot_diagram(x_axes, y_axes, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
+                     focus_area=focus_area, allow_overwrite=True)
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """
@@ -181,36 +133,3 @@ class DiagramOnline(Diagram):
         measurement -= self._norm_min_value
         measurement /= self._norm_max_value - self._norm_min_value
         return measurement
-
-    def voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
-        """
-        Convert a voltage to a coordinate in the diagram relatively to the origin chosen.
-
-        :param x: The voltage (x axes) to convert.
-        :param y: The voltage (y axes) to convert.
-        :return: The coordinate (x, y) in the diagram.
-        """
-        origin_x, origin_y = self._origin_voltage
-        return round(((x - origin_x) / settings.pixel_size)), round(((y - origin_y) / settings.pixel_size))
-
-    def coord_to_voltage(self, x: int, y: int) -> Tuple[float, float]:
-        """
-        Convert a coordinate in the diagram to a voltage.
-
-        :param x: The coordinate (x axes) to convert.
-        :param y: The coordinate (y axes) to convert.
-        :return: The voltage (x, y) in this diagram.
-        """
-        min_x_v, min_y_v = self._origin_voltage
-        x_volt = min_x_v + x * settings.pixel_size
-        y_volt = min_y_v + y * settings.pixel_size
-        return x_volt, y_volt
-
-    def get_max_patch_coordinates(self) -> Tuple[int, int]:
-        """
-        Get the maximum coordinates of a patch in this diagram.
-
-        :return: The maximum coordinates as (x, y)
-        """
-        x_max, y_max = self.voltage_to_coord(settings.max_voltage, settings.max_voltage)
-        return x_max - settings.patch_size_x, y_max - settings.patch_size_y

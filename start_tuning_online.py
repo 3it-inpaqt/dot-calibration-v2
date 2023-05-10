@@ -16,18 +16,20 @@ def start_tuning_online_task() -> None:
     check_settings()
 
     # Instantiate the model according to the settings
-    model = init_model()
+    device = get_cuda_device()
+    model = init_model().to(device)
     # Load the pretrained model
-    if not load_network_(model, settings.trained_network_cache_path, get_cuda_device()):
+    if not load_network_(model, settings.trained_network_cache_path, device):
         raise ValueError(f'Could not load the pretrained model from "{settings.trained_network_cache_path}".')
 
-    # Get the connector to measure online data from experimental setup.
-    # Then instantiate an online diagram with this connector.
-    with SectionTimer('setup connection'), Connector.get_connector() as connector:
-        diagram = connector.get_diagram()
+    with Connector.get_connector() as connector:
+        # Get the connector to measure online data from experimental setup.
+        # Then instantiate an online diagram with this connector.
+        with SectionTimer('setup connection'):
+            diagram = connector.get_diagram()
 
-    # Run the autotuning task with one online diagram
-    run_autotuning(model, [diagram])
+        # Run the autotuning task with one online diagram
+        run_autotuning(model, [diagram])
 
 
 def check_settings() -> None:
