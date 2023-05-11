@@ -19,14 +19,14 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
         model: The neural network model to convert.
         test_dataset: the test set.
     """
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=True)
+    test_loader = DataLoader(test_dataset)
     outputs_table = []
 
     for i, (inputs, label) in enumerate(test_loader):
             outputs_table.append(inference_job(model, inputs, label))
 
 
-def inference_job(model: ClassifierNN, input_values: torch.tensor, label: torch.tensor):
+def inference_job(model: ClassifierNN, inputs: torch.tensor, label: torch.tensor):
     """
     Run an independent inference job.
 
@@ -36,7 +36,7 @@ def inference_job(model: ClassifierNN, input_values: torch.tensor, label: torch.
         label: The label for this input.
     """
 
-    input_values = input_values.tolist()
+    inputs = torch.flatten(inputs).tolist()
     label = label.tolist()
 
-    sim_results, sim_output_before_thr, sim_output = run_circuit_simulation(model, input_values)
+    sim_results, sim_output_before_thr, sim_output = run_circuit_simulation(model, inputs)

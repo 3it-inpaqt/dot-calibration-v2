@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from classes.classifier_nn import ClassifierNN
+from utils.settings import settings
 from circuit_simulation.generate_netlist import generate_netlist_from_model
 
 
@@ -18,7 +19,8 @@ def run_circuit_simulation(model: ClassifierNN, inputs):
 
     Args:
         model: The model to convert as a physical circuit
-        inputs_sequences: The binary sequence for each input
+        inputs: List of inputs on which we want to do inference (e.g. if we have a 18x18 patch then the list contains
+                324 elements)
 
     Returns:
         A pandas dataframe that represent the measurements defined in the simulation. One column for each
@@ -96,7 +98,6 @@ def detect_model_output(sim_results: pd.DataFrame) -> (float, int):
     Args:
         sim_results: A pandas dataframe that represent the measurements defined in the simulation. One column for each
          variable defined in the line ".PRINT" of the netlist.
-        xyce_config: Program configuration related to Xyce (run with --help to see the configuration options).
 
     Returns:
         The analog output value before threshold (V)
@@ -109,15 +110,15 @@ def detect_model_output(sim_results: pd.DataFrame) -> (float, int):
 
     window_mean = 1e-8
     v_out_threshold = 4.9
-    inference_duration = xyce_config.pulse_width + xyce_config.resting_time
-    nb_inference = round((t.iloc[-1] - xyce_config.init_latency) / inference_duration)
-    i_min = np.where(t > xyce_config.init_latency)[0][0]
+    inference_duration = settings.xyce_pulse_width + settings.xyce_resting_time
+    nb_inference = round((t.iloc[-1] - settings.xyce_init_latency) / inference_duration)
+    i_min = np.where(t > settings.xyce_init_latency)[0][0]
 
     list_output = []
     list_thr = []
     for i in range(nb_inference):
         # Search the index of the end of this inference
-        search_i_max = np.where(t >= xyce_config.init_latency + (i + 1) * inference_duration)
+        search_i_max = np.where(t >= settings.xyce_init_latency + (i + 1) * inference_duration)
         i_max = search_i_max[0][0] if len(search_i_max[0]) > 0 else len(t) - 1
         if np.max(output_threshold[i_min:i_max]) > v_out_threshold:
             list_thr.append(1)

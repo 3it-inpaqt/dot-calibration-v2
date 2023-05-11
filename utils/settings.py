@@ -339,6 +339,43 @@ class Settings:
     # [-parameters_clipping, parameters_clipping] after each training batch.
     parameters_clipping = 2
 
+    # The simulation step size for transient analysis (s)
+    xyce_step_size = 2e-10
+
+    # The minimal resistance value that we consider for memristor programming (ohm)
+    xyce_r_min = 5000
+
+    # The maximal resistance value that we consider for memristor programming (ohm)
+    xyce_r_max = 15000
+
+    # The read standard deviation of the memristor resistance (% [0,1])
+    xyce_memristor_read_std = 0.0
+
+    # The pulse amplitude for the input encoding (V)
+    xyce_pulse_amplitude = 0.2
+
+    # The pulse duration for the input encoding (s)
+    xyce_pulse_width = 1e-7
+
+    # The resting time after a pulse (s)
+    xyce_resting_time = 5e-8
+
+    # Pulse delay from 0V to pulse_amplitude (s)
+    xyce_pulse_rise_delay = 1e-9
+
+    # Pulse delay from pulse_amplitude to 0V (s)
+    xyce_pulse_fall_delay = 1e-9
+
+    # Simulation initial latency before to start the first pulse (s)
+    xyce_init_latency = 1e-9
+
+    # The number of sample for the variability study. This setting have no effect if memristor_read_std is 0.
+    xyce_var_sample_size = 10
+
+    # The estimated delay between the input and the output of the sigmoid analog bloc. Used to synchronise the pulse
+    # between layers.
+    xyce_sigmoid_latency = 1e-8
+
 
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
