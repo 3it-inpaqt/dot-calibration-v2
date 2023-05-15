@@ -212,7 +212,7 @@ def get_new_measurement_out_file_path(file_name: str) -> Path:
         return Path(file.name)
 
 
-def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: bool = False) \
+def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: bool = False, figure=None) \
         -> Optional[Union[Path, io.BytesIO]]:
     """
     Save a plot image in the directory
@@ -225,14 +225,18 @@ def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: boo
     :return: The path where the plot is saved, or None if not saved.
     """
 
+    # If the figure is not provided, use the one currently active in matplotlib
+    if figure is None:
+        figure = plt.gcf()
+
     # Adjust the padding between and around subplots
-    plt.tight_layout()
+    figure.tight_layout()
 
     # Keep the image in buffer, but no plot and no save it as a file.
     if save_in_buffer:
         buffer = io.BytesIO()
-        plt.savefig(buffer, dpi=200, format='png')
-        plt.close()
+        figure.savefig(buffer, dpi=200, format='png')
+        plt.close(figure)
         buffer.seek(0)
         return buffer
 
@@ -241,11 +245,11 @@ def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: boo
         out_format = 'svg' if settings.image_latex_format else 'png'
         save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, out_format, allow_overwrite)
 
-        plt.savefig(save_path, dpi=200, transparent=settings.image_latex_format)
+        figure.savefig(save_path, dpi=200, transparent=settings.image_latex_format)
         logger.debug(f'Plot saved in {save_path}')
 
     # Plot image or close it
-    plt.show(block=False) if settings.show_images else plt.close()
+    figure.show(block=False) if settings.show_images else plt.close(figure)
 
     return save_path
 

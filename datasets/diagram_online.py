@@ -112,7 +112,7 @@ class DiagramOnline(Diagram):
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         values, x_axes, y_axes = self.get_cropped_values()
         plot_diagram(x_axes, y_axes, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
-                     focus_area=focus_area, allow_overwrite=True)
+                     focus_area=focus_area, allow_overwrite=True, show_offset=False)
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """

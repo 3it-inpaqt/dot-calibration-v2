@@ -40,6 +40,7 @@ def plot_diagram(x_i, y_i,
                  focus_area: Optional[Tuple] = None,
                  show_offset: bool = True,
                  scan_history: List["StepHistoryEntry"] = None,
+                 last_patch_zoom: bool = True,
                  scan_errors: bool = False,
                  confidence_thresholds: List[float] = None,
                  fog_of_war: bool = False,
@@ -99,47 +100,65 @@ def plot_diagram(x_i, y_i,
     show_title = not settings.image_latex_format if show_title is None else show_title
 
     with sns.axes_style("ticks"):  # Temporary change the axe style (avoid white ticks)
-        boundaries = [np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)]
-        if pixels is None:
-            # If no pixels provided, plot a blank image to allow other information on the same format
-            plt.imshow(np.zeros((len(x_i), len(y_i))), cmap=LinearSegmentedColormap.from_list('', ['white', 'white']),
-                       extent=boundaries)
+        if last_patch_zoom and scan_history is not None and len(scan_history) > 0:
+            fig, ax = plt.subplot_mosaic("""
+            DDP
+            DDT
+            """, figsize=(16, 9))
+            diagram_ax = ax['D']
+            patch_ax = ax['P']
+            text_ax = ax['T']
         else:
-            if fog_of_war and scan_history is not None and len(scan_history) > 0:
-                # Mask area not scanned
-                mask = np.full_like(pixels, True)
-                for scan in scan_history:
-                    x, y = scan.coordinates
-                    y = len(y_i) - y  # Origine to bottom left
-                    mask[y - settings.patch_size_y: y, x:x + settings.patch_size_x] = False
-                pixels = np.ma.masked_array(pixels, mask)
+            fig, ax = plt.subplot_mosaic("""
+                        DDT
+                        DDT
+                        """, figsize=(16, 9))
+            diagram_ax = ax['D']
+            text_ax = ax['T']
 
-            cmap = matplotlib.cm.copper
-            cmap.set_bad(color=NOT_SCANNED_COLOR)
-            plt.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
-            if scale_bar:
-                if settings.research_group == 'michel_pioro_ladriere' or \
-                        settings.research_group == 'eva_dupont_ferrier':
-                    measuring = r'$\mathregular{I_{SET}}$'
-                elif settings.research_group == 'louis_gaudreau':
-                    measuring = r'$\mathregular{I_{QPC}}$'
-                else:
-                    measuring = 'I'
-                plt.colorbar(shrink=0.85, label=f'{measuring} (A)')
+    boundaries = [np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)]
+    if pixels is None:
+        # If no pixels provided, plot a blank image to allow other information on the same format
+        diagram_ax.imshow(np.zeros((len(x_i), len(y_i))),
+                          cmap=LinearSegmentedColormap.from_list('', ['white', 'white']),
+                          extent=boundaries)
+    else:
+        if fog_of_war and scan_history is not None and len(scan_history) > 0:
+            # Mask area not scanned
+            mask = np.full_like(pixels, True)
+            for scan in scan_history:
+                x, y = scan.coordinates
+                y = len(y_i) - y  # Origine to bottom left
+                mask[y - settings.patch_size_y: y, x:x + settings.patch_size_x] = False
+            pixels = np.ma.masked_array(pixels, mask)
+
+        cmap = matplotlib.cm.copper
+        cmap.set_bad(color=NOT_SCANNED_COLOR)
+        diagram_ax.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
+        if scale_bar:
+            if settings.research_group == 'michel_pioro_ladriere' or \
+                    settings.research_group == 'eva_dupont_ferrier':
+                measuring = r'$\mathregular{I_{SET}}$'
+            elif settings.research_group == 'louis_gaudreau':
+                measuring = r'$\mathregular{I_{QPC}}$'
+            else:
+                measuring = 'I'
+            diagram_ax.colorbar(shrink=0.85, label=f'{measuring} (A)')
 
     charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
         for regime, polygon in charge_regions:
             polygon_x, polygon_y = polygon.exterior.coords.xy
-            plt.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
+            diagram_ax.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
             label_x, label_y = list(polygon.centroid.coords)[0]
-            charge_text = plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b', weight='bold',
-                                   bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
+            charge_text = diagram_ax.text(label_x, label_y, str(regime), ha="center", va="center", color='b',
+                                          weight='bold',
+                                          bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
 
     if transition_lines is not None:
         for i, line in enumerate(transition_lines):
             line_x, line_y = line.coords.xy
-            plt.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
+            diagram_ax.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
             legend = True
 
     if scan_history is not None and len(scan_history) > 0:
@@ -209,7 +228,7 @@ def plot_diagram(x_i, y_i,
                                           label=label,
                                           facecolor=face_color,
                                           alpha=alpha)
-                plt.gca().add_patch(patch)
+                diagram_ax.add_patch(patch)
 
         # Marker for first point
         if show_crosses and (fading_history == 0 or len(scan_history) < fading_history * 2):
@@ -220,8 +239,8 @@ def plot_diagram(x_i, y_i,
                 # Fading after the first scans if fading_history is enabled
                 i = len(scan_history) - 2
                 alpha = 1 if i < fading_history else (2 * fading_history - i) / (fading_history + 1)
-            plt.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
-                        color='skyblue', marker='X', s=200, label='Start', alpha=alpha)
+            diagram_ax.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
+                               color='skyblue', marker='X', s=200, label='Start', alpha=alpha)
             legend = True
 
         if history_uncertainty:
@@ -231,7 +250,7 @@ def plot_diagram(x_i, y_i,
             else:
                 cmap = LinearSegmentedColormap.from_list('', [LINE_COLOR, 'white', ERROR_COLOR])
             norm = Normalize(vmin=-1, vmax=1)
-            cbar = plt.colorbar(ScalarMappable(cmap=cmap, norm=norm), shrink=0.8, aspect=15)
+            cbar = diagram_ax.colorbar(ScalarMappable(cmap=cmap, norm=norm), shrink=0.8, aspect=15)
             cbar.outline.set_edgecolor('0.15')
             cbar.set_ticks([-1, 0, 1])
 
@@ -269,8 +288,9 @@ def plot_diagram(x_i, y_i,
         # Get marker position (and avoid going out)
         last_x_i = min(last_x, len(x_i) - 1)
         last_y_i = min(last_y, len(y_i) - 1)
-        plt.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='w', marker='x', s=210, linewidths=2)  # Make white borders
-        plt.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='fuchsia', marker='x', s=200, label='End')
+        diagram_ax.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='w', marker='x', s=210,
+                           linewidths=2)  # Make white borders
+        diagram_ax.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='fuchsia', marker='x', s=200, label='End')
         legend = True
 
     if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
@@ -284,7 +304,7 @@ def plot_diagram(x_i, y_i,
                                  linewidth=1.5, edgecolor='fuchsia', facecolor='none')
 
         # Add the patch to the Axes
-        plt.gca().add_patch(rect)
+        diagram_ax.add_patch(rect)
 
     if text_stats:
         text = ''
@@ -327,35 +347,37 @@ def plot_diagram(x_i, y_i,
             text += f'Tuning step:\n'
             text += f'  {scan_history[-1].description}'
 
-        plt.text(1.03, 0.8, text, horizontalalignment='left', verticalalignment='top', fontsize=8,
-                 fontfamily='monospace', transform=plt.gca().transAxes)
+        text_ax.text(0.05, 0.95, text, horizontalalignment='left', verticalalignment='top', fontsize=12,
+                     fontfamily='monospace', transform=text_ax.transAxes)
+        text_ax.axis('off')
 
     if show_title:
         interpolation_str = f'interpolated ({interpolation_method}) - ' if interpolation_method is not None else ''
-        plt.title(f'{image_name}\n{interpolation_str}pixel size {round(pixel_size, 10) * 1_000}mV')
+        diagram_ax.set_title(f'{image_name}\n{interpolation_str}pixel size {round(pixel_size, 10) * 1_000}mV')
 
-    plt.xlabel('G1 (V)')
-    plt.xticks(rotation=30)
-    plt.ylabel('G2 (V)')
+    diagram_ax.set_xlabel('G1 (V)')
+    diagram_ax.tick_params(axis='x', labelrotation=30)
+    diagram_ax.set_ylabel('G2 (V)')
 
-    if legend:
-        handles, labels = plt.gca().get_legend_handles_labels()
-        handler_map = None
-        if charge_text is not None:
-            # Create custom legend for charge regime text
-            charge_text = copy(charge_text)
-            charge_text.set(text='N')
-            handler_map = {type(charge_text): TextHandler()}
-            handles.append(charge_text)
-            labels.append('Charge regime')
-
-        plt.legend(ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.35), handles=handles, labels=labels,
-                   handler_map=handler_map)
+    # if legend:
+    #     handles, labels = diagram_ax.get_legend_handles_labels()
+    #     handler_map = None
+    #     if charge_text is not None:
+    #         # Create custom legend for charge regime text
+    #         charge_text = copy(charge_text)
+    #         charge_text.set(text='N')
+    #         handler_map = {type(charge_text): TextHandler()}
+    #         handles.append(charge_text)
+    #         labels.append('Charge regime')
+    #
+    #     diagram_ax.legend(ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.35), handles=handles, labels=labels,
+    #                handler_map=handler_map)
 
     if focus_area:
-        plt.axis(focus_area)
+        diagram_ax.axis(focus_area)
 
-    return save_plot(f'diagram_{image_name}', allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer)
+    return save_plot(f'diagram_{image_name}', allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer,
+                     figure=fig)
 
 
 def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: List["StepHistoryEntry"],
