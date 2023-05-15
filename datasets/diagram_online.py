@@ -1,6 +1,6 @@
 from math import prod
 from random import randrange
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -110,7 +110,7 @@ class DiagramOnline(Diagram):
         return self.normalize(measurement.data)
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
-        values, x_axes, y_axes = self.get_values()
+        values, x_axes, y_axes = self.get_cropped_values()
         plot_diagram(x_axes, y_axes, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
                      focus_area=focus_area, allow_overwrite=True)
 
@@ -136,3 +136,33 @@ class DiagramOnline(Diagram):
         measurement -= self._norm_min_value
         measurement /= self._norm_max_value - self._norm_min_value
         return measurement
+
+    def get_cropped_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
+        """
+        Get the values of the diagram, cropped to the measured area.
+
+        :return: The values as a tensor, the list of x-axis values, the list of y-axis values.
+        """
+        values, x_axis, y_axis = self.get_values()
+        # Crop the nan values from the image (not measured area)
+        # Solution from: https://stackoverflow.com/a/25831190/2666094
+        nans = torch.isnan(values)
+        nan_cols = torch.all(nans, axis=0).int()  # True where col is all NAN
+        nan_rows = torch.all(nans, axis=1).int()  # True where row is all NAN
+
+        # The first index where not NAN
+        first_col = nan_cols.argmin()
+        first_row = nan_rows.argmin()
+
+        # The last index where not NAN
+        last_col = len(nan_cols) - nan_cols.flip(0).argmin()
+        last_row = len(nan_rows) - nan_rows.flip(0).argmin()
+
+        # Apply margins
+        margin = settings.patch_size_x
+        first_col = max(0, first_col - margin)
+        first_row = max(0, first_row - margin)
+        last_col = min(last_col + margin, len(x_axis))
+        last_row = min(last_row + margin, len(y_axis))
+
+        return values[first_row:last_row, first_col:last_col], x_axis[first_col:last_col], y_axis[first_row:last_row]
