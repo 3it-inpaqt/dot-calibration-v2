@@ -375,9 +375,9 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
         values, x_axes, y_axes = d.get_values()
         from datasets.diagram_online import DiagramOnline
         is_online = isinstance(d, DiagramOnline)
-        # Compute min / max here because numpy doesn't like to do this on multi thread
-        vmin = values.min()
-        vmax = values.max()
+        # Compute min / max here because numpy doesn't like to do this on multi thread (ignore NaN values)
+        vmin = np.nanmin(values)
+        vmax = np.nanmax(values)
         # Animation speed => Time for an image (ms)
         base_fps = 100
         # Ratio of image to skip for the animation frames (1 means nothing skipped, 4 means 1 keep for 3 skip)

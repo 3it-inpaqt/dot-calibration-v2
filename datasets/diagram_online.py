@@ -92,12 +92,15 @@ class DiagramOnline(Diagram):
             raise ValueError(f'Unexpected measurement size: {tuple(measurement.data.shape)} while {patch_size} has'
                              f' been requested.')
 
+        # Flip y-axis because we save the diagram values with origin is in the top left corner
+        measurement.data = measurement.data.flip(0)
         # Save the measurement in the history to keep track of it
         self._measurement_history.append(measurement)
         # Send the data matrix to the same device as the values
         measurement.to(self.values.device)
-        # Save the measurement in the grid
-        self.values[x_start: x_end, y_start: y_end] = measurement.data
+        # Save the measurement in the grid (invert y-axis because the diagram origin is in the top left corner)
+        diagram_size_y, _ = self.values.shape
+        self.values[diagram_size_y - y_end:diagram_size_y - y_start, x_start: x_end] = measurement.data
 
         # Plot the diagram with all current measurements
         if settings.is_named_run() and (settings.save_images or settings.show_images):
@@ -107,7 +110,7 @@ class DiagramOnline(Diagram):
         return self.normalize(measurement.data)
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
-        x_axes, y_axes, values = self.get_values()
+        values, x_axes, y_axes = self.get_values()
         plot_diagram(x_axes, y_axes, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
                      focus_area=focus_area, allow_overwrite=True)
 
