@@ -30,6 +30,9 @@ class Connector:
                     start_volt_y: float, end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
         """
         Request an experimental measurement to the connector.
+        The intervals exclude the last point.
+        Eg: start_volt_x = 0, end_volt_x = 1, step_volt_x = 0.1 will result in the following 10 voltages:
+            [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
         :param start_volt_x: The beginning of the voltage sweep in the x-axis.
         :param end_volt_x: The end of the voltage sweep in the x-axis.
@@ -60,6 +63,9 @@ class Connector:
                      start_volt_y: float, end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
         """
         Request an experimental measurement to the connector.
+        The intervals exclude the last point.
+        Eg: start_volt_x = 0, end_volt_x = 1, step_volt_x = 0.1 will result in the following 10 voltages:
+            [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
         The internal logic of the measurement has to be overwritten by each connector implementation.
 
         :param start_volt_x: The beginning of the voltage sweep in the x-axis.
