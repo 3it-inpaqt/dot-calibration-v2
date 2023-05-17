@@ -1,9 +1,12 @@
 from typing import Tuple
 
+import torch
+
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.data_structures import Direction
 from plots.data import plot_diagram_step_animation
 from utils.logger import logger
+from utils.settings import settings
 
 
 class SanityCheck(AutotuningProcedure):
@@ -13,11 +16,23 @@ class SanityCheck(AutotuningProcedure):
         """
         Run some simple patterns to check if the autotuning is working as expected (especially the bloody coordinates).
         """
+        # The number of steps expected for this sanity check procedure
+        nb_steps_expected = 1 + (self._sequence_size * 4) + (self._sequence_size * 8 + 4)
+        # The total number of measurements (pixel) expected for this sanity check procedure
+        nb_measurements_expected = nb_steps_expected * settings.patch_size_x * settings.patch_size_y
+        # Because of label offset measurement could, therefore some datapoint are measured twice
+        surface_overlap_x = settings.label_offset_x * 2 * settings.patch_size_y
+        surface_overlap_y = settings.label_offset_y * 2 * settings.patch_size_x
+        nb_double_measurements_expected = self._sequence_size * 6 * (surface_overlap_x + surface_overlap_y)
+        # The number of unique measurement expected
+        nb_unique_measurements_expected = nb_measurements_expected - nb_double_measurements_expected
 
-        expected_number_of_steps = 1 + (self._sequence_size * 4) + (self._sequence_size * 8 + 4)
+        start_x, start_y = self.x, self.y
         x_v, y_v = self.diagram.coord_to_voltage(self.x, self.y)
         logger.info(f'Auto-tuning sanity check. Start from ({x_v:.2f}V, {y_v:.2f}V). '
-                    f'Expected number of steps: {expected_number_of_steps}')
+                    f'Expected number of steps: {nb_steps_expected}. '
+                    f'Expected number of measurements: {nb_measurements_expected} '
+                    f'(unique: {nb_unique_measurements_expected}).')
 
         # First scan the starting position
         logger.debug(f'Debug stage (0) - Scan the starting position')
@@ -30,11 +45,21 @@ class SanityCheck(AutotuningProcedure):
         # Check the four corners
         self._border_sanity_check()
 
-        if len(self._scan_history) == expected_number_of_steps:
-            logger.info(f'Expected number of steps ({expected_number_of_steps}) reached.')
-        else:
-            logger.error(f'Expected number of steps ({expected_number_of_steps}) not reached. '
-                         f'Number of steps: {len(self._scan_history)}')
+        assert len(self._scan_history) == nb_steps_expected, \
+            f"The number of steps ({len(self._scan_history)}) doesn't match with the expectation ({nb_steps_expected})."
+
+        nb_unique_measurements = self.diagram.values.isnan().logical_not().sum()
+        assert nb_unique_measurements == nb_unique_measurements_expected, \
+            f"The number of unique measurements ({nb_unique_measurements}) doesn't match with the " \
+            f"expectation ({nb_unique_measurements_expected})."
+
+        assert not torch.isnan(self.diagram.values[0][0]).item(), 'Corner (0, 0) is not measured.'
+        assert not torch.isnan(self.diagram.values[-1][0]).item(), 'Corner (0, -1) is not measured.'
+        assert not torch.isnan(self.diagram.values[0][-1]).item(), 'Corner (-1, 0) is not measured.'
+        assert not torch.isnan(self.diagram.values[-1][-1]).item(), 'Corner (-1, -1) is not measured.'
+        # FIXME Do not invert the coordinates
+        # assert not torch.isnan(self.diagram.values[start_y][start_x]).item(), \
+        #     f'Starting point ({start_x}, {start_y}) is not measured.'
 
         return self.get_patch_center()
 

@@ -34,9 +34,10 @@ class DiagramOnline(Diagram):
 
         # Create a virtual axes and discret grid that represent the voltage space to explore.
         # Where NaN values represent the voltage that have not been measured yet.
+        # The min value is included but not the max value (to match with python standard).
         space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
-        self.x_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
-        self.y_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
+        self.x_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
+        self.y_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
         self.values = torch.full((space_size, space_size), torch.nan)
 
     def get_random_starting_point(self) -> Tuple[int, int]:
@@ -82,8 +83,8 @@ class DiagramOnline(Diagram):
 
         # Request a new measurement to the connector
         logger.debug(f'Requesting measurement ({prod(patch_size):,d} points) to the {self._connector} connector: '
-                     f'|X|{x_start}->{x_end}| ({x_start_v:.3f}V->{x_end_v:.3f}V) '
-                     f'|Y|{y_start}->{y_end}| ({y_start_v:.3f}V->{y_end_v:.3f}V)')
+                     f'|X|{x_start}->{x_end}| ({x_start_v:.4f}V->{x_end_v:.4f}V) '
+                     f'|Y|{y_start}->{y_end}| ({y_start_v:.4f}V->{y_end_v:.4f}V)')
         measurement = self._connector.measurement(x_start_v, x_end_v, settings.pixel_size,
                                                   y_start_v, y_end_v, settings.pixel_size)
 
@@ -103,16 +104,16 @@ class DiagramOnline(Diagram):
         self.values[diagram_size_y - y_end:diagram_size_y - y_start, x_start: x_end] = measurement.data
 
         # Plot the diagram with all current measurements
-        if settings.is_named_run() and (settings.save_images or settings.show_images):
-            self.plot()
+        # if settings.is_named_run() and (settings.save_images or settings.show_images):
+        #     self.plot()
 
         # Normalize the measurement with the normalization range used during the training, then return it.
         return self.normalize(measurement.data)
 
-    def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
+    def plot(self, label_extra: Optional[str] = '') -> None:
         values, x_axes, y_axes = self.get_cropped_values()
         plot_diagram(x_axes, y_axes, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
-                     focus_area=focus_area, allow_overwrite=True, show_offset=False)
+                     allow_overwrite=True, show_offset=False)
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """
