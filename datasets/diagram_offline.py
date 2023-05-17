@@ -178,17 +178,16 @@ class DiagramOffline(Diagram):
         # Label is True if any line intersect the patch shape
         return any([line.intersects(patch_shape) for line in self.transition_lines])
 
-    def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
+    def plot(self, label_extra: Optional[str] = '') -> None:
         """
         Plot the diagram with matplotlib (save and/or show it depending on the settings).
         This method is a shortcut of plots.diagram.plot_diagram.
 
-        :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
         :param label_extra: Optional extra information for the plot label.
         """
         plot_diagram(self.x_axes, self.y_axes, self.values, self.name + label_extra, 'nearest',
                      settings.pixel_size, transition_lines=self.transition_lines, charge_regions=self.charge_areas,
-                     focus_area=focus_area, show_offset=False, scale_bar=True)
+                     show_offset=False, scale_bar=True)
 
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'

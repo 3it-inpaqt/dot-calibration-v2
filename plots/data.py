@@ -37,10 +37,9 @@ def plot_diagram(x_i, y_i,
                  pixel_size: float,
                  charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: Iterable[LineString] = None,
-                 focus_area: Optional[Tuple] = None,
                  show_offset: bool = True,
                  scan_history: List["StepHistoryEntry"] = None,
-                 last_patch_zoom: bool = True,
+                 last_patch_zoom: bool = False,
                  scan_errors: bool = False,
                  confidence_thresholds: List[float] = None,
                  fog_of_war: bool = False,
@@ -67,9 +66,10 @@ def plot_diagram(x_i, y_i,
     :param pixel_size: The size of pixels, in voltage, used for plot title.
     :param charge_regions: The charge region annotations to draw on top of the image.
     :param transition_lines: The transition line annotation to draw on top of the image.
-    :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
     :param show_offset: If True, draw the offset rectangle (ignored if both offset x and y are 0).
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
+    :param last_patch_zoom: Show the last patch in a separate subplot. Only works if scan_history contains at least
+        one scan.
     :param scan_errors: If True, and scan_history defined, plot the step error on the diagram. If False plot the class
         inference instead. Soft errors are shown only if uncertainty is disabled.
     :param confidence_thresholds: The model confidence threshold values for each class. Only necessary if scan_errors
@@ -98,9 +98,10 @@ def plot_diagram(x_i, y_i,
     legend = False
     # By default do not plot title for latex format.
     show_title = not settings.image_latex_format if show_title is None else show_title
+    show_last_patch_zoom = last_patch_zoom and scan_history is not None and len(scan_history) > 0
 
     with sns.axes_style("ticks"):  # Temporary change the axe style (avoid white ticks)
-        if last_patch_zoom and scan_history is not None and len(scan_history) > 0:
+        if show_last_patch_zoom:
             fig, ax = plt.subplot_mosaic("""
             DDP
             DDT
@@ -116,7 +117,9 @@ def plot_diagram(x_i, y_i,
             diagram_ax = ax['D']
             text_ax = ax['T']
 
-    boundaries = [np.min(x_i), np.max(x_i), np.min(y_i), np.max(y_i)]
+    half_p = pixel_size / 2
+    # Set the plot boundaries to fit the image with the axes, with pixel center aligned with the coordinates.
+    boundaries = [x_i[0] - half_p, x_i[-1] + half_p, y_i[0] - half_p, y_i[-1] + half_p]
     if pixels is None:
         # If no pixels provided, plot a blank image to allow other information on the same format
         diagram_ax.imshow(np.zeros((len(x_i), len(y_i))),
@@ -124,7 +127,7 @@ def plot_diagram(x_i, y_i,
                           extent=boundaries)
     else:
         if fog_of_war and scan_history is not None and len(scan_history) > 0:
-            # Mask area not scanned
+            # Mask area not scanned according to the current scan history list
             mask = np.full_like(pixels, True)
             for scan in scan_history:
                 x, y = scan.coordinates
@@ -134,7 +137,7 @@ def plot_diagram(x_i, y_i,
 
         cmap = matplotlib.cm.copper
         cmap.set_bad(color=NOT_SCANNED_COLOR)
-        diagram_ax.imshow(pixels, interpolation='nearest', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
+        diagram_ax.imshow(pixels, interpolation='none', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
         if scale_bar:
             if settings.research_group == 'michel_pioro_ladriere' or \
                     settings.research_group == 'eva_dupont_ferrier':
@@ -144,6 +147,12 @@ def plot_diagram(x_i, y_i,
             else:
                 measuring = 'I'
             diagram_ax.colorbar(shrink=0.85, label=f'{measuring} (A)')
+
+        if show_last_patch_zoom:
+            last_patch_x, last_patch_y = scan_history[-1].coordinates
+            patch_ax.imshow(pixels, interpolation='none', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
+            patch_ax.set_xlim(x_i[last_patch_x] - half_p, x_i[last_patch_x + settings.patch_size_x - 1] + half_p)
+            patch_ax.set_ylim(y_i[last_patch_y] - half_p, y_i[last_patch_y + settings.patch_size_y - 1] + half_p)
 
     charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
@@ -293,19 +302,6 @@ def plot_diagram(x_i, y_i,
         diagram_ax.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='fuchsia', marker='x', s=200, label='End')
         legend = True
 
-    if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
-        focus_x, focus_y = focus_area if focus_area else 0, 0
-
-        # Create a Rectangle patch
-        rect = patches.Rectangle((x_i[settings.label_offset_x] - pixel_size * 0.35,
-                                  y_i[settings.label_offset_y] - pixel_size * 0.35),
-                                 (focus_x + settings.patch_size_x - 2 * settings.label_offset_x) * pixel_size,
-                                 (focus_y + settings.patch_size_y - 2 * settings.label_offset_y) * pixel_size,
-                                 linewidth=1.5, edgecolor='fuchsia', facecolor='none')
-
-        # Add the patch to the Axes
-        diagram_ax.add_patch(rect)
-
     if text_stats:
         text = ''
         if scan_history and len(scan_history) > 0:
@@ -373,9 +369,6 @@ def plot_diagram(x_i, y_i,
     #     diagram_ax.legend(ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.35), handles=handles, labels=labels,
     #                handler_map=handler_map)
 
-    if focus_area:
-        diagram_ax.axis(focus_area)
-
     return save_plot(f'diagram_{image_name}', allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer,
                      figure=fig)
 
@@ -401,7 +394,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
         vmin = np.nanmin(values)
         vmax = np.nanmax(values)
         # Animation speed => Time for an image (ms)
-        base_fps = 100
+        base_fps = 200
         # Ratio of image to skip for the animation frames (1 means nothing skipped, 4 means 1 keep for 3 skip)
         rate_gif = 4
         rate_video = 1
@@ -415,7 +408,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             # Main animation frames
             async_result_main = pool.map_async(
                 partial(plot_diagram, x_axes, y_axes, values, d.name, 'nearest', settings.pixel_size,
-                        None, None, None, False, save_in_buffer=True, text_stats=True, show_title=False,
+                        None, None, True, last_patch_zoom=True, save_in_buffer=True, text_stats=True, show_title=False,
                         fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax, show_crosses=show_crosses),
                 (scan_history[0:i] for i in frame_ids)
             )
@@ -424,51 +417,50 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             async_result_end = [
                 # Show diagram with all inference and fog of war
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                       'image_name': d.name, 'interpolation_method': 'nearest',
-                                       'pixel_size': settings.pixel_size, 'scan_history': scan_history,
-                                       'show_offset': False, 'save_in_buffer': True, 'text_stats': True,
-                                       'show_title': False, 'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
+                                       'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                       'scan_history': scan_history, 'last_patch_zoom': True, 'save_in_buffer': True,
+                                       'text_stats': True, 'show_title': False, 'fog_of_war': True, 'vmin': vmin,
+                                       'vmax': vmax}),
                 # Show diagram with tuning final coordinate and fog of war
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                       'image_name': d.name,
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
                                        'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
-                                       'scan_history': scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False,
-                                       'fog_of_war': True, 'vmin': vmin, 'vmax': vmax})
+                                       'scan_history': scan_history, 'last_patch_zoom': True,
+                                       'final_coord': final_coord, 'show_offset': True, 'save_in_buffer': True,
+                                       'text_stats': True, 'show_title': False, 'fog_of_war': True, 'vmin': vmin,
+                                       'vmax': vmax})
             ]
 
             # If online, we don't have label to show
             if is_online:
-                end_durations = [base_fps * 20, base_fps * 60]
+                end_durations = [base_fps * 15, base_fps * 40]
             else:
-                end_durations = [base_fps * 20, base_fps * 20, base_fps * 20, base_fps * 40, base_fps * 60]
+                end_durations = [base_fps * 15, base_fps * 15, base_fps * 15, base_fps * 30, base_fps * 40]
                 async_result_end += [
                     # Show full diagram with tuning final coordinate
                     pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                           'image_name': d.name, 'interpolation_method': 'nearest',
-                                           'pixel_size': settings.pixel_size, 'scan_history': scan_history,
-                                           'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
-                                           'text_stats': True, 'show_title': False, 'vmin': vmin, 'vmax': vmax}),
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
+                                           'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                           'scan_history': scan_history, 'last_patch_zoom': True,
+                                           'final_coord': final_coord, 'save_in_buffer': True, 'text_stats': True,
+                                           'show_title': False, 'vmin': vmin, 'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line labels
                     pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                           'image_name': d.name, 'interpolation_method': 'nearest',
-                                           'pixel_size': settings.pixel_size, 'scan_history': scan_history,
-                                           'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
-                                           'text_stats': True, 'show_title': False,
-                                           'transition_lines': d.transition_lines, 'vmin': vmin, 'vmax': vmax}),
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
+                                           'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                           'scan_history': scan_history, 'last_patch_zoom': True,
+                                           'final_coord': final_coord, 'save_in_buffer': True, 'text_stats': True,
+                                           'show_title': False, 'transition_lines': d.transition_lines, 'vmin': vmin,
+                                           'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line & regime labels
                     pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values,
-                                           'image_name': d.name, 'interpolation_method': 'nearest',
-                                           'pixel_size': settings.pixel_size, 'scan_history': scan_history,
-                                           'final_coord': final_coord, 'show_offset': False, 'save_in_buffer': True,
-                                           'text_stats': True, 'show_title': False,
-                                           'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
-                                           'vmin': vmin, 'vmax': vmax}),
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
+                                           'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                           'scan_history': scan_history, 'last_patch_zoom': True,
+                                           'final_coord': final_coord, 'save_in_buffer': True, 'text_stats': True,
+                                           'show_title': False, 'transition_lines': d.transition_lines,
+                                           'charge_regions': d.charge_areas, 'vmin': vmin, 'vmax': vmax}),
                 ]
 
             # Wait for the processes to finish and get result
@@ -532,8 +524,7 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
                             fontsize='xx-large', fontweight='bold')
         for j, class_data in enumerate(cl):
             axs[i, j].imshow(class_data.reshape(settings.patch_size_x, settings.patch_size_y),
-                             interpolation='nearest',
-                             cmap='copper')
+                             interpolation='nearest', cmap='copper')
 
             if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
                 # Create a rectangle patch that represent offset

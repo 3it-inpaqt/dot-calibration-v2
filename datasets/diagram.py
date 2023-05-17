@@ -48,7 +48,7 @@ class Diagram:
 
         :return: The maximum coordinates as (x, y)
         """
-        return len(self.x_axes) - settings.patch_size_x - 1, len(self.y_axes) - settings.patch_size_y - 1
+        return len(self.x_axes) - settings.patch_size_x, len(self.y_axes) - settings.patch_size_y
 
     def voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
         """
@@ -68,9 +68,12 @@ class Diagram:
         :param y: The coordinate (y axes) to convert.
         :return: The voltage (x, y) in this diagram.
         """
-        x_volt = self.x_axes[0] + x * settings.pixel_size
-        y_volt = self.y_axes[0] + y * settings.pixel_size
-        return x_volt, y_volt
+        try:
+            # If possible use the axes values
+            return self.x_axes[x], self.y_axes[y]
+        except IndexError:
+            # Otherwise use the pixel size
+            return self.x_axes[0] + x * settings.pixel_size, self.y_axes[0] + y * settings.pixel_size
 
     def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
         """
@@ -101,7 +104,7 @@ class Diagram:
         raise NotImplementedError
 
     @abstractmethod
-    def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
+    def plot(self, label_extra: Optional[str] = '') -> None:
         """
         Plot the diagram with matplotlib (save and/or show it depending on the settings).
         This method is a shortcut of plots.diagram.plot_diagram.
