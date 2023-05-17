@@ -27,7 +27,7 @@ class Settings:
 
     # Name of the run to save the result ('tmp' for temporary files).
     # If empty or None thing is saved.
-    run_name: str = ''
+    run_name: str = 'tmp'
 
     # The seed to use for all random number generator during this run.
     # Forcing reproducibility could lead to a performance lost.
@@ -161,7 +161,7 @@ class Settings:
 
     # The type of model to use (could be a neural network).
     # Have to be in the implemented list: FF, BFF, CNN, BCNN.
-    model_type: str = 'CNN'
+    model_type: str = 'FF'
 
     # The number of fully connected hidden layer and their respective number of neurons.
     hidden_layers_size: Sequence = (200, 100)
@@ -176,7 +176,7 @@ class Settings:
 
     # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
     # Have to match the number of layers (convolution + linear)
-    batch_norm_layers: Sequence = (False, False, False, False)
+    batch_norm_layers: Sequence = (False, False)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -375,6 +375,12 @@ class Settings:
     # The estimated delay between the input and the output of the sigmoid analog bloc. Used to synchronise the pulse
     # between layers.
     xyce_sigmoid_latency = 1e-8
+
+    # Maximum number of test inferences to run on Xyce (0 means the whole test set)
+    xyce_max_test_inference = 0
+
+    # Number of parallel process to run (0 means the number of cpu cores)
+    xyce_nb_process = 0
 
 
     def is_named_run(self) -> bool:

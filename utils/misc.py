@@ -129,3 +129,21 @@ def yaml_preprocess(item: Any) -> Union[str, int, float, List, Dict]:
     except TypeError:
         # Not iterable, then convert to string
         return str(item)
+
+
+def short_number(n: Union[int, float]) -> str:
+    """
+    Convert an integer into a short string notation using 'k' for 1 000 and 'M' for 1 000 000.
+
+    Args:
+        n: The integer to format.
+
+    Returns:
+        The formatted string.
+    """
+    if n < 1_000:
+        return str(n)
+    if n < 1_000_000:
+        return f'{n / 1_000:.1f}'.rstrip('0').rstrip('.') + 'k'  # Remove unnecessary decimal 0
+    # >= 1_000_000
+    return f'{n / 1_000_000:.1f}'.rstrip('0').rstrip('.') + 'M'  # Remove unnecessary decimal 0

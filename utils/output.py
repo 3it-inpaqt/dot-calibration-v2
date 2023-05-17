@@ -104,6 +104,20 @@ def remove_out_directory(directory: Path) -> None:
             measurement_file.unlink()
         measurements_dir.rmdir()
 
+    # Remove Xyce results
+    netlist = directory / 'netlist.CIR'
+    xyce_output = directory / 'xyce_output.txt'
+    xyce_results = directory / 'xyce_results.csv'
+    inferences = directory / 'inferences_results.csv'
+    if netlist.exists():
+        netlist.unlink()
+    if xyce_output.exists():
+        xyce_output.unlink()
+    if xyce_results.exists():
+        xyce_results.unlink()
+    if inferences.exists():
+        inferences.unlink()
+
     # Remove tmp directory
     directory.rmdir()
 
@@ -370,6 +384,72 @@ def save_normalization(min_value: float, max_value: float) -> None:
         yaml.dump({'min': min_value, 'max': max_value}, f)
 
     logger.debug(f'Normalization values saved in {normalization_file}')
+
+
+def save_netlist(netlist: str):
+    """
+    Save the netlist if it is the first one generated during this run.
+    Only the input should change in the next netlists.
+
+    Args:
+        netlist: The generated netlist to save as a string.
+    """
+
+    # Skip saving if the name of the run is not set
+    if settings.is_unnamed_run():
+        return
+
+    save_path = Path(OUT_DIR, settings.run_name, 'netlist.CIR')
+    with open(save_path, 'w') as f:
+        f.write(netlist)
+
+
+def save_xyce_output(xyce_output: str):
+    """
+    Save Xyce process output.
+
+    Args:
+        xyce_output: Xyce process output as a string.
+    """
+
+    # Skip saving if the name of the run is not set
+    if settings.is_unnamed_run():
+        return
+
+    save_path = Path(OUT_DIR, settings.run_name, 'xyce_output.txt')
+    with open(save_path, 'w') as f:
+        f.write(xyce_output)
+
+
+def save_xyce_results(xyce_results: pd.DataFrame):
+    """
+    Save Xyce measurements as a CSV file.
+    There is one column per variable listed after ".PRINT TRAN" in the Netlist.
+
+    Args:
+        xyce_results: Xyce measurements as a pandas dataframe.
+    """
+
+    # Skip saving if the name of the run is not set
+    if settings.is_unnamed_run():
+        return
+
+    save_path = Path(OUT_DIR, settings.run_name, 'xyce_results.csv')
+    xyce_results.to_csv(save_path, index=False)
+
+
+def save_inferences(inferences: pd.DataFrame):
+    """
+    Save the results from the digital and analog inferences.
+    :param inferences: the digital and analog inferences
+    """
+
+    # Skip saving if the name of the run is not set
+    if settings.is_unnamed_run():
+        return
+
+    save_path = Path(OUT_DIR, settings.run_name, 'inferences_results.csv')
+    inferences.to_csv(save_path, index=False)
 
 
 def load_normalization() -> Tuple[float, float]:

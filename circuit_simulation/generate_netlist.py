@@ -7,6 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from classes.classifier_nn import ClassifierNN
 from utils.settings import settings
+from plots.parameters import plot_resistance_distribution
 
 
 def convert_param_to_resistances(param: float, r_min: int, r_max: int) -> (int, int):
@@ -94,7 +95,7 @@ def convert_inputs_to_pulses(inputs: Union[List[List[float]], List[float]],
     return pulses
 
 
-def generate_netlist_from_model(model: ClassifierNN, inputs) -> str:
+def generate_netlist_from_model(model: ClassifierNN, inputs: List) -> str:
     """
     Convert a neural network model to its equivalent analog circuit netlist.
     The netlist is formatted to fit Xyce (https://xyce.sandia.gov/) syntax.
@@ -125,24 +126,26 @@ def generate_netlist_from_model(model: ClassifierNN, inputs) -> str:
                 for weight in neuron_params:
                     neuron_weights.append(convert_param_to_resistances(weight, settings.xyce_r_min, settings.xyce_r_max))
                 layers['weight_' + str(nb_layers)].append(neuron_weights)  # Add neuron to the list
-                nb_layers += 1
             # Bias conversion
             elif 'bias' in layer_name:
                 layers['bias_' + str(nb_layers - 1)].append(
                     convert_param_to_resistances(neuron_params, settings.xyce_r_min, settings.xyce_r_max))
 
+        if 'weight' in layer_name:
+            nb_layers += 1
+
     # Convert input pulses
     inputs_pulses = convert_inputs_to_pulses(inputs)
     # Create bias pulse train (will be used only if model have bias enable)
     bias_pulses = {}
-    for i, key in enumerate(layers):
-        if 'bias' in key:
-            bias_pulses[key] = convert_inputs_to_pulses([1], offset=(i//2) * settings.xyce_sigmoid_latency)[0]
+    for i in range(nb_layers):
+        if layers['bias_' + str(i)] is not None:
+            bias_pulses['bias_' + str(i)] = convert_inputs_to_pulses([1], offset=i * settings.xyce_sigmoid_latency)[0]
 
     # Compute gain matching for TIA and sum according to the parameters max value and the physical configuration
     gain_tia, gain_sum = compute_gain_matching(parameters_max)
 
-    # Take the last time of the pulse sequence as the total simulation duration
+    # Total simulation duration
     simulation_duration = settings.xyce_init_latency + settings.xyce_pulse_width \
                           + settings.xyce_sigmoid_latency * nb_layers
 
@@ -150,9 +153,9 @@ def generate_netlist_from_model(model: ClassifierNN, inputs) -> str:
     # Logical value hardcoded to 1 for now
     tanh_upper_bound = 1 * settings.xyce_pulse_amplitude - 0.6
 
-    # # Plot some stuff
-    # plot_resistance_distribution(layers, 'Resistance values of the memristors\nrepresenting the model parameters',
-    #                              model.get_log_dir_path(), 'parameters_resistances')
+    # Plot a histogram of the resistances
+    plot_resistance_distribution(layers, 'Resistance values of the memristors\nrepresenting the model parameters',
+                                 'parameters_resistances')
 
     # Creat Jinja template environment and process the netlist with model layers
     environment = Environment(loader=FileSystemLoader("./circuit_simulation"))
@@ -167,8 +170,6 @@ def generate_netlist_from_model(model: ClassifierNN, inputs) -> str:
         nb_layers=nb_layers,
         pulses_sequences=inputs_pulses,
         bias_pulses=bias_pulses,
-        threshold=settings.xyce_pulse_amplitude * 0.5,  # threshold_analog = pulse_amplitude * threshold_digital
-        non_linearity=model.hidden_activation.analog_subcircuit_name(),
         tanh_upper_bound=tanh_upper_bound,
         step_size=settings.xyce_step_size,
         simulation_duration=simulation_duration,

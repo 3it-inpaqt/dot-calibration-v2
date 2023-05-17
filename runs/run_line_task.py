@@ -281,5 +281,4 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
 
     if settings.simulate_circuit:
         # Test the simulated circuit on Xyce
-        # TODO: add parameters, implement function
         test_analog(network, test_dataset)
