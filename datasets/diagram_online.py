@@ -105,6 +105,7 @@ class DiagramOnline(Diagram):
 
         # Plot the diagram with all current measurements
         # if settings.is_named_run() and (settings.save_images or settings.show_images):
+        #     # TODO move this to the autotuning class
         #     self.plot()
 
         # Normalize the measurement with the normalization range used during the training, then return it.
@@ -112,8 +113,14 @@ class DiagramOnline(Diagram):
 
     def plot(self, label_extra: Optional[str] = '') -> None:
         values, x_axes, y_axes = self.get_cropped_values()
+        focus_area = False
+        if self._measurement_history and len(self._measurement_history) > 0:
+            last_m = self._measurement_history[-1]
+            # FIXME the coordinates doesn't match (y-axis inverted?)
+            focus_area = (last_m.x_axes[0], last_m.x_axes[-1], last_m.y_axes[0], last_m.y_axes[-1])
+
         plot_diagram(x_axes, y_axes, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
-                     allow_overwrite=True, show_offset=False)
+                     allow_overwrite=True, show_offset=False, focus_area=focus_area)
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """
