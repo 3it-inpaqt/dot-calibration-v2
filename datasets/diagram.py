@@ -60,20 +60,38 @@ class Diagram:
         """
         return round(((x - self.x_axes[0]) / settings.pixel_size)), round(((y - self.y_axes[0]) / settings.pixel_size))
 
-    def coord_to_voltage(self, x: int, y: int) -> Tuple[float, float]:
+    def coord_to_voltage(self, x: int, y: int, clip_in_diagram: bool = False) -> Tuple[float, float]:
         """
         Convert a coordinate in the diagram to a voltage.
 
         :param x: The coordinate (x axes) to convert.
         :param y: The coordinate (y axes) to convert.
+        :param clip_in_diagram: If True and the coordinates are not in the diagram, the coordinate will be clipped to
+            the closest value in the diagram before to convert them to volt. If True and the coordinates are not in
+            the diagram, the pixel size will be used to convert them to volt.
         :return: The voltage (x, y) in this diagram.
         """
-        try:
+        if 0 <= x < len(self.x_axes):
             # If possible use the axes values
-            return self.x_axes[x], self.y_axes[y]
-        except IndexError:
-            # Otherwise use the pixel size
-            return self.x_axes[0] + x * settings.pixel_size, self.y_axes[0] + y * settings.pixel_size
+            x_v = self.x_axes[x]
+        elif clip_in_diagram:
+            # If outside the range, clip to the closest value
+            x_v = self.x_axes[0] if x < 0 else self.x_axes[-1]
+        else:
+            # If no clipping, use the pixel size
+            x_v = self.x_axes[0] + x * settings.pixel_size
+
+        if 0 <= y < len(self.y_axes):
+            # If possible use the axes values
+            y_v = self.y_axes[y]
+        elif clip_in_diagram:
+            # If outside the range, clip to the closest value
+            y_v = self.y_axes[0] if y < 0 else self.y_axes[-1]
+        else:
+            # If no clipping, use the pixel size
+            y_v = self.y_axes[0] + y * settings.pixel_size
+
+        return x_v, y_v
 
     def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
         """

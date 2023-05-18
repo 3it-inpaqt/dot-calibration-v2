@@ -109,6 +109,10 @@ class StepHistoryEntry:
 
         return False  # No confidence thresholds defined
 
+    def get_area_coord(self) -> Tuple[int, int, int, int]:
+        start_x, start_y = self.coordinates
+        return start_x, start_x + settings.patch_size_x, start_y, start_y + settings.patch_size_y
+
 
 @dataclass
 class Direction:
