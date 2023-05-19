@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, List, Optional, Tuple, Union
 
-import imageio
+import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -296,7 +296,8 @@ def save_video(images: List[io.BytesIO], file_name: str, duration: Union[List[in
         save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, 'mp4', allow_overwrite)
 
         smallest_duration = min(duration) if isinstance(duration, Iterable) else duration
-        writer = imageio.get_writer(save_path, fps=1_000 / smallest_duration)
+        # macro_block_size=None is used to avoid a warning, but could lead to incompatibility with some video players
+        writer = imageio.get_writer(save_path, fps=1_000 / smallest_duration, macro_block_size=None)
         for data, d in zip(images, duration):
             current_duration = 0
             # Add frames until we reach the targeted duration
