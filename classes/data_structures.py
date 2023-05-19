@@ -9,6 +9,7 @@ from typing import Callable, Deque, Iterable, List, Optional, Sequence, Tuple
 import torch
 
 from utils.settings import settings
+from utils.timer import duration_to_str
 
 
 @unique
@@ -85,6 +86,9 @@ class StepHistoryEntry:
     soft_truth_larger: bool  # Ground truth if the active area was larger (smaller offset)
     soft_truth_smaller: bool  # Ground truth if the active area was smaller (larger offset)
     description: str
+    timestamp_start: float  # In seconds
+    timestamp_data_fetched: float  # In seconds
+    timestamp_data_processed: float  # In seconds
 
     def is_classification_correct(self) -> bool:
         """ :return: True only if model_classification is the same as the ground_truth. """
@@ -112,6 +116,72 @@ class StepHistoryEntry:
     def get_area_coord(self) -> Tuple[int, int, int, int]:
         start_x, start_y = self.coordinates
         return start_x, start_x + settings.patch_size_x, start_y, start_y + settings.patch_size_y
+
+    @staticmethod
+    def get_text_description(scan_history: List["StepHistoryEntry"]) -> str:
+        """
+        Generate a text description of the given scan history.
+
+        :param scan_history: The scan history to describe.
+        :return: The text description.
+        """
+        text = ''
+        if scan_history:
+            nb_scan = len(scan_history)
+            # Local import to avoid circular mess
+            from datasets.qdsd import QDSDLines
+
+            # History statistics
+            accuracy = sum(1 for s in scan_history if s.is_classification_correct()) / nb_scan
+            nb_line = sum(1 for s in scan_history if s.ground_truth)  # s.ground_truth == True means line
+            nb_no_line = sum(1 for s in scan_history if not s.ground_truth)  # s.ground_truth == False means no line
+
+            if nb_line > 0:
+                line_success = sum(
+                    1 for s in scan_history if s.ground_truth and s.is_classification_correct()) / nb_line
+            else:
+                line_success = None
+
+            if nb_no_line > 0:
+                no_line_success = sum(1 for s in scan_history
+                                      if not s.ground_truth and s.is_classification_correct()) / nb_no_line
+            else:
+                no_line_success = None
+
+            # Time information
+            time_start_tuning = scan_history[0].timestamp_start
+            time_end_last_scan = scan_history[-1].timestamp_data_processed
+            tuning_duration = duration_to_str(time_end_last_scan - time_start_tuning, nb_units_display=2)
+
+            time_start_last_scan = scan_history[-1].timestamp_start
+            time_end_data_fetched = scan_history[-1].timestamp_data_fetched
+            fetch_duration = duration_to_str(time_end_data_fetched - time_start_last_scan, 1, 'us')
+            inference_duration = duration_to_str(time_end_last_scan - time_end_data_fetched, 1, 'us')
+
+            # Last classification information
+            if scan_history[-1].is_classification_correct():
+                class_error = 'good'
+            elif scan_history[-1].is_classification_almost_correct():
+                class_error = 'soft error'
+            else:
+                class_error = 'error'
+            last_class = QDSDLines.classes[scan_history[-1].model_classification]
+
+            text += f'Nb step: {nb_scan: >3n} (acc: {accuracy: >4.0%})\n'
+            text += f'{QDSDLines.classes[True].capitalize(): <7}: {nb_line: >3n}'
+            text += '\n' if line_success is None else f' (acc: {line_success:>4.0%})\n'
+            text += f'{QDSDLines.classes[False].capitalize(): <7}: {nb_no_line: >3n}'
+            text += '\n' if no_line_success is None else f' (acc: {no_line_success:>4.0%})\n\n'
+            text += f'Last patch:\n'
+            text += f'  - Pred: {last_class.capitalize(): <7} ({class_error})\n'
+            text += f'  - Conf: {scan_history[-1].model_confidence: >4.0%}\n'
+            text += f'  - Fetch data: {fetch_duration}\n'
+            text += f'  - Inference : {inference_duration}\n\n'
+            text += f'Tuning duration: {tuning_duration}\n\n'
+            text += f'Tuning step:\n'
+            text += f'  {scan_history[-1].description}'
+
+        return text
 
 
 @dataclass

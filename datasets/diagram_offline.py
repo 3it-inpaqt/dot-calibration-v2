@@ -185,7 +185,7 @@ class DiagramOffline(Diagram):
 
         :param label_extra: Optional extra information for the plot label.
         """
-        plot_diagram(self.x_axes, self.y_axes, self.values, self.name + label_extra, 'nearest',
+        plot_diagram(self.x_axes, self.y_axes, self.values, self.name + label_extra,
                      settings.pixel_size, transition_lines=self.transition_lines, charge_regions=self.charge_areas,
                      show_offset=False, scale_bar=True)
 

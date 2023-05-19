@@ -53,7 +53,7 @@ class Connector:
             result = self._measurement(start_volt_x, end_volt_x, step_volt_x, start_volt_y, end_volt_y, step_volt_y)
 
         if settings.plot_measurements:
-            plot_diagram(result.x_axes, result.y_axes, result.data, f'measurement_{self._nb_measurement:03}', None,
+            plot_diagram(result.x_axes, result.y_axes, result.data, f'measurement_{self._nb_measurement:03}',
                          step_volt_x, scale_bar=True)
 
         return result

@@ -1,4 +1,5 @@
 from multiprocessing import Pool
+from time import perf_counter
 from typing import List, Optional, Tuple
 
 import torch
@@ -89,6 +90,7 @@ class AutotuningProcedure:
         :return: The line classification (True = line detected) and
          the confidence score (0: low confidence to 1: very high confidence).
         """
+        time_start = perf_counter()
 
         # Check coordinates according to the current policy.
         # They could be changed to fit inside the diagram if necessary
@@ -102,10 +104,12 @@ class AutotuningProcedure:
             # Oracle use ground truth with full confidence
             prediction = ground_truth
             confidence = 1
+            time_data_processed = time_data_fetched = perf_counter()
         else:
             with torch.no_grad():
                 # Cut the patch area and send it to the model for inference
                 patch = self.diagram.get_patch((self.x, self.y), self.patch_size)
+                time_data_fetched = perf_counter()
                 # Reshape as valid input for the model (batch size, patch x, patch y)
                 size_x, size_y = self.patch_size
                 patch = patch.view((1, size_x, size_y))
@@ -114,12 +118,14 @@ class AutotuningProcedure:
                 # Extract data from pytorch tensor
                 prediction = prediction.item()
                 confidence = confidence.item()
+                time_data_processed = perf_counter()
 
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
         self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
-                                                   soft_truth_larger, soft_truth_smaller, step_description))
+                                                   soft_truth_larger, soft_truth_smaller, step_description,
+                                                   time_start, time_data_fetched, time_data_processed))
 
         logger.debug(f'Patch {self.get_nb_steps():03} classified as {prediction} with confidence {confidence:.2%}')
 
@@ -491,13 +497,12 @@ class AutotuningProcedure:
             # diagram + label + step with classification color
             pool.apply_async(plot_diagram,
                              kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': name,
-                                   'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
-                                   'transition_lines': transition_lines, 'scan_history': self._scan_history,
-                                   'final_coord': final_coord, 'show_offset': False, 'history_uncertainty': False})
+                                   'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
+                                   'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
+                                   'history_uncertainty': False})
             # label + step with classification color and uncertainty
             pool.apply_async(plot_diagram,
-                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                   'image_name': name + ' uncertainty', 'interpolation_method': interpolation_method,
+                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'image_name': name + ' uncertainty',
                                    'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
                                    'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
                                    'history_uncertainty': True})
@@ -505,16 +510,15 @@ class AutotuningProcedure:
                 # step with error and soft error color
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'image_name': name + ' errors',
-                                       'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
-                                       'transition_lines': transition_lines, 'scan_history': self._scan_history,
-                                       'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
+                                       'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
+                                       'scan_history': self._scan_history, 'final_coord': final_coord,
+                                       'show_offset': False, 'scan_errors': True,
                                        'confidence_thresholds': self.model.confidence_thresholds,
                                        'history_uncertainty': False})
                 # step with error color and uncertainty
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                       'image_name': name + ' errors uncertainty',
-                                       'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
+                                       'image_name': name + ' errors uncertainty', 'pixel_size': settings.pixel_size,
                                        'transition_lines': transition_lines, 'scan_history': self._scan_history,
                                        'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
                                        'history_uncertainty': True})
