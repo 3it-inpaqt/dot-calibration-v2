@@ -49,32 +49,32 @@ class FullScan(AutotuningProcedure):
             # diagram + step with classification color
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values, 'image_name': name,
-                                   'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                   'pixel_size': d.x_axes[1] - d.x_axes[0],
                                    'scan_history': self._scan_history, 'show_offset': False,
                                    'history_uncertainty': False, 'show_crosses': False})
             # step with classification color and uncertainty
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
-                                   'image_name': name + ' uncertainty', 'interpolation_method': 'nearest',
+                                   'image_name': name + ' uncertainty',
                                    'pixel_size': d.x_axes[1] - d.x_axes[0], 'scan_history': self._scan_history,
                                    'show_offset': False, 'history_uncertainty': True, 'show_crosses': False})
             # diagram + label + step with classification color
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': values, 'image_name': name + ' labels',
-                                   'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                   'pixel_size': d.x_axes[1] - d.x_axes[0],
                                    'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
                                    'show_offset': False, 'history_uncertainty': False, 'show_crosses': False})
             # label + step with classification color and uncertainty
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
-                                   'image_name': name + ' uncertainty labels', 'interpolation_method': 'nearest',
+                                   'image_name': name + ' uncertainty labels',
                                    'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
                                    'scan_history': self._scan_history, 'show_offset': False,
                                    'history_uncertainty': True, 'show_crosses': False})
             # step with error and soft error color
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None, 'image_name': name + ' errors',
-                                   'interpolation_method': 'nearest', 'pixel_size': d.x_axes[1] - d.x_axes[0],
+                                   'pixel_size': d.x_axes[1] - d.x_axes[0],
                                    'transition_lines': d.transition_lines, 'scan_history': self._scan_history,
                                    'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
                                    'confidence_thresholds': self.model.confidence_thresholds,
@@ -82,7 +82,7 @@ class FullScan(AutotuningProcedure):
             # step with error color and uncertainty
             pool.apply_async(plot_diagram,
                              kwds={'x_i': d.x_axes, 'y_i': d.y_axes, 'pixels': None,
-                                   'image_name': name + ' errors uncertainty', 'interpolation_method': 'nearest',
+                                   'image_name': name + ' errors uncertainty',
                                    'pixel_size': d.x_axes[1] - d.x_axes[0], 'transition_lines': d.transition_lines,
                                    'scan_history': self._scan_history, 'show_offset': False, 'scan_errors': True,
                                    'history_uncertainty': True, 'show_crosses': False})

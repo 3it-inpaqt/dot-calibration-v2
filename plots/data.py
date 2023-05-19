@@ -17,6 +17,7 @@ from matplotlib.legend_handler import HandlerBase
 from shapely.geometry import LineString, Polygon
 from torch.utils.data import DataLoader, Dataset
 
+from classes.data_structures import StepHistoryEntry
 from utils.misc import get_nb_loader_workers
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
@@ -33,7 +34,6 @@ NOT_SCANNED_COLOR = 'lightgrey'
 def plot_diagram(x_i, y_i,
                  pixels: Optional,
                  image_name: str,
-                 interpolation_method: Optional[str],
                  pixel_size: float,
                  charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: Iterable[LineString] = None,
@@ -49,7 +49,7 @@ def plot_diagram(x_i, y_i,
                  scale_bar: bool = False,
                  final_coord: Tuple[int, int] = None,
                  save_in_buffer: bool = False,
-                 text_stats: bool = False,
+                 description: bool = False,
                  show_title: Optional[bool] = None,
                  show_crosses: bool = True,
                  vmin: float = None,
@@ -62,8 +62,6 @@ def plot_diagram(x_i, y_i,
     :param y_i: The y coordinates of the pixels (post interpolation).
     :param pixels: The list of pixels to plot.
     :param image_name: The name of the image, used for plot title and file name.
-    :param interpolation_method: The pixels' interpolation method used to process the pixels,
-        used as information in the title.
     :param pixel_size: The size of pixels, in voltage, used for plot title.
     :param charge_regions: The charge region annotations to draw on top of the image.
     :param transition_lines: The transition line annotation to draw on top of the image.
@@ -88,7 +86,8 @@ def plot_diagram(x_i, y_i,
         are normalized this scale unit doesn't make sense.
     :param final_coord: The final tuning coordinates.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
-    :param text_stats: If True, add statistics information in the plot.
+    :param description: If True and scan_history has at least one entry, add statistics information about the scan steps
+        in the plot. If a string, directly add the given string as description.
     :param show_title: If True, plot figure title. If omitted, show title only if not latex format.
     :param show_crosses: If True, plot the crosses representing the start and the end of the tuning if possible.
     :param vmin: Minimal pixel value for color scaling. Set to keep consistant color between plots. If None, the scaling
@@ -103,6 +102,7 @@ def plot_diagram(x_i, y_i,
     legend = False
     # By default do not plot title for latex format.
     show_title = not settings.image_latex_format if show_title is None else show_title
+    show_description = description is not False and description is not None
 
     # If focus area is True, and scan history is not empty, set focus area to the last step area.
     if focus_area is True:
@@ -114,7 +114,7 @@ def plot_diagram(x_i, y_i,
             focus_area = False
 
     with sns.axes_style("ticks"):  # Temporary change the axe style (avoid white ticks)
-        diagram_ax, focus_ax, text_ax, legend_ax = None, None, None, None
+        diagram_ax, focus_ax, description_ax, legend_ax = None, None, None, None
         if focus_area is not None:
             fig, ax = plt.subplot_mosaic("""
             DDF
@@ -122,14 +122,14 @@ def plot_diagram(x_i, y_i,
             """, figsize=(16, 9))
             diagram_ax = ax['D']
             focus_ax = ax['F']
-            text_ax = ax['T']
+            description_ax = ax['T']
         else:
             fig, ax = plt.subplot_mosaic("""
                         DDT
                         DDT
                         """, figsize=(16, 9))
             diagram_ax = ax['D']
-            text_ax = ax['T']
+            description_ax = ax['T']
 
     half_p = pixel_size / 2
     # Set the plot boundaries to fit the image with the axes, with pixel center aligned with the coordinates.
@@ -332,54 +332,19 @@ def plot_diagram(x_i, y_i,
                            linewidths=lw, zorder=nb_scan + 3)
         legend = True
 
-    if text_stats:
-        text = ''
-        if scan_history and nb_scan > 0:
-            # Local import to avoid circular mess
-            from datasets.qdsd import QDSDLines
+    if description_ax is not None:
+        if isinstance(description, str):
+            text = description
+        else:
+            # If text_stat is not s string, it means that we want to generate the text from the scan history
+            text = StepHistoryEntry.get_text_description(scan_history)
 
-            accuracy = sum(1 for s in scan_history if s.is_classification_correct()) / nb_scan
-            nb_line = sum(1 for s in scan_history if s.ground_truth)  # s.ground_truth == True means line
-            nb_no_line = sum(1 for s in scan_history if not s.ground_truth)  # s.ground_truth == False means no line
-
-            if nb_line > 0:
-                line_success = sum(
-                    1 for s in scan_history if s.ground_truth and s.is_classification_correct()) / nb_line
-            else:
-                line_success = None
-
-            if nb_no_line > 0:
-                no_line_success = sum(1 for s in scan_history
-                                      if not s.ground_truth and s.is_classification_correct()) / nb_no_line
-            else:
-                no_line_success = None
-
-            if scan_history[-1].is_classification_correct():
-                class_error = 'good'
-            elif scan_history[-1].is_classification_almost_correct():
-                class_error = 'soft error'
-            else:
-                class_error = 'error'
-            last_class = QDSDLines.classes[scan_history[-1].model_classification]
-
-            text += f'Nb step: {nb_scan: >3n} (acc: {accuracy: >4.0%})\n'
-            text += f'{QDSDLines.classes[True].capitalize(): <7}: {nb_line: >3n}'
-            text += '\n' if line_success is None else f' (acc: {line_success:>4.0%})\n'
-            text += f'{QDSDLines.classes[False].capitalize(): <7}: {nb_no_line: >3n}'
-            text += '\n' if no_line_success is None else f' (acc: {no_line_success:>4.0%})\n\n'
-            text += f'Last scan:\n'
-            text += f'  - Pred: {last_class.capitalize(): <7} ({class_error})\n'
-            text += f'  - Conf: {scan_history[-1].model_confidence: >4.0%}\n\n'
-            text += f'Tuning step:\n'
-            text += f'  {scan_history[-1].description}'
-
-        text_ax.text(0.05, 0.95, text, horizontalalignment='left', verticalalignment='top', fontsize=12,
-                     fontfamily='monospace', transform=text_ax.transAxes)
-        text_ax.axis('off')
+        description_ax.text(0.05, 0.95, text, horizontalalignment='left', verticalalignment='top', fontsize=12,
+                            fontfamily='monospace', transform=description_ax.transAxes)
+        description_ax.axis('off')
 
     if show_title:
-        interpolation_str = f'interpolated ({interpolation_method}) - ' if interpolation_method is not None else ''
-        diagram_ax.set_title(f'{image_name}\n{interpolation_str}pixel size {round(pixel_size, 10) * 1_000}mV')
+        diagram_ax.set_title(f'{image_name}pixel size {round(pixel_size, 10) * 1_000}mV')
 
     diagram_ax.set_xlabel('G1 (V)')
     diagram_ax.tick_params(axis='x', labelrotation=30)
@@ -442,9 +407,9 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             # Generate images in parallel for speed. Use partial to set constants arguments.
             # Main animation frames
             async_result_main = pool.map_async(
-                partial(plot_diagram, x_axes, y_axes, values, d.name, 'nearest', settings.pixel_size,
+                partial(plot_diagram, x_axes, y_axes, values, d.name, settings.pixel_size,
                         None, None, True, focus_area=True, focus_area_title='Last patch', save_in_buffer=True,
-                        text_stats=True, show_title=False, fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax,
+                        description=True, show_title=False, fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax,
                         show_crosses=show_crosses),
                 (scan_history[0:i] for i in frame_ids)
             )
@@ -454,17 +419,17 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                 # Show diagram with all inference and fog of war
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                       'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                       'pixel_size': settings.pixel_size,
                                        'scan_history': scan_history, 'focus_area': final_area,
-                                       'focus_area_title': 'End area', 'save_in_buffer': True, 'text_stats': True,
+                                       'focus_area_title': 'End area', 'save_in_buffer': True, 'description': True,
                                        'show_title': False, 'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
                 # Show diagram with tuning final coordinate and fog of war
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                       'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                       'pixel_size': settings.pixel_size,
                                        'scan_history': scan_history, 'focus_area': final_area,
                                        'focus_area_title': 'End area', 'final_coord': final_coord,
-                                       'save_in_buffer': True, 'text_stats': True, 'show_title': False,
+                                       'save_in_buffer': True, 'description': True, 'show_title': False,
                                        'fog_of_war': True, 'vmin': vmin, 'vmax': vmax})
             ]
 
@@ -477,26 +442,26 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                     # Show full diagram with tuning final coordinate
                     pool.apply_async(plot_diagram,
                                      kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                           'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                           'pixel_size': settings.pixel_size,
                                            'scan_history': scan_history, 'focus_area': final_area,
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'text_stats': True, 'show_title': False,
+                                           'save_in_buffer': True, 'description': True, 'show_title': False,
                                            'vmin': vmin, 'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line labels
                     pool.apply_async(plot_diagram,
                                      kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                           'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                           'pixel_size': settings.pixel_size,
                                            'scan_history': scan_history, 'focus_area': final_area,
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'text_stats': True, 'show_title': False,
+                                           'save_in_buffer': True, 'description': True, 'show_title': False,
                                            'transition_lines': d.transition_lines, 'vmin': vmin, 'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line & regime labels
                     pool.apply_async(plot_diagram,
                                      kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                           'interpolation_method': 'nearest', 'pixel_size': settings.pixel_size,
+                                           'pixel_size': settings.pixel_size,
                                            'scan_history': scan_history, 'focus_area': final_area,
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'text_stats': True, 'show_title': False,
+                                           'save_in_buffer': True, 'description': True, 'show_title': False,
                                            'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
                                            'vmin': vmin, 'vmax': vmax}),
                 ]
