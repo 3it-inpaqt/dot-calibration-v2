@@ -182,8 +182,29 @@ class DiagramOffline(Diagram):
                                (end_x_v, end_y_v),
                                (start_x_v, end_y_v)])
 
-        # Label is True if any line intersect the patch shape
-        return any([[line.intersects(patch_shape) for line in nb_line] for nb_line in self.transition_lines_list])
+        if settings.dot_number == 1:
+            # Label is True if any line intersect the patch shape
+            return any([[line.intersects(patch_shape) for line in nb_line] for nb_line in self.transition_lines_list])
+        else:
+            classification = []
+            for line_type in self.transition_lines_list:
+                classification.append(any([line.intersects(patch_shape) for line in line_type]))
+            return self.Classification(classification)
+
+    def Classification(self, labels):
+        from datasets.qdsd import QDSDLines
+        labels = np.array(labels)
+        if (labels == np.zeros(settings.dot_number, dtype=bool)).all():
+            return 0  # No line
+        else:
+            if (labels == np.ones(settings.dot_number, dtype=bool)).all():
+                return len(QDSDLines.classes) - 1  # Crosspoint
+            else:
+                count = 1
+                for label in labels:
+                    if label:
+                        return count  # Line [count]
+                    count += 1
 
     def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
            copy: bool = False):
@@ -286,7 +307,7 @@ class DiagramOffline(Diagram):
                 continue
 
             if f'{file_basename}.png' not in labels:
-                logger.debug(f'No label found for {file_basename}')
+                logger.warning(f'No label found for {file_basename}')
                 nb_no_label += 1
                 continue
 
@@ -313,7 +334,7 @@ class DiagramOffline(Diagram):
                         transition_lines_list.append(transition_lines)
 
                     if len(transition_lines_list) != len(np.zeros(settings.dot_number)):
-                        logger.debug(f'No line label found for {file_basename}')
+                        logger.warning(f'No line label found for {file_basename}')
                         nb_no_label += 1
                         continue
 
@@ -325,7 +346,7 @@ class DiagramOffline(Diagram):
                                                                            pixel_size=label_pixel_size, snap=1)
 
                     if not charge_areas:
-                        logger.debug(f'No charge label found for {file_basename}')
+                        logger.warning(f'No charge label found for {file_basename}')
                         nb_no_label += 1
                         continue
 
@@ -338,10 +359,10 @@ class DiagramOffline(Diagram):
             logger.warning(f'{nb_no_label} diagram(s) skipped because no label found')
 
         if nb_excluded_whitelist > 0:
-            logger.info(f'{nb_excluded_whitelist} diagram(s) excluded because not in white list')
+            logger.warning(f'{nb_excluded_whitelist} diagram(s) excluded because not in white list')
             logger.debug(f'Diagram not in the whitelist: {list_whitelist}')
         if nb_excluded_blacklist > 0:
-            logger.info(f'{nb_excluded_blacklist} diagram(s) excluded because in black list')
+            logger.warning(f'{nb_excluded_blacklist} diagram(s) excluded because in black list')
             logger.debug(f'Diagram in the blacklist: {list_blacklist}')
 
         if len(diagrams) == 0:

@@ -21,7 +21,7 @@ from utils.misc import get_nb_loader_workers
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
 
-LINE_COLOR = 'blue'
+LINE_COLOR = ['blue', 'cyan', 'yellow']
 NO_LINE_COLOR = 'tab:red'
 GOOD_COLOR = 'green'
 ERROR_COLOR = 'tab:red'
@@ -137,12 +137,11 @@ def plot_diagram(x_i, y_i,
 
     if transition_lines is not None:
         for nb, line_number in enumerate(transition_lines):
-            color = np.random.rand(3)
             for i, line in enumerate(line_number):
                 line_x, line_y = line.coords.xy
                 # Import here because of a loop
                 from datasets.qdsd import QDSDLines
-                plt.plot(line_x, line_y, color=color,
+                plt.plot(line_x, line_y, color=LINE_COLOR[nb],
                          label=f'Line {QDSDLines.classes[nb + 1]} annotation' if i == 0 else None)
                 legend = True
 
@@ -176,8 +175,12 @@ def plot_diagram(x_i, y_i,
                     label = 'Error'
             else:
                 # Patch color depending on the inferred class
-                color = LINE_COLOR if line_detected else NO_LINE_COLOR
-                label = f'Infer {QDSDLines.classes[line_detected]}'
+                if settings.dot_number == 1:
+                    color = LINE_COLOR[0] if line_detected else NO_LINE_COLOR
+                    label = f'Infer {QDSDLines.classes[line_detected]}'
+                else:
+                    color = LINE_COLOR[line_detected - 1] if line_detected else NO_LINE_COLOR
+                    label = f'Infer {QDSDLines.classes[line_detected]}'
 
             # Add label only if it is the first time we plot a patch with this label
             if label in first_patch_label:
@@ -233,7 +236,7 @@ def plot_diagram(x_i, y_i,
             if scan_errors:
                 cmap = LinearSegmentedColormap.from_list('', [GOOD_COLOR, 'white', ERROR_COLOR])
             else:
-                cmap = LinearSegmentedColormap.from_list('', [LINE_COLOR, 'white', ERROR_COLOR])
+                cmap = LinearSegmentedColormap.from_list('', [LINE_COLOR[line_detected], 'white', ERROR_COLOR])
             norm = Normalize(vmin=-1, vmax=1)
             cbar = plt.colorbar(ScalarMappable(cmap=cmap, norm=norm), shrink=0.8, aspect=15)
             cbar.outline.set_edgecolor('0.15')

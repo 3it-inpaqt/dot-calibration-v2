@@ -297,7 +297,7 @@ class Settings:
     # If True the Jump algorithm will validate the leftmost line at different Y-position to avoid mistake in the case of
     # fading lines.
     validate_left_line: bool = True
-    validate_line: bool = True
+    validate_bottom_line: bool = True
 
     # If the oracle is enabled, these numbers corrupt its precision.
     # 0.0 = all predictions are based on the ground truth (labels), means 100% precision
@@ -310,6 +310,10 @@ class Settings:
     # Number of iteration per diagram for the autotuning test.
     # For the 'full' procedure this number is override to 1.
     autotuning_nb_iteration: int = 50
+
+    # Nb of video to save for good autotuning and bad autotuning
+    nb_error_to_plot: int = 5
+    nb_good_to_plot: int = 2
 
     # ==================================================================================================================
     # ==================================================== Connector ===================================================
@@ -417,7 +421,7 @@ class Settings:
         assert self.checkpoints_after_updates >= 0, 'The number of updates per checkpoints should be >= 0'
 
         # Autotuning
-        procedures_allow = ('random', 'shift', 'shift_u', 'jump', 'jump_u', 'full')
+        procedures_allow = ('random', 'shift', 'shift_u', 'jump', 'jump_u', 'jump_ndots', 'full')
         for procedure in self.autotuning_procedures:
             assert isinstance(procedure, str) and procedure.lower() in procedures_allow, \
                 f'Invalid autotuning procedure name {procedure}'

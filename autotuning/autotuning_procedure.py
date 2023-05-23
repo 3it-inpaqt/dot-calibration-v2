@@ -580,10 +580,7 @@ class AutotuningProcedure:
 
         :return: Tuning information and result.
         """
-        if settings.dot_number == 1:
-            tuned_x, tuned_y = self._tune()
-        else:
-            tuned_x, tuned_y = self._tune_Ndots()
+        tuned_x, tuned_y = self._tune()
         return AutotuningResult(diagram_name=self.diagram.file_basename,
                                 procedure_name=str(self),
                                 model_name=str(self.model),

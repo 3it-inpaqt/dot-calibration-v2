@@ -130,7 +130,7 @@ class AutotuningResult:
     @property
     def is_success_tuning(self):
         success_list = [ChargeRegime[f'1_electron_{dot}'] for dot in range(1, settings.dot_number + 1)]
-        return self.charge_area is success_list
+        return self.charge_area == success_list
 
     @property
     def success_rate(self):
