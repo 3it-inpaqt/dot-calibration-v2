@@ -1,6 +1,8 @@
 from math import atan2, ceil, cos, pi, radians, sin, tan
 from typing import List, Optional, Tuple
 
+from math import atan2, ceil, cos, pi, radians, sin, tan
+
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.data_structures import Direction, SearchLineSlope
 from utils.logger import logger
@@ -20,8 +22,9 @@ class Jump(AutotuningProcedure):
     _line_slope: float = None
     # List of distance between lines in pixel
     _line_distances: List[int] = None
-    # Coordinate of the leftmost line found so far
+    # Coordinate of the leftmost  and bottommost line found so far
     _leftmost_line_coord: Optional[Tuple[int, int]] = None
+    _bottommost_line_coord: Optional[Tuple[int, int]] = None
 
     def _tune(self) -> Tuple[int, int]:
         # Search first line, if none found return a random position
@@ -257,7 +260,7 @@ class Jump(AutotuningProcedure):
                     # Skip half line distance left
                     self._move_left_perpendicular_to_line(ceil(self._default_step_x * line_step_distance / 2))
 
-                    # Go left for 2x the line distance (total 2.5x the line distance)
+                    # Go left for 2x the line distance (total 2x the line distance)
                     for i in range(ceil(line_step_distance * 2)):
                         nb_steps += 1
                         # If new line found and this is the new leftmost one, start again the checking loop
@@ -339,7 +342,31 @@ class Jump(AutotuningProcedure):
         # Check if the current position is at the left (https://math.stackexchange.com/a/1896651/1053890)
         y_line = m * self.x + b
         y_delta = y_line - self.y
-        return (y_delta > 0 and m < 0) or (y_delta < 0 and m > 0)
+        return (y_delta > 0 > m) or (y_delta < 0 < m)
+
+    def _is_bottom_relative_to_line(self) -> bool:
+        """
+        Check if the current position is at the bottom of the bottommost line found so far, considering the line angle.
+
+        :return: True if the current position should be considered as the new bottommost point.
+        """
+        x, y = self._bottommost_line_coord
+        # Error margin to avoid unnecessary updates
+        x -= self._default_step_x
+        y -= self._default_step_y
+
+        # Special condition for 0° (horizontal line)  and 90° because tan(90) is undefined
+        if self._line_slope == 0 or self._line_slope == 90:
+            return self.y < y
+
+        # Reconstruct line equation (y = m*x + b)
+        m = tan(radians(-self._line_slope))  # Inverted angle because the setup is wierd
+        b = y - (x * m)
+
+        # Check if the current position is at the left (https://math.stackexchange.com/a/1896651/1053890)
+        y_line = m * self.x + b
+        y_delta = y_line - self.y
+        return y_delta > 0
 
     def _move_relative_to_line(self, angle: float, step_size: Optional[int] = None) -> None:
         """
@@ -390,16 +417,32 @@ class Jump(AutotuningProcedure):
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
+
         self._move_relative_to_line(90 - self._line_slope, step_size)
 
     def _move_up_follow_line(self, step_size: Optional[int] = None) -> None:
+        """
+        Alias of _move_perpendicular_to_line(False)
+
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+
         self._move_relative_to_line(180 - self._line_slope, step_size)
 
-    def _move_down_follow_line(self, step_size: Optional[int] = None) -> None:
+    def _move_down_follow_line(self, step_size: Optional[int] = None, line_state: Optional[int] = None) -> None:
+        """
+        Alias of _move_perpendicular_to_line(False)
+
+        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
+         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        """
+
         self._move_relative_to_line(-self._line_slope, step_size)
 
     def _get_avg_line_step_distance(self) -> float:
         """ Get the mean line distance in number of steps. """
+
         return sum(self._line_distances) / len(self._line_distances)
 
     def _get_leftmost_line_coord_str(self) -> str:
@@ -435,4 +478,5 @@ class Jump(AutotuningProcedure):
             self._line_slope = 45  # Prior assumption about line direction
             self._line_distances = [4]  # Prior assumption about distance between lines
 
+        self._bottommost_line_coord = None
         self._leftmost_line_coord = None

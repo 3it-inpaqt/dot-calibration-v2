@@ -10,6 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from math import ceil, sqrt
 from matplotlib import patches
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, Normalize
@@ -21,7 +22,7 @@ from utils.misc import get_nb_loader_workers
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
 
-LINE_COLOR = 'blue'
+LINE_COLOR = ['blue', 'cyan', 'yellow']
 NO_LINE_COLOR = 'tab:red'
 GOOD_COLOR = 'green'
 ERROR_COLOR = 'tab:red'
@@ -129,18 +130,25 @@ def plot_diagram(x_i, y_i,
 
     charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
-        for regime, polygon in charge_regions:
+        for charge_regions_number in charge_regions:
+            regime = charge_regions_number[0]
+            polygon = charge_regions_number[1]
             polygon_x, polygon_y = polygon.exterior.coords.xy
             plt.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
             label_x, label_y = list(polygon.centroid.coords)[0]
-            charge_text = plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b', weight='bold',
+            charge_text = plt.text(label_x, label_y, str(regime), ha="center", va="center", color='b',
+                                   weight='bold',
                                    bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
 
     if transition_lines is not None:
-        for i, line in enumerate(transition_lines):
-            line_x, line_y = line.coords.xy
-            plt.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
-            legend = True
+        for nb, line_number in enumerate(transition_lines):
+            for i, line in enumerate(line_number):
+                line_x, line_y = line.coords.xy
+                # Import here because of a loop
+                from datasets.qdsd import QDSDLines
+                plt.plot(line_x, line_y, color=LINE_COLOR[nb],
+                         label=f'Line {QDSDLines.classes[nb + 1]} annotation' if i == 0 else None)
+                legend = True
 
     if scan_history is not None and len(scan_history) > 0:
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import
@@ -172,8 +180,12 @@ def plot_diagram(x_i, y_i,
                     label = 'Error'
             else:
                 # Patch color depending on the inferred class
-                color = LINE_COLOR if line_detected else NO_LINE_COLOR
-                label = f'Infer {QDSDLines.classes[line_detected]}'
+                if settings.dot_number == 1:
+                    color = LINE_COLOR[0] if line_detected else NO_LINE_COLOR
+                    label = f'Infer {QDSDLines.classes[line_detected]}'
+                else:
+                    color = LINE_COLOR[line_detected - 1] if line_detected else NO_LINE_COLOR
+                    label = f'Infer {QDSDLines.classes[line_detected]}'
 
             # Add label only if it is the first time we plot a patch with this label
             if label in first_patch_label:
@@ -229,7 +241,7 @@ def plot_diagram(x_i, y_i,
             if scan_errors:
                 cmap = LinearSegmentedColormap.from_list('', [GOOD_COLOR, 'white', ERROR_COLOR])
             else:
-                cmap = LinearSegmentedColormap.from_list('', [LINE_COLOR, 'white', ERROR_COLOR])
+                cmap = LinearSegmentedColormap.from_list('', [LINE_COLOR[line_detected], 'white', ERROR_COLOR])
             norm = Normalize(vmin=-1, vmax=1)
             cbar = plt.colorbar(ScalarMappable(cmap=cmap, norm=norm), shrink=0.8, aspect=15)
             cbar.outline.set_edgecolor('0.15')
@@ -492,14 +504,21 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
     data_per_class = [list() for _ in range(nb_classes)]
 
     # Random sample
-    for data, label in data_loader:
-        label = int(label)  # Convert boolean to integer
-        if len(data_per_class[label]) < number_per_class:
-            data_per_class[label].append(data)
+    for data, labels in data_loader:
 
-            # Stop of we sampled enough data
-            if all([len(cl) == number_per_class for cl in data_per_class]):
-                break
+        # Not single dot
+        if settings.dot_number != 1:
+            labels = QDSDLines.class_mapping(labels[0])
+        # Single dot
+        else:
+            labels = int(labels)
+
+        if len(data_per_class[labels]) < number_per_class:
+            data_per_class[labels].append(data)
+
+        # Stop of we sampled enough data
+        if all([len(cl) == number_per_class for cl in data_per_class]):
+            break
 
     # Create subplots
     fig, axs = plt.subplots(nrows=nb_classes, ncols=number_per_class,
@@ -553,7 +572,7 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
 
     for i, s in enumerate(samples):
         ax = axs[i // plot_length, i % plot_length]
-        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='nearest', cmap='copper')
+        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='nearest', cmap='RdBu_r')
 
         if confidences:
             # If it's a tuple we assume it is: mean, std, entropy

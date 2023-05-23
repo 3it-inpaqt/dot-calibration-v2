@@ -1,12 +1,13 @@
-from math import ceil
 from typing import List, Optional
 
 import numpy as np
 import torch
+from math import ceil
 from torch.utils.data import DataLoader, Dataset
 from torchsampler import ImbalancedDatasetSampler
 
 from classes.classifier_nn import ClassifierNN
+from datasets.qdsd import QDSDLines
 from plots.train_results import plot_train_progress
 from runs.test import test
 from utils.logger import logger
@@ -38,9 +39,15 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
 
     sampler = None
     if settings.balance_class_sampling:
-        sampler = ImbalancedDatasetSampler(train_dataset,
-                                           # Convert boolean to int
-                                           callback_get_label=lambda dataset: list(map(int, dataset.get_labels())))
+        if settings.dot_number > 1:  # No single dot
+            sampler = ImbalancedDatasetSampler(train_dataset,
+                                               # Convert boolean to int
+                                               callback_get_label=lambda dataset: list(
+                                                   map(QDSDLines.class_mapping, dataset.get_labels())))
+        else:  # Single dot
+            sampler = ImbalancedDatasetSampler(train_dataset,
+                                               # Convert boolean to int
+                                               callback_get_label=lambda dataset: list(map(int, dataset.get_labels())))
 
     # Use the pyTorch data loader
     train_loader = DataLoader(train_dataset, batch_size=settings.batch_size,

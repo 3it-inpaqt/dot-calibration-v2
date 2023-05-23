@@ -1,7 +1,9 @@
+import argparse
 from pathlib import Path
 from random import shuffle
 from typing import Callable, Iterable, List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 
@@ -18,11 +20,15 @@ class QDSDLines(Dataset):
     Quantum Dots Stability Diagrams (QDSD) dataset.
     Transition line classification task.
     """
-
-    classes = [
-        'no line',  # False (0)
-        'line'  # True (1)
-    ]
+    classes = ['No Line']  # Common class for any dot number
+    if settings.dot_number == 1:  # Single dot
+        classes.append('Line')  # Class line for single dot
+    else:
+        for nb in range(settings.dot_number):
+            # Class of the line with an angle of 180/nb_line.nb, column {nb} is True
+            classes.append(f'Line {180 / settings.dot_number * nb}')
+        classes.append(f'Crosspoint')  # Last class for the case of dot_number is superior at 1
+        # All parameters in the label is True
 
     def __init__(self, patches: List[Tuple], role: str, transform: Optional[List[Callable]] = None):
         """
@@ -129,7 +135,6 @@ class QDSDLines(Dataset):
     def build_split_datasets(pixel_size,
                              research_group,
                              test_ratio_or_names: Union[float, List[str]],
-                             single_dot: bool = True,
                              validation_ratio: float = 0,
                              patch_size: Tuple[int, int] = (10, 10),
                              overlap: Tuple[int, int] = (0, 0),
@@ -141,7 +146,6 @@ class QDSDLines(Dataset):
 
         :param pixel_size: The dataset pixel size to load
         :param research_group: The dataset research group to load
-        :param single_dot: The dataset number of quantum dot to load
         :param test_ratio_or_names: The ratio of patches reserved for test data or the list of diagram names to include
          in test data.
         :param validation_ratio: The ratio of patches reserved for validation data (ignored if 0)
@@ -152,6 +156,12 @@ class QDSDLines(Dataset):
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
 
+        if settings.dot_number == 2:
+            single_dot = False
+        elif settings.dot_number == 1:
+            single_dot = True
+        else:
+            single_dot = False
         use_test_ratio = isinstance(test_ratio_or_names, float)
         test_patches = []
         patches = []
@@ -257,6 +267,41 @@ class QDSDLines(Dataset):
         for dataset in (d for d in datasets if d):  # Skip None datasets
             dataset._patches -= ref_min
             dataset._patches /= (ref_max - ref_min)
+
+    def class_mapping(labels: torch.Tensor) -> int:
+        """
+        Convert the output of the NN (the predition) or the label of the diagram into an int witch is the position
+        in the list QDSDLines.classes
+
+        :param labels: A list of N (dot_number) int witch is the output of the NN
+        :return: Position of the corresponding class in the list QDSDLines.classes
+        """
+        if (labels == torch.zeros(settings.dot_number, dtype=int, device=labels.device)).all():
+            return 0  # No line
+        else:
+            if (labels == torch.ones(settings.dot_number, dtype=int, device=labels.device)).all():
+                return len(QDSDLines.classes) - 1  # Crosspoint
+            else:
+                count = 1
+                for label in labels:
+                    if label:
+                        return count  # Line [count]
+                    count += 1
+            raise argparse.ArgumentTypeError('ERROR no class found')
+
+    def conf_mapping(confidence: torch.Tensor, prediction: int) -> type(np.array(1)):
+        """
+        Convert the confidence output of the NN into the confidence for the prediction
+
+        :param prediction: Confidence for each output of the NN
+        :return: The confidence for the prediction
+        """
+        if prediction == 0 or prediction == len(QDSDLines.classes) - 1:
+            return np.array(np.mean(np.array(confidence)))  # No line & Crosspoint
+        else:
+            # Line [prediction]
+            delta = [confidence[prediction - 1] - confidence[i] for i in range(len(confidence)) if i != prediction]
+            return np.array(max(confidence[prediction - 1] - np.mean(delta), 0))
 
 
 class AddGaussianNoise(object):

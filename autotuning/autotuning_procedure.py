@@ -3,11 +3,13 @@ from typing import List, Optional, Tuple
 
 import torch
 
+from utils.logger import logger
 from classes.classifier import Classifier
 from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
 from datasets.diagram import Diagram
 from datasets.diagram_offline import DiagramOffline
 from datasets.diagram_online import DiagramOnline
+from datasets.qdsd import QDSDLines
 from plots.data import plot_diagram, plot_diagram_step_animation
 from runs.run_line_task import get_cuda_device
 from utils.logger import logger
@@ -112,16 +114,20 @@ class AutotuningProcedure:
                 # Send to the model for inference
                 prediction, confidence = self.model.infer(patch, settings.bayesian_nb_sample_test)
                 # Extract data from pytorch tensor
-                prediction = prediction.item()
-                confidence = confidence.item()
-
+                if settings.dot_number == 1:
+                    prediction = prediction.item()
+                    confidence = confidence.item()
+                else:
+                    prediction = QDSDLines.class_mapping(prediction)
+                    confidence = QDSDLines.conf_mapping(confidence, prediction)
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
         self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
                                                    soft_truth_larger, soft_truth_smaller, step_description))
 
-        logger.debug(f'Patch {self.get_nb_steps():03} classified as {prediction} with confidence {confidence:.2%}')
+        logger.debug(f'Patch {self.get_nb_steps():03} classified as {QDSDLines.classes[prediction]} with confidence '
+                     f'{confidence:.2%}')
 
         return prediction, confidence
 
@@ -478,7 +484,7 @@ class AutotuningProcedure:
         d = self.diagram
         values, x_axes, y_axes = d.get_values()
         is_online = isinstance(d, DiagramOnline)
-        transition_lines = None if is_online else d.transition_lines
+        transition_lines = None if is_online else d.transition_lines_list
         interpolation_method = None if is_online else 'nearest'
 
         if is_online:
@@ -558,6 +564,23 @@ class AutotuningProcedure:
          according to this tuning procedure.
         """
         raise NotImplementedError
+
+    def _tune_Ndots(self) -> Tuple[int, int]:
+        """
+        Start the tuning procedure on a diagram for Ndots.
+
+        :return: The coordinates (not the gate voltage) in the diagram that is 1 electron regime,
+         according to this tuning procedure.
+        """
+        raise NotImplementedError
+
+    def charge_areas_coord(self, charge_area):
+        """
+
+        :param charge_area:
+        :return:
+        """
+        return
 
     def run_tuning(self) -> AutotuningResult:
         """

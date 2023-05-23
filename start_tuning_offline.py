@@ -25,7 +25,7 @@ def start_tuning_offline_task() -> None:
                                                 research_group=settings.research_group,
                                                 diagrams_path=Path(DATA_DIR, 'interpolated_csv.zip'),
                                                 labels_path=Path(DATA_DIR, 'labels.json'),
-                                                single_dot=True,
+                                                single_dot=True if settings.dot_number == 1 else False,
                                                 load_lines=True,
                                                 load_areas=True,
                                                 white_list=[settings.test_diagram] if settings.test_diagram else None)
