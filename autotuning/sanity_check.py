@@ -17,9 +17,9 @@ class SanityCheck(AutotuningProcedure):
         """
         Run some simple patterns to check if the autotuning is working as expected (especially the bloody coordinates).
         """
-        # The number of steps expected for this sanity check procedure
+        # The number of steps expected for this sanity-check procedure
         nb_steps_expected = 1 + (self._sequence_size * 4) + (self._sequence_size * 8 + 4)
-        # The total number of measurements (pixel) expected for this sanity check procedure
+        # The total number of measurements (pixel) expected for this sanity-check procedure
         nb_measurements_expected = nb_steps_expected * settings.patch_size_x * settings.patch_size_y
         # Because of label offset measurement could, therefore some datapoint are measured twice
         surface_overlap_x = settings.label_offset_x * 2 * settings.patch_size_y

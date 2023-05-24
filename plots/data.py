@@ -330,6 +330,7 @@ def plot_diagram_old(x_i, y_i,
                  show_crosses: bool = True,
                  vmin: float = None,
                  vmax: float = None,
+                 diagram_boundaries: Optional[Tuple[float, float, float, float]] = None,
                  allow_overwrite: bool = False) -> Optional[Union[Path, io.BytesIO]]:
     """
     Plot the interpolated image. This function is a multi-tool nightmare.
@@ -408,16 +409,15 @@ def plot_diagram_old(x_i, y_i,
             description_ax = ax['T']
 
     half_p = settings.pixel_size / 2
-    # Set the plot boundaries to fit the image with the axes, with pixel center aligned with the coordinates.
-    boundaries = [x_i[0] - half_p, x_i[-1] + half_p, y_i[0] - half_p, y_i[-1] + half_p]
+    # Set the plot coordinates to fit the image with the axes, with the center of pixels aligned with the coordinates.
+    axes_matching = [x_i[0] - half_p, x_i[-1] + half_p, y_i[0] - half_p, y_i[-1] + half_p]
     if pixels is None:
         # If no pixels provided, plot a blank image to allow other information on the same format
         diagram_ax.imshow(np.zeros((len(x_i), len(y_i))),
-                          cmap=LinearSegmentedColormap.from_list('', ['white', 'white']),
-                          extent=boundaries)
+                          cmap=LinearSegmentedColormap.from_list('', ['white', 'white']), extent=axes_matching)
     else:
-        if fog_of_war and nb_scan > 0:
-            # Mask area not scanned according to the current scan history list
+        if fog_of_war and scan_history is not None and nb_scan > 0:
+            # Mask not-scanned area according to the current scan history list
             mask = np.full_like(pixels, True)
             for scan in scan_history:
                 x, y = scan.coordinates
@@ -427,7 +427,7 @@ def plot_diagram_old(x_i, y_i,
 
         cmap = matplotlib.cm.copper
         cmap.set_bad(color=NOT_SCANNED_COLOR)
-        diagram_ax.imshow(pixels, interpolation='none', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
+        diagram_ax.imshow(pixels, interpolation='none', cmap=cmap, extent=axes_matching, vmin=vmin, vmax=vmax)
         if scale_bar:
             if settings.research_group == 'michel_pioro_ladriere' or \
                     settings.research_group == 'eva_dupont_ferrier':
@@ -440,14 +440,19 @@ def plot_diagram_old(x_i, y_i,
             # diagram_ax.colorbar(shrink=0.85, label=f'{measuring} (A)')
 
         if focus_ax and isinstance(focus_area, tuple):
+            # Get coordinates and add half-pixel to match with the border of pixel (instead of center).
             x_start, x_end, y_start, y_end = focus_area
-            focus_ax.imshow(pixels, interpolation='none', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
+            x_start -= half_p
+            y_start -= half_p
+            x_end += half_p
+            y_end += half_p
+            focus_ax.imshow(pixels, interpolation='none', cmap=cmap, extent=axes_matching, vmin=vmin, vmax=vmax)
             # Show the location of the focus area in the diagram using a rectangle
             loc = patches.Rectangle((x_start, y_start), x_end - x_start, y_end - y_start, linewidth=1, zorder=9999,
                                     edgecolor='black', label=focus_area_title, facecolor='none', alpha=0.8)
             diagram_ax.add_patch(loc)
-            focus_ax.set_xlim(x_start - half_p, x_end + half_p)
-            focus_ax.set_ylim(y_start - half_p, y_end + half_p)
+            focus_ax.set_xlim(x_start, x_end)
+            focus_ax.set_ylim(y_start, y_end)
             if show_title and focus_area_title:
                 focus_ax.set_title(focus_area_title)
 
@@ -546,14 +551,16 @@ def plot_diagram_old(x_i, y_i,
         # Marker for first point
         if show_crosses and (fading_history == 0 or nb_scan < fading_history * 2):
             first_x, first_y = scan_history[0].coordinates
+            first_x = x_i[first_x + settings.patch_size_x // 2] - half_p
+            first_y = y_i[first_y + settings.patch_size_y // 2] - half_p
             if fading_history == 0:
                 alpha = 1
             else:
                 # Fading after the first scans if fading_history is enabled
                 i = nb_scan - 2
                 alpha = 1 if i < fading_history else (2 * fading_history - i) / (fading_history + 1)
-            diagram_ax.scatter(x=x_i[first_x + settings.patch_size_x // 2], y=y_i[first_y + settings.patch_size_y // 2],
-                               color='skyblue', marker='X', s=200, label='Start', alpha=alpha, zorder=nb_scan + 1)
+            diagram_ax.scatter(x=first_x, y=first_y, color='skyblue', marker='X', s=200, label='Start', alpha=alpha,
+                               zorder=nb_scan + 1)
             legend = True
 
         if history_uncertainty:
@@ -599,14 +606,16 @@ def plot_diagram_old(x_i, y_i,
     if show_crosses and final_coord is not None:
         last_x, last_y = final_coord
         # Get marker position (and avoid going out)
-        last_x_i = min(last_x, len(x_i) - 1)
-        last_y_i = min(last_y, len(y_i) - 1)
+        last_x_i = max(min(last_x, len(x_i) - 1), 0)
+        last_y_i = max(min(last_y, len(y_i) - 1), 0)
+        last_x = x_i[last_x_i] - half_p
+        last_y = y_i[last_y_i] - half_p
         for ax, cross_size, lw in ((diagram_ax, 200, 2), (focus_ax, 600, 4)):
             if ax:
                 # Make white borders using a slightly bigger marker under it
-                ax.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='w', marker='x', s=cross_size * 1.1,
+                ax.scatter(x=last_x, y=last_y, color='w', marker='x', s=cross_size * 1.1,
                            linewidths=lw * 1.5, zorder=nb_scan + 2)
-                ax.scatter(x=x_i[last_x_i], y=y_i[last_y_i], color='fuchsia', marker='x', s=cross_size, label='End',
+                ax.scatter(x=last_x, y=last_y, color='fuchsia', marker='x', s=cross_size, label='End',
                            linewidths=lw, zorder=nb_scan + 3)
         legend = True
 
@@ -623,6 +632,12 @@ def plot_diagram_old(x_i, y_i,
 
     if show_title:
         diagram_ax.set_title(f'{image_name} - pixel size: {round(pixel_size, 10) * 1_000}mV')
+
+    # If defined, set boundaries for the diagram axes
+    if diagram_boundaries:
+        x_start_v, x_end_v, y_start_v, y_end_v = diagram_boundaries
+        diagram_ax.set_xlim(x_start_v, x_end_v)
+        diagram_ax.set_ylim(y_start_v, y_end_v)
 
     diagram_ax.set_xlabel('G1 (V)')
     diagram_ax.tick_params(axis='x', labelrotation=30)
@@ -662,6 +677,7 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
         values, x_axes, y_axes = d.get_values()
         from datasets.diagram_online import DiagramOnline
         is_online = isinstance(d, DiagramOnline)
+        diagram_boundaries = d.get_cropped_boundaries() if is_online else None
         # Compute min / max here because numpy doesn't like to do this on multi thread (ignore NaN values)
         vmin = np.nanmin(values)
         vmax = np.nanmax(values)
@@ -686,8 +702,8 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
             async_result_main = pool.map_async(
                 partial(plot_diagram, x_axes, y_axes, values, None, title,
                         None, None, True, focus_area=True, focus_area_title='Last patch', save_in_buffer=True,
-                        description=True, show_title=True, fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax,
-                        show_crosses=show_crosses),
+                        description=True, show_title=True, fog_of_war=True, fading_history=8,
+                        diagram_boundaries=diagram_boundaries, vmin=vmin, vmax=vmax, show_crosses=show_crosses),
                 (scan_history[0:i] for i in frame_ids)
             )
 
@@ -698,14 +714,16 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                        'scan_history': scan_history, 'focus_area': final_area,
                                        'focus_area_title': 'End area', 'save_in_buffer': True, 'description': True,
-                                       'show_title': True, 'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
+                                       'show_title': True, 'fog_of_war': True, 'diagram_boundaries': diagram_boundaries,
+                                       'vmin': vmin, 'vmax': vmax}),
                 # Show diagram with tuning final coordinate and fog of war
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                        'scan_history': scan_history, 'focus_area': final_area,
                                        'focus_area_title': 'End area', 'final_coord': final_coord,
                                        'save_in_buffer': True, 'description': True, 'show_title': True,
-                                       'fog_of_war': True, 'vmin': vmin, 'vmax': vmax})
+                                       'fog_of_war': True, 'diagram_boundaries': diagram_boundaries, 'vmin': vmin,
+                                       'vmax': vmax})
             ]
 
             # If online, we don't have label to show
@@ -720,14 +738,15 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
                                            'scan_history': scan_history, 'focus_area': final_area,
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
                                            'save_in_buffer': True, 'description': True, 'show_title': True,
-                                           'vmin': vmin, 'vmax': vmax}),
+                                           'diagram_boundaries': diagram_boundaries, 'vmin': vmin, 'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line labels
                     pool.apply_async(plot_diagram,
                                      kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                            'scan_history': scan_history, 'focus_area': final_area,
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
                                            'save_in_buffer': True, 'description': True, 'show_title': True,
-                                           'transition_lines': d.transition_lines, 'vmin': vmin, 'vmax': vmax}),
+                                           'transition_lines': d.transition_lines,
+                                           'diagram_boundaries': diagram_boundaries, 'vmin': vmin, 'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line & regime labels
                     pool.apply_async(plot_diagram,
                                      kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
@@ -735,7 +754,7 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
                                            'save_in_buffer': True, 'description': True, 'show_title': True,
                                            'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
-                                           'vmin': vmin, 'vmax': vmax}),
+                                           'diagram_boundaries': diagram_boundaries, 'vmin': vmin, 'vmax': vmax}),
                 ]
 
             # Wait for the processes to finish and get results

@@ -1,6 +1,6 @@
 from math import prod
 from random import randrange
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -145,11 +145,11 @@ class DiagramOnline(Diagram):
         measurement /= self._norm_max_value - self._norm_min_value
         return measurement
 
-    def get_cropped_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
+    def get_cropped_boundaries(self) -> Tuple[float, float, float, float]:
         """
-        Get the values of the diagram, cropped to the measured area.
+        Get the coordinates of the diagram that crop to the measured area.
 
-        :return: The values as a tensor, the list of x-axis values, the list of y-axis values.
+        :return: Voltages of the cropped boundaries as: x_start, x_end, y_start, y_end.
         """
         values, x_axis, y_axis = self.get_values()
         # Crop the nan values from the image (not measured area)
@@ -170,7 +170,9 @@ class DiagramOnline(Diagram):
         margin = settings.patch_size_x
         first_col = max(0, first_col - margin)
         first_row = max(0, first_row - margin)
-        last_col = min(last_col + margin, len(x_axis))
-        last_row = min(last_row + margin, len(y_axis))
+        last_col = min(last_col + margin, len(x_axis) - 1)
+        last_row = min(last_row + margin, len(y_axis) - 1)
 
-        return values[first_row:last_row, first_col:last_col], x_axis[first_col:last_col], y_axis[first_row:last_row]
+        # y-axis is inverted
+        return x_axis[first_col], x_axis[last_col], y_axis[len(y_axis) - first_row - 1], y_axis[
+            len(y_axis) - last_row - 1]
