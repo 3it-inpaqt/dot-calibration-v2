@@ -4,7 +4,7 @@ from functools import partial
 from math import ceil, sqrt
 from multiprocessing import Pool
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Iterable, List, Literal, Optional, Sequence, Tuple, Union
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -15,6 +15,7 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.legend_handler import HandlerBase
 from shapely.geometry import LineString, Polygon
+from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 
 from classes.data_structures import StepHistoryEntry
@@ -22,19 +23,294 @@ from utils.misc import get_nb_loader_workers
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
 
-LINE_COLOR = 'blue'
-NO_LINE_COLOR = 'tab:red'
+CLASS_COLORS = [
+    'tab:red',  # False (0)
+    'blue'  # True (1)
+]
 GOOD_COLOR = 'green'
 ERROR_COLOR = 'tab:red'
 SOFT_ERROR_COLOR = 'blueviolet'
 UNKNOWN_COLOR = 'dimgray'
 NOT_SCANNED_COLOR = 'lightgrey'
 
+PIXELS_CMAP = matplotlib.cm.copper
+PIXELS_CMAP.set_bad(color=NOT_SCANNED_COLOR)
 
-def plot_diagram(x_i, y_i,
+MEASURE_UNIT = {
+    'michel_pioro_ladriere': r'$\mathregular{I_{SET}}$',
+    'eva_dupont_ferrier': r'$\mathregular{I_{SET}}$',
+    'louis_gaudreau': r'$\mathregular{I_{QPC}}$'
+}
+
+
+def _get_layout(show_focus_area_ax, show_text_ax, show_legend_ax):
+    # Optional axes
+    focus_area_ax = text_ax = legend_ax = None
+
+    fig = plt.figure(figsize=(16, 9))
+    spec = fig.add_gridspec(10, 10)
+
+    y_bottom = 9
+    # Layout with legend at the bottom
+    if show_legend_ax:
+        y_bottom = 8
+        legend_ax = fig.add_subplot(spec[y_bottom:, :])
+
+    # 2 columns layout
+    if show_focus_area_ax or show_text_ax:
+        x_end_col_1 = 6
+        diagram_ax = fig.add_subplot(spec[:y_bottom, :x_end_col_1])
+        if show_focus_area_ax:
+            focus_area_ax = fig.add_subplot(spec[:2, x_end_col_1:])
+        if show_text_ax:
+            text_ax = fig.add_subplot(spec[2 if show_focus_area_ax else 0:y_bottom, x_end_col_1:])
+
+    # 1 column layout
+    else:
+        diagram_ax = fig.add_subplot(spec[:y_bottom, :])
+
+    return fig, diagram_ax, focus_area_ax, text_ax, legend_ax
+
+
+def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Optional[Tensor], title: Optional[str],
+                     scan_history: List["StepHistoryEntry"], fog_of_war: bool, scale_bar: bool, vmin: float,
+                     vmax: float, axes_matching: List[float]) -> None:
+    # Subplot title
+    if title:
+        ax.set_title(title)
+
+    # If no pixels provided, plot a blank image to allow other information on the same format
+    if pixels is None:
+        cmap = LinearSegmentedColormap.from_list('', ['white', 'white'])
+        ax.imshow(np.zeros((len(x_i), len(y_i))), cmap=cmap, extent=axes_matching)
+        return
+
+    nb_scan = len(scan_history)
+    # If the fog of war is enabled, mask the pixels that have not been scanned yet according to the scan history
+    if fog_of_war and scan_history is not None and nb_scan > 0:
+        mask = np.full_like(pixels, True)
+        for scan in scan_history:
+            x, y = scan.coordinates
+            mask[y + settings.patch_size_y: y, x:x + settings.patch_size_x] = False
+        pixels = np.ma.masked_array(pixels, mask)
+
+    # Plot the pixels
+    ax.imshow(pixels, interpolation='none', cmap=PIXELS_CMAP, extent=axes_matching, vmin=vmin, vmax=vmax,
+              origin='lower')
+
+    # Add the scale bar
+    if scale_bar:
+        if settings.research_group in MEASURE_UNIT:
+            measuring = MEASURE_UNIT[settings.research_group]
+        else:
+            measuring = 'I'
+        ax.colorbar(shrink=0.85, label=f'{measuring} (A)')
+
+
+def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, vmin, vmax, axes_matching: List[float]):
+    # Subplot title
+    if title:
+        focus_ax.set_title(title)
+
+    # Get coordinates and add half-pixel to match with the border of pixel (instead of center).
+    half_p = settings.pixel_size / 2
+    x_start, x_end, y_start, y_end = focus_area
+    x_start -= half_p
+    y_start -= half_p
+    x_end += half_p
+    y_end += half_p
+
+    focus_ax.imshow(pixels, interpolation='none', cmap=PIXELS_CMAP, extent=axes_matching, vmin=vmin, vmax=vmax,
+                    origin='lower')
+    focus_ax.set_xlim(x_start, x_end)
+    focus_ax.set_ylim(y_start, y_end)
+
+    # Show the location of the current focus area in the main diagram using a black rectangle
+    loc = patches.Rectangle((x_start, y_start), x_end - x_start, y_end - y_start, linewidth=1, zorder=99999,
+                            edgecolor='black', label=title, facecolor='none', alpha=0.8)
+    diagram_ax.add_patch(loc)
+
+
+def _plot_labels(ax, charge_regions: List[Tuple["ChargeRegime", Polygon]], transition_lines: List[LineString]):
+    if charge_regions:
+        for regime, polygon in charge_regions:
+            polygon_x, polygon_y = polygon.exterior.coords.xy
+            ax.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
+            label_x, label_y = list(polygon.centroid.coords)[0]
+            charge_text = ax.text(label_x, label_y, str(regime), ha="center", va="center", color='b', weight='bold',
+                                  bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
+
+    if transition_lines:
+        for i, line in enumerate(transition_lines):
+            line_x, line_y = line.coords.xy
+            ax.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
+
+
+def _plot_scan_history(diagram_ax, focus_ax, x_i, y_i, scan_history, scan_history_mode, scan_history_alpha,
+                       full_squares):
+    from datasets.qdsd import QDSDLines
+    nb_scan = len(scan_history)
+    half_p = settings.pixel_size / 2
+    detection_size_x_v = (settings.patch_size_x - settings.label_offset_x * 2) * settings.pixel_size
+    detection_size_y_v = (settings.patch_size_y - settings.label_offset_y * 2) * settings.pixel_size
+
+    for i, scan_entry in enumerate(reversed(scan_history)):
+        x, y = scan_entry.coordinates
+        # Initial scan square parameters
+        color = 'black'
+        square_params = {
+            'xy': (x_i[x + settings.label_offset_x] - half_p, y_i[y + settings.label_offset_y] - half_p),
+            'width': detection_size_x_v,
+            'height': detection_size_y_v,
+            'edgecolor': None,
+            'label': None,
+            'facecolor': None,
+            'alpha': 1,
+            'zorder': nb_scan - i
+        }
+
+        # Set the alpha of the scan square according to the mode.
+        if scan_history_alpha == 'uncertainty':
+            # Alpha is set according to the uncertainty of the classification
+            square_params['alpha'] = scan_entry.model_confidence
+        elif isinstance(scan_history_alpha, int):
+            # Alpha is increasing after a specific number of scans
+            if i < scan_history_alpha:
+                square_params['alpha'] = 1
+            else:
+                square_params['alpha'] = (2 * scan_history_alpha - i) / (scan_history_alpha + 1)
+
+            # If the alpha is very low, we don't need to plot the rest of the scan history
+            if square_params['alpha'] < 0.01:
+                break
+
+        # Set the color and the label of the rectangle according to the scan history mode.
+        match scan_history_mode:
+            case 'classes':
+                color = CLASS_COLORS[scan_entry.model_classification]
+                square_params['label'] = f'Infer {QDSDLines.classes[scan_entry.model_classification]}'
+            case 'error':
+                # Patch color depending on the classification success
+                if scan_history_alpha != 'uncertainty' and not scan_entry.is_above_confidence_threshold:
+                    # If the uncertainty is not shown with alpha, we show it by a gray patch
+                    color = UNKNOWN_COLOR
+                    square_params['label'] = 'Unknown'
+                elif scan_entry.is_classification_correct():
+                    color = GOOD_COLOR
+                    square_params['label'] = 'Good'
+                elif scan_history_alpha != 'uncertainty' and scan_entry.is_classification_almost_correct():
+                    # Soft error is not compatible with uncertainty
+                    color = SOFT_ERROR_COLOR
+                    square_params['label'] = 'Soft Error'
+                else:
+                    color = ERROR_COLOR
+                    square_params['label'] = 'Error'
+            case 'uncertainty':
+                color = scan_entry.uncertainty_color
+
+        if full_squares:
+            # Filled patch if white background
+            square_params['facecolor'] = color
+        else:
+            # Empty patch if to see the diagram
+            square_params['edgecolor'] = color
+
+        rec = patches.Rectangle(linewidth=1, **square_params)
+        diagram_ax.add_patch(rec)
+
+        # Show the rectangle label offset for the last scan
+        if focus_ax and i == 0:
+            square_params['facecolor'] = None
+            square_params['edgecolor'] = color
+            focus_ax.add_patch(patches.Rectangle(linewidth=2, **square_params))
+
+
+def _plot_text_ax(text_ax, text: str):
+    text_ax.text(0.05, 0.95, text, horizontalalignment='left', verticalalignment='top', fontsize=12,
+                 fontfamily='monospace', transform=text_ax.transAxes)
+    text_ax.axis('off')
+
+
+def _plot_final_coord(diagram_ax, focus_area_ax, final_volt_coord: Tuple[float, float]):
+    last_x, last_y = final_volt_coord
+    for ax, cross_size, lw in ((diagram_ax, 200, 2), (focus_area_ax, 600, 4)):
+        if ax:
+            # Make white borders using a slightly bigger marker under it
+            ax.scatter(x=last_x, y=last_y, color='w', marker='x', s=cross_size * 1.1, linewidths=lw * 1.5, zorder=9998)
+            ax.scatter(x=last_x, y=last_y, color='fuchsia', marker='x', s=cross_size, label='End',
+                       linewidths=lw, zorder=9999)
+
+
+def plot_diagram(x_i: Sequence[float],
+                 y_i: Sequence[float],
+                 pixels: Optional[Tensor],
+                 title: Optional[str] = None,
+                 fog_of_war: bool = False,
+                 scale_bar: bool = False,
+                 charge_regions: List[Tuple["ChargeRegime", Polygon]] = None,
+                 transition_lines: List[LineString] = None,
+                 scan_history: List["StepHistoryEntry"] = None,
+                 scan_history_mode: Literal['classes', 'error', 'uncertainty'] | None = None,
+                 scan_history_alpha: Literal['uncertainty'] | int | None = None,
+                 focus_area: Optional[bool | Tuple[float, float, float, float]] = None,
+                 focus_area_title: str = 'Focus area',
+                 final_volt_coord: Tuple[float, float] = None,
+                 text: Optional[str | bool] = None,
+                 legend: Optional[bool] = None,
+                 vmin: float = None,
+                 vmax: float = None,
+                 file_name: str = None,
+                 allow_overwrite: bool = False,
+                 save_in_buffer: bool = False
+                 ) -> Optional[Path | io.BytesIO]:
+    # Choose the appropriate layout
+    show_focus_area_ax = focus_area is not None
+    show_text_ax = text is not None
+    show_legend_ax = legend is not None
+    fig, diagram_ax, focus_area_ax, text_ax, legend_ax = _get_layout(show_focus_area_ax, show_text_ax, show_legend_ax)
+
+    # Set the plot coordinates to fit the image with the axes, with the center of pixels aligned with the coordinates.
+    half_p = settings.pixel_size / 2
+    axes_matching = [x_i[0] - half_p, x_i[-1] + half_p, y_i[0] - half_p, y_i[-1] + half_p]
+
+    # Build the main diagram subplot
+    _plot_diagram_ax(diagram_ax, x_i, y_i, pixels, title, scan_history, fog_of_war, scale_bar, vmin, vmax,
+                     axes_matching)
+
+    # Show labels if provided
+    if charge_regions or transition_lines:
+        _plot_labels(diagram_ax, charge_regions, transition_lines)
+
+    # Build the focus area subplot
+    if show_focus_area_ax:
+        if focus_area is True:
+            # Get last scan coordinates and convert them to voltage.
+            x_start, x_end, y_start, y_end = scan_history[-1].get_area_coord()
+            focus_area = (x_i[x_start], x_i[x_end - 1], x_i[y_start], x_i[y_end - 1])
+        _plot_focus_area_ax(focus_area_ax, diagram_ax, pixels, focus_area_title, focus_area, vmin, vmax, axes_matching)
+
+    # Plot the scan history visualization
+    if scan_history_mode and scan_history and len(scan_history) > 0:
+        _plot_scan_history(diagram_ax, show_focus_area_ax, x_i, y_i, scan_history, scan_history_mode,
+                           scan_history_alpha, pixels is None)
+
+    if final_volt_coord is not None:
+        _plot_final_coord(diagram_ax, focus_area_ax, final_volt_coord)
+
+    if show_text_ax:
+        if not isinstance(text, str):
+            # If the text is not a string, it means that we want to generate the text from the scan history
+            text = StepHistoryEntry.get_text_description(scan_history)
+        _plot_text_ax(text_ax, text)
+
+    # Save the plot
+    return save_plot(file_name, allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer, figure=fig)
+
+
+def plot_diagram_old(x_i, y_i,
                  pixels: Optional,
-                 image_name: str,
-                 pixel_size: float,
+                 file_name: str = None,
+                 title: str = None,
                  charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: Iterable[LineString] = None,
                  show_offset: bool = False,
@@ -61,8 +337,8 @@ def plot_diagram(x_i, y_i,
     :param x_i: The x coordinates of the pixels (post interpolation).
     :param y_i: The y coordinates of the pixels (post interpolation).
     :param pixels: The list of pixels to plot.
-    :param image_name: The name of the image, used for plot title and file name.
-    :param pixel_size: The size of pixels, in voltage, used for plot title.
+    :param file_name: The name of the output file.
+    :param title: The title of the diagram axis. If None, use the diagram name.
     :param charge_regions: The charge region annotations to draw on top of the image.
     :param transition_lines: The transition line annotation to draw on top of the image.
     :param show_offset: If True, draw the label offset of the last patch in the focus area
@@ -78,12 +354,12 @@ def plot_diagram(x_i, y_i,
     :param confidence_thresholds: The model confidence threshold values for each class. Only necessary if scan_errors
      and not history_uncertainty enabled (yes, this is very specific).
     :param fog_of_war: If True, and scan_history defined, hide the section of the diagram that was never scanned.
-    :param fading_history: The number of scan inference the plot, the latest first. The number set will be plotted with
+    :param fading_history: The number of scan inferences to plot, the latest first. The number set will be plotted with
         solid color and the same number will fad progressively. Not compatible with history_uncertainty.
     :param history_uncertainty: If True and scan_history provided, plot steps with full squares and alpha representing
         the uncertainty.
     :param scale_bar: If True, and pixels provided, plot the pixel color scale at the right of the diagram. If the data
-        are normalized this scale unit doesn't make sense.
+        are normalized, this scale unit doesn't make sense.
     :param final_coord: The final tuning coordinates.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
     :param description: If True and scan_history has at least one entry, add statistics information about the scan steps
@@ -131,7 +407,7 @@ def plot_diagram(x_i, y_i,
             diagram_ax = ax['D']
             description_ax = ax['T']
 
-    half_p = pixel_size / 2
+    half_p = settings.pixel_size / 2
     # Set the plot boundaries to fit the image with the axes, with pixel center aligned with the coordinates.
     boundaries = [x_i[0] - half_p, x_i[-1] + half_p, y_i[0] - half_p, y_i[-1] + half_p]
     if pixels is None:
@@ -166,13 +442,14 @@ def plot_diagram(x_i, y_i,
         if focus_ax and isinstance(focus_area, tuple):
             x_start, x_end, y_start, y_end = focus_area
             focus_ax.imshow(pixels, interpolation='none', cmap=cmap, extent=boundaries, vmin=vmin, vmax=vmax)
-            focus_ax.set_xlim(x_start - half_p, x_end + half_p)
-            focus_ax.set_ylim(y_start - half_p, y_end + half_p)
-            focus_ax.set_title(focus_area_title)
             # Show the location of the focus area in the diagram using a rectangle
             loc = patches.Rectangle((x_start, y_start), x_end - x_start, y_end - y_start, linewidth=1, zorder=9999,
                                     edgecolor='black', label=focus_area_title, facecolor='none', alpha=0.8)
             diagram_ax.add_patch(loc)
+            focus_ax.set_xlim(x_start - half_p, x_end + half_p)
+            focus_ax.set_ylim(y_start - half_p, y_end + half_p)
+            if show_title and focus_area_title:
+                focus_ax.set_title(focus_area_title)
 
     charge_text = None  # Keep on text field for legend
     if charge_regions is not None:
@@ -194,8 +471,8 @@ def plot_diagram(x_i, y_i,
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import
         first_patch_label = set()
 
-        patch_size_x_v = (settings.patch_size_x - settings.label_offset_x * 2) * pixel_size
-        patch_size_y_v = (settings.patch_size_y - settings.label_offset_y * 2) * pixel_size
+        patch_size_x_v = (settings.patch_size_x - settings.label_offset_x * 2) * settings.pixel_size
+        patch_size_y_v = (settings.patch_size_y - settings.label_offset_y * 2) * settings.pixel_size
 
         for i, scan_entry in enumerate(reversed(scan_history)):
             line_detected = scan_entry.model_classification
@@ -247,7 +524,7 @@ def plot_diagram(x_i, y_i,
                     if fading_history != 0:
                         # History fading for fancy animation
                         rec_param['alpha'] = 1 if i < fading_history else (2 * fading_history - i) / (
-                                    fading_history + 1)
+                                fading_history + 1)
                     legend = True
 
                 if pixels is None:
@@ -365,11 +642,10 @@ def plot_diagram(x_i, y_i,
     #     diagram_ax.legend(ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.35), handles=handles, labels=labels,
     #                handler_map=handler_map)
 
-    return save_plot(f'diagram_{image_name}', allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer,
-                     figure=fig)
+    return save_plot(file_name, allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer, figure=fig)
 
 
-def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: List["StepHistoryEntry"],
+def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_history: List["StepHistoryEntry"],
                                 final_coord: Tuple[int, int], show_crosses: bool = True) -> None:
     """
     Plot an animation of the tuning procedure.
@@ -400,17 +676,17 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
         rate_gif = 4
         rate_video = 1
         # Define frames to compute
-        gif_frames_ids = list(range(0, len(scan_history), rate_gif)) if settings.save_gif else []
-        video_frames_ids = list(range(0, len(scan_history), rate_video)) if settings.save_video else []
+        gif_frames_ids = list(range(1, len(scan_history), rate_gif)) if settings.save_gif else []
+        video_frames_ids = list(range(1, len(scan_history), rate_video)) if settings.save_video else []
         frame_ids = list(dict.fromkeys(gif_frames_ids + video_frames_ids))  # Remove duplicate and keep order
 
         with Pool(get_nb_loader_workers()) as pool:
             # Generate images in parallel for speed. Use partial to set constants arguments.
             # Main animation frames
             async_result_main = pool.map_async(
-                partial(plot_diagram, x_axes, y_axes, values, d.name, settings.pixel_size,
+                partial(plot_diagram, x_axes, y_axes, values, None, title,
                         None, None, True, focus_area=True, focus_area_title='Last patch', save_in_buffer=True,
-                        description=True, show_title=False, fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax,
+                        description=True, show_title=True, fog_of_war=True, fading_history=8, vmin=vmin, vmax=vmax,
                         show_crosses=show_crosses),
                 (scan_history[0:i] for i in frame_ids)
             )
@@ -419,18 +695,16 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             async_result_end = [
                 # Show diagram with all inference and fog of war
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                       'pixel_size': settings.pixel_size,
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                        'scan_history': scan_history, 'focus_area': final_area,
                                        'focus_area_title': 'End area', 'save_in_buffer': True, 'description': True,
-                                       'show_title': False, 'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
+                                       'show_title': True, 'fog_of_war': True, 'vmin': vmin, 'vmax': vmax}),
                 # Show diagram with tuning final coordinate and fog of war
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                       'pixel_size': settings.pixel_size,
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                        'scan_history': scan_history, 'focus_area': final_area,
                                        'focus_area_title': 'End area', 'final_coord': final_coord,
-                                       'save_in_buffer': True, 'description': True, 'show_title': False,
+                                       'save_in_buffer': True, 'description': True, 'show_title': True,
                                        'fog_of_war': True, 'vmin': vmin, 'vmax': vmax})
             ]
 
@@ -442,32 +716,29 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
                 async_result_end += [
                     # Show full diagram with tuning final coordinate
                     pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                           'pixel_size': settings.pixel_size,
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                            'scan_history': scan_history, 'focus_area': final_area,
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'description': True, 'show_title': False,
+                                           'save_in_buffer': True, 'description': True, 'show_title': True,
                                            'vmin': vmin, 'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line labels
                     pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                           'pixel_size': settings.pixel_size,
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                            'scan_history': scan_history, 'focus_area': final_area,
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'description': True, 'show_title': False,
+                                           'save_in_buffer': True, 'description': True, 'show_title': True,
                                            'transition_lines': d.transition_lines, 'vmin': vmin, 'vmax': vmax}),
                     # Show full diagram with tuning final coordinate + line & regime labels
                     pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': d.name,
-                                           'pixel_size': settings.pixel_size,
+                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                            'scan_history': scan_history, 'focus_area': final_area,
                                            'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'description': True, 'show_title': False,
+                                           'save_in_buffer': True, 'description': True, 'show_title': True,
                                            'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
                                            'vmin': vmin, 'vmax': vmax}),
                 ]
 
-            # Wait for the processes to finish and get result
+            # Wait for the processes to finish and get results
             pool.close()
             pool.join()
             main_frames = async_result_main.get()
@@ -478,6 +749,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             frames_gif = [main_frames[frame_ids.index(f_id)] for f_id in gif_frames_ids] + end_frames
             # List of duration for each image (ms)
             durations_gif = [base_fps * rate_gif] * len(gif_frames_ids) + end_durations
+            durations_gif[0] = base_fps * 2
             save_gif(frames_gif, image_name, duration=durations_gif)
 
         if settings.save_video:
@@ -485,6 +757,7 @@ def plot_diagram_step_animation(d: "Diagram", image_name: str, scan_history: Lis
             frames_video = [main_frames[frame_ids.index(f_id)] for f_id in video_frames_ids] + end_frames
             # List of duration for each image (ms)
             durations_video = [base_fps * rate_video] * len(video_frames_ids) + end_durations
+            durations_video[0] = base_fps * 4
             save_video(frames_video, image_name, duration=durations_video)
 
         # Close buffers

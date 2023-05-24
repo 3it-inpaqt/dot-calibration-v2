@@ -181,13 +181,12 @@ class DiagramOffline(Diagram):
     def plot(self, label_extra: Optional[str] = '') -> None:
         """
         Plot the diagram with matplotlib (save and/or show it depending on the settings).
-        This method is a shortcut of plots.diagram.plot_diagram.
 
         :param label_extra: Optional extra information for the plot label.
         """
-        plot_diagram(self.x_axes, self.y_axes, self.values, self.name + label_extra,
-                     settings.pixel_size, transition_lines=self.transition_lines, charge_regions=self.charge_areas,
-                     show_offset=False, scale_bar=True)
+        plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}',
+                     transition_lines=self.transition_lines, charge_regions=self.charge_areas,
+                     scale_bar=True, file_name=f'diagram_{self.name}')
 
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'

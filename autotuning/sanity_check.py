@@ -150,7 +150,7 @@ class SanityCheck(AutotuningProcedure):
         :param final_coord: The final coordinate of the tuning procedure
         :param success_tuning: Result of the tuning (True = Success)
         """
-
-        name = f'{self.diagram.name} steps'
-        # Generate a gif image
-        plot_diagram_step_animation(self.diagram, name, self._scan_history, final_coord, False)
+        file_name = f'tuning_{self}_{self.diagram.name}'
+        title = f'Tuning {self}: {self.diagram.name}'
+        # Generate a gif and / or video
+        plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_coord, False)

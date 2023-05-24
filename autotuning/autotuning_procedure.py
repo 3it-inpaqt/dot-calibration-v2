@@ -123,9 +123,11 @@ class AutotuningProcedure:
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
-        self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
-                                                   soft_truth_larger, soft_truth_smaller, step_description,
-                                                   time_start, time_data_fetched, time_data_processed))
+        is_above_confidence_threshold = self.model.is_above_confident_threshold(prediction, confidence)
+        self._scan_history.append(StepHistoryEntry(
+            (self.x, self.y), prediction, confidence, ground_truth, soft_truth_larger, soft_truth_smaller,
+            is_above_confidence_threshold, step_description, time_start, time_data_fetched, time_data_processed
+        ))
 
         logger.debug(f'Patch {self.get_nb_steps():03} classified as {prediction} with confidence {confidence:.2%}')
 
@@ -179,6 +181,8 @@ class AutotuningProcedure:
         step_description = self._step_name + decr
         for (x, y), pred, conf, (truth, truth_larger, truth_smaller) in \
                 zip(self._batch_pending, predictions, confidences, ground_truths):
+            # FIXME: the step history arguments need to be updated to reflect the function refactoring,
+            #  refer to the method is_transition_line
             self._scan_history.append(
                 StepHistoryEntry((x, y), pred, conf, truth, truth_larger, truth_smaller, step_description))
 
@@ -467,7 +471,7 @@ class AutotuningProcedure:
         return None, None, None
 
     def nb_pending(self) -> int:
-        """ Return the number of patch inference pending. """
+        """ Return the number of patch inferences pending. """
         return len(self._batch_pending)
 
     def plot_step_history(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
@@ -485,40 +489,40 @@ class AutotuningProcedure:
         values, x_axes, y_axes = d.get_values()
         is_online = isinstance(d, DiagramOnline)
         transition_lines = None if is_online else d.transition_lines
-        interpolation_method = None if is_online else 'nearest'
 
-        if is_online:
-            name = f'Online tuning steps\n{self}'
-        else:
-            name = f'{self.diagram.name} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
+        file_name = f'tuning_{self}_{self.diagram.name}'
+        title = f'Tuning {self}: {self.diagram.name}'
+        if not is_online:
+            file_name += "_GOOD" if success_tuning else "_FAIL"
+            title = "[GOOD] " if success_tuning else "[FAIL] " + title
 
         # Parallel plotting for speed.
         with Pool(get_nb_loader_workers()) as pool:
             # diagram + label + step with classification color
             pool.apply_async(plot_diagram,
-                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': name,
-                                   'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
+                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'file_name': file_name,
+                                   'title': title, 'transition_lines': transition_lines,
                                    'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
                                    'history_uncertainty': False})
             # label + step with classification color and uncertainty
             pool.apply_async(plot_diagram,
-                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'image_name': name + ' uncertainty',
-                                   'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
-                                   'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                   'history_uncertainty': True})
+                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
+                                   'file_name': file_name + '_uncertainty', 'title': title,
+                                   'transition_lines': transition_lines, 'scan_history': self._scan_history,
+                                   'final_coord': final_coord, 'show_offset': False, 'history_uncertainty': True})
             if not settings.autotuning_use_oracle and not is_online:
                 # step with error and soft error color
                 pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'image_name': name + ' errors',
-                                       'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
-                                       'scan_history': self._scan_history, 'final_coord': final_coord,
-                                       'show_offset': False, 'scan_errors': True,
+                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'file_name': file_name + '_errors',
+                                       'title': title, 'pixel_size': settings.pixel_size,
+                                       'transition_lines': transition_lines, 'scan_history': self._scan_history,
+                                       'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
                                        'confidence_thresholds': self.model.confidence_thresholds,
                                        'history_uncertainty': False})
                 # step with error color and uncertainty
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                       'image_name': name + ' errors uncertainty', 'pixel_size': settings.pixel_size,
+                                       'file_name': file_name + '_errors_uncertainty', 'title': title,
                                        'transition_lines': transition_lines, 'scan_history': self._scan_history,
                                        'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
                                        'history_uncertainty': True})
@@ -534,10 +538,15 @@ class AutotuningProcedure:
         :param final_coord: The final coordinate of the tuning procedure
         :param success_tuning: Result of the tuning (True = Success)
         """
+        is_online = isinstance(self.diagram, DiagramOnline)
+        file_name = f'tuning_{self}_{self.diagram.name}'
+        title = f'Tuning {self}: {self.diagram.name}'
+        if not is_online:
+            file_name += "_GOOD" if success_tuning else "_FAIL"
+            title = "[GOOD] " if success_tuning else "[FAIL] " + title
 
-        name = f'{self.diagram.name} steps {"GOOD" if success_tuning else "FAIL"}'
-        # Generate a gif image
-        plot_diagram_step_animation(self.diagram, name, self._scan_history, final_coord)
+        # Generate a gif and / or video
+        plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_coord)
 
     def setup_next_tuning(self, diagram: Diagram, start_coord: Optional[Tuple[int, int]] = None) -> None:
         """

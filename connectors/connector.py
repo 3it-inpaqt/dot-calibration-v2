@@ -54,7 +54,7 @@ class Connector:
 
         if settings.plot_measurements:
             plot_diagram(result.x_axes, result.y_axes, result.data, f'measurement_{self._nb_measurement:03}',
-                         step_volt_x, scale_bar=True)
+                         title=f'Measurement #{self._nb_measurement:03,d}', scale_bar=True)
 
         return result
 
@@ -84,7 +84,7 @@ class Connector:
         """
         if not self._is_connected:
             raise RuntimeError('The connector should be connected before to get an online diagram.')
-        return DiagramOnline('online_diagram', self)
+        return DiagramOnline(f'Online {self}', self)
 
     def __enter__(self):
         """ Method called when entering the context manager. """

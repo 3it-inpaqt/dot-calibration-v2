@@ -119,7 +119,7 @@ class DiagramOnline(Diagram):
             # FIXME the coordinates doesn't match (y-axis inverted?)
             focus_area = (last_m.x_axes[0], last_m.x_axes[-1], last_m.y_axes[0], last_m.y_axes[-1])
 
-        plot_diagram(x_axes, y_axes, values, 'Online intermediate step' + label_extra, settings.pixel_size,
+        plot_diagram(x_axes, y_axes, values, f'diagram_{self.name}', title=f'Online diagram {self.name}',
                      allow_overwrite=True, show_offset=False, focus_area=focus_area)
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:

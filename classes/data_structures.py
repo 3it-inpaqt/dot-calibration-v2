@@ -85,6 +85,7 @@ class StepHistoryEntry:
     ground_truth: bool
     soft_truth_larger: bool  # Ground truth if the active area was larger (smaller offset)
     soft_truth_smaller: bool  # Ground truth if the active area was smaller (larger offset)
+    is_above_confidence_threshold: bool
     description: str
     timestamp_start: float  # In seconds
     timestamp_data_fetched: float  # In seconds
@@ -101,17 +102,6 @@ class StepHistoryEntry:
         """
         return (self.model_classification and self.soft_truth_larger) or \
                (not self.model_classification and not self.soft_truth_smaller)
-
-    def is_under_confidence_threshold(self, confidence_thresholds: List[float]) -> bool:
-        """
-        :return: True if the confidence threshold is defined and the model classification confidence is under the
-         threshold.
-         """
-
-        if confidence_thresholds:
-            return self.model_confidence < confidence_thresholds[self.model_classification]
-
-        return False  # No confidence thresholds defined
 
     def get_area_coord(self) -> Tuple[int, int, int, int]:
         start_x, start_y = self.coordinates

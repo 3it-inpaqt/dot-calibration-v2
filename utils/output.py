@@ -176,9 +176,12 @@ def get_save_path(directory: Path, file_name: str, extension: str, allow_overwri
     :return: The file path.
     """
 
+    # Clean the file name
+    file_name = re.sub(r'[\s\\/()_]+', '_', file_name.lower().strip())
+
     save_path = Path(directory, f'{file_name}.{extension}')
 
-    # Check if file exist and rename if we want to avoid overwriting
+    # Check if file exists and renames if we want to avoid overwriting
     if save_path.is_file() and not allow_overwrite:
         for i in range(2, index_limit, 1):
             save_path = Path(directory, f'{file_name} ({i:02d}).{extension}')
@@ -300,9 +303,10 @@ def save_video(images: List[io.BytesIO], file_name: str, duration: Union[List[in
         writer = imageio.get_writer(save_path, fps=1_000 / smallest_duration, macro_block_size=None)
         for data, d in zip(images, duration):
             current_duration = 0
+            image = imageio.imread(data)
             # Add frames until we reach the targeted duration
             while current_duration < d:
-                writer.append_data(imageio.imread(data))
+                writer.append_data(image)
                 current_duration += smallest_duration
         writer.close()
 
@@ -351,7 +355,7 @@ def save_timers() -> None:
 
     timers_file = Path(OUT_DIR, settings.run_name, OUT_FILES['timers'])
     with open(timers_file, 'w+') as f:
-        # Save with replacing white spaces by '_' in timers name
+        # Save with replacing white-spaces by '_' in timers name
         f.write('# Values in seconds\n')
         yaml.dump({re.sub(r'\s+', '_', n.strip()): v for n, v in Timer.timers.data.items()}, f)
 
