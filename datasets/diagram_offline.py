@@ -216,12 +216,16 @@ class DiagramOffline(Diagram):
         :return: A list of Diagram objects.
         """
 
-        # Open the json file that contains annotations for every diagrams
+        # Open the json file that contains annotations for every diagram
+        labels = dict()
         with open(labels_path, 'r') as annotations_file:
-            labels_json = json.load(annotations_file)
+            # It is a ndjson format, so each line should be a json object
+            for json_row in annotations_file:
+                label_data = json.loads(json_row)
+                diagram_id = label_data['data_row']['external_id']
+                labels[diagram_id] = label_data
 
-        logger.debug(f'{len(labels_json)} labeled diagrams found')
-        labels = {obj['External ID']: obj for obj in labels_json}
+        logger.debug(f'{len(labels)} labeled diagrams found')
 
         # Open the zip file and iterate over all csv files
         # in_zip_path should use "/" separator, no matter the current OS
@@ -253,10 +257,13 @@ class DiagramOffline(Diagram):
             with diagram_name.open(open_options) as diagram_file:
                 # Load values from CSV file
                 x, y, values = DiagramOffline._load_interpolated_csv(gzip.open(diagram_file))
-
-                current_labels = labels[f'{file_basename}.png']['Label']
-                label_pixel_size = float(next(filter(lambda l: l['title'] == 'pixel_size_volt',
-                                                     current_labels['classifications']))['answer'])
+                # Filter labels for this diagram and this project
+                current_labels = next(
+                    filter(lambda l: l['name'].upper() == 'QDSD', labels[f'{file_basename}.png']['projects'].values())
+                )['labels'][0]['annotations']
+                # Extract pixel size used for labeling this diagram (in volt)
+                label_pixel_size = float(next(filter(lambda l: l['name'] == 'pixel_size_volt',
+                                                     current_labels['classifications']))['text_answer']['content'])
                 transition_lines = None
                 charge_area = None
 
@@ -264,7 +271,7 @@ class DiagramOffline(Diagram):
                     # TODO adapt for double dot (load line_2 too)
                     # Load transition line annotations
                     transition_lines = DiagramOffline._load_lines_annotations(
-                        filter(lambda l: l['title'] == 'line_1', current_labels['objects']), x, y,
+                        filter(lambda l: l['name'] == 'line_1', current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
 
@@ -277,7 +284,7 @@ class DiagramOffline(Diagram):
                     # TODO adapt for double dot (load N_electron_2 too)
                     # Load charge area annotations
                     charge_area = DiagramOffline._load_charge_annotations(
-                        filter(lambda l: l['title'] != 'line_1', current_labels['objects']), x, y,
+                        filter(lambda l: l['name'] != 'line_1', current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
 
