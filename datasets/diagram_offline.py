@@ -248,6 +248,18 @@ class DiagramOffline(Diagram):
                 continue
 
             if f'{file_basename}.png' not in labels:
+                # In case we don't found a row for this diagram
+                logger.debug(f'No label found for {file_basename}')
+                nb_no_label += 1
+                continue
+
+            # Filter labels for this diagram and this project
+            try:
+                current_labels = next(
+                    filter(lambda l: l['name'].upper() == 'QDSD', labels[f'{file_basename}.png']['projects'].values())
+                )['labels'][0]['annotations']
+            except StopIteration:
+                # In case we found a row for this diagram, but no label
                 logger.debug(f'No label found for {file_basename}')
                 nb_no_label += 1
                 continue
@@ -257,10 +269,7 @@ class DiagramOffline(Diagram):
             with diagram_name.open(open_options) as diagram_file:
                 # Load values from CSV file
                 x, y, values = DiagramOffline._load_interpolated_csv(gzip.open(diagram_file))
-                # Filter labels for this diagram and this project
-                current_labels = next(
-                    filter(lambda l: l['name'].upper() == 'QDSD', labels[f'{file_basename}.png']['projects'].values())
-                )['labels'][0]['annotations']
+
                 # Extract pixel size used for labeling this diagram (in volt)
                 label_pixel_size = float(next(filter(lambda l: l['name'] == 'pixel_size_volt',
                                                      current_labels['classifications']))['text_answer']['content'])
