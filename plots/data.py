@@ -98,7 +98,7 @@ def plot_diagram(x_i, y_i,
     :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
         instead of the path.
     """
-    nb_scan = len(scan_history)
+    nb_scan = len(scan_history) if scan_history is not None else 0
     legend = False
     # By default do not plot title for latex format.
     show_title = not settings.image_latex_format if show_title is None else show_title
@@ -106,7 +106,7 @@ def plot_diagram(x_i, y_i,
 
     # If focus area is True, and scan history is not empty, set focus area to the last step area.
     if focus_area is True:
-        if scan_history is not None and nb_scan > 0:
+        if nb_scan > 0:
             # Get last scan coordinates, and convert them to voltage.
             x_start, x_end, y_start, y_end = scan_history[-1].get_area_coord()
             focus_area = (x_i[x_start], x_i[x_end - 1], x_i[y_start], x_i[y_end - 1])
@@ -140,7 +140,7 @@ def plot_diagram(x_i, y_i,
                           cmap=LinearSegmentedColormap.from_list('', ['white', 'white']),
                           extent=boundaries)
     else:
-        if fog_of_war and scan_history is not None and nb_scan > 0:
+        if fog_of_war and nb_scan > 0:
             # Mask area not scanned according to the current scan history list
             mask = np.full_like(pixels, True)
             for scan in scan_history:
@@ -160,7 +160,8 @@ def plot_diagram(x_i, y_i,
                 measuring = r'$\mathregular{I_{QPC}}$'
             else:
                 measuring = 'I'
-            diagram_ax.colorbar(shrink=0.85, label=f'{measuring} (A)')
+            # TODO fix the colorbar, or add the colorbar directly with the legend
+            # diagram_ax.colorbar(shrink=0.85, label=f'{measuring} (A)')
 
         if focus_ax and isinstance(focus_area, tuple):
             x_start, x_end, y_start, y_end = focus_area
@@ -189,7 +190,7 @@ def plot_diagram(x_i, y_i,
             diagram_ax.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
             legend = True
 
-    if scan_history is not None and nb_scan > 0:
+    if nb_scan > 0:
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import
         first_patch_label = set()
 
@@ -344,7 +345,7 @@ def plot_diagram(x_i, y_i,
         description_ax.axis('off')
 
     if show_title:
-        diagram_ax.set_title(f'{image_name}pixel size {round(pixel_size, 10) * 1_000}mV')
+        diagram_ax.set_title(f'{image_name} - pixel size: {round(pixel_size, 10) * 1_000}mV')
 
     diagram_ax.set_xlabel('G1 (V)')
     diagram_ax.tick_params(axis='x', labelrotation=30)

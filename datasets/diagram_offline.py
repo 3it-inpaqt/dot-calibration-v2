@@ -384,7 +384,7 @@ class DiagramOffline(Diagram):
                                                    True)
 
             area_obj = Polygon(zip(area_x, area_y))
-            processed_areas.append((ChargeRegime(area['value']), area_obj))
+            processed_areas.append((ChargeRegime(area['name']), area_obj))
 
         return processed_areas
 

@@ -20,7 +20,7 @@ class ChargeRegime(Enum):
     ELECTRON_1 = '1_electron_1'
     ELECTRON_2 = '2_electrons_1'
     ELECTRON_3 = '3_electrons_1'
-    ELECTRON_4_PLUS = '4_electrons_1'  # The value is no '4+_electrons' because labelbox remove the '+'
+    ELECTRON_4_PLUS = '4+_electrons_1'
 
     def __str__(self) -> str:
         """
