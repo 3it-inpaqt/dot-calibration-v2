@@ -4,6 +4,7 @@ import torch
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.data_structures import Direction
+from datasets.diagram_online import DiagramOnline
 from plots.data import plot_diagram_step_animation
 from utils.logger import logger
 from utils.settings import settings
@@ -24,7 +25,7 @@ class SanityCheck(AutotuningProcedure):
         surface_overlap_x = settings.label_offset_x * 2 * settings.patch_size_y
         surface_overlap_y = settings.label_offset_y * 2 * settings.patch_size_x
         nb_double_measurements_expected = self._sequence_size * 6 * (surface_overlap_x + surface_overlap_y)
-        # The number of unique measurement expected
+        # The number of unique measurements expected
         nb_unique_measurements_expected = nb_measurements_expected - nb_double_measurements_expected
 
         start_x, start_y = self.x, self.y
@@ -48,18 +49,19 @@ class SanityCheck(AutotuningProcedure):
         assert len(self._scan_history) == nb_steps_expected, \
             f"The number of steps ({len(self._scan_history)}) doesn't match with the expectation ({nb_steps_expected})."
 
-        nb_unique_measurements = self.diagram.values.isnan().logical_not().sum()
-        assert nb_unique_measurements == nb_unique_measurements_expected, \
-            f"The number of unique measurements ({nb_unique_measurements}) doesn't match with the " \
-            f"expectation ({nb_unique_measurements_expected})."
+        if isinstance(self.diagram, DiagramOnline):
+            nb_unique_measurements = self.diagram.values.isnan().logical_not().sum()
+            assert nb_unique_measurements == nb_unique_measurements_expected, \
+                f"The number of unique measurements ({nb_unique_measurements}) doesn't match with the " \
+                f"expectation ({nb_unique_measurements_expected})."
 
-        assert not torch.isnan(self.diagram.values[0][0]).item(), 'Corner (0, 0) is not measured.'
-        assert not torch.isnan(self.diagram.values[-1][0]).item(), 'Corner (0, -1) is not measured.'
-        assert not torch.isnan(self.diagram.values[0][-1]).item(), 'Corner (-1, 0) is not measured.'
-        assert not torch.isnan(self.diagram.values[-1][-1]).item(), 'Corner (-1, -1) is not measured.'
-        # FIXME Do not invert the coordinates
-        # assert not torch.isnan(self.diagram.values[start_y][start_x]).item(), \
-        #     f'Starting point ({start_x}, {start_y}) is not measured.'
+            assert not torch.isnan(self.diagram.values[0][0]).item(), 'Corner (0, 0) is not measured.'
+            assert not torch.isnan(self.diagram.values[-1][0]).item(), 'Corner (0, -1) is not measured.'
+            assert not torch.isnan(self.diagram.values[0][-1]).item(), 'Corner (-1, 0) is not measured.'
+            assert not torch.isnan(self.diagram.values[-1][-1]).item(), 'Corner (-1, -1) is not measured.'
+            # FIXME Do not invert the coordinates
+            # assert not torch.isnan(self.diagram.values[start_y][start_x]).item(), \
+            #     f'Starting point ({start_x}, {start_y}) is not measured.'
 
         return self.get_patch_center()
 
