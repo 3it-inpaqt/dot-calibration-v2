@@ -2,7 +2,6 @@ from collections import Counter, defaultdict
 from itertools import chain
 from typing import Dict, List, Optional, Tuple
 
-from itertools import chain
 from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
@@ -79,9 +78,31 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
                     result = procedure.run_tuning()
 
                     # Save result and log
-                    autotuning_results[(procedure_name, diagram.file_basename)].append(result)
-                    nb_error_to_plot, nb_good_to_plot \
-                        = save_show_results(result, procedure, i == 0, nb_error_to_plot, nb_good_to_plot)
+                    autotuning_results[(procedure_name, diagram.name)].append(result)
+                    force_save_list_iteration = [2126, 2127, 2128]
+                    force_save_list_charge_area = [
+                        # ['2_1', '0_2'], ['0_1', '2_2'],
+                        # ['2_1', '1_2'], ['1_1', '2_2'],
+                        # ['2_1', '2_2'], ['2_1', '2_2'],
+                        # ['2_1', '3_2'], ['3_1', '2_2'],
+                        # ['2_1', '4+_2'], ['4+_1', '2_2'],
+                        ['3_1', '0_2'], ['0_1', '3_2'],
+                        ['3_1', '1_2'], ['1_1', '3_2'],
+                        ['3_1', '2_2'], ['2_1', '3_2'],
+                        ['3_1', '3_2'], ['3_1', '3_2'],
+                        ['3_1', '4+_2'], ['4+_1', '3_2'],
+                        ['4+_1', '0_2'], ['0_1', '4+_2'],
+                        ['4+_1', '1_2'], ['1_1', '4+_2'],
+                        ['4+_1', '2_2'], ['2_1', '4+_2'],
+                        ['4+_1', '3_2'], ['3_1', '4+_2'],
+                        ['4+_1', '4+_2'], ['4+_1', '4+_2']
+                    ]
+                    if i in force_save_list_iteration or result.charge_area in force_save_list_charge_area:
+                        nb_error_to_plot, nb_good_to_plot \
+                            = save_show_results(result, procedure, True, nb_error_to_plot, nb_good_to_plot)
+                    else:
+                        nb_error_to_plot, nb_good_to_plot \
+                            = save_show_results(result, procedure, False, nb_error_to_plot, nb_good_to_plot)
 
                     progress.incr()
 
@@ -126,21 +147,20 @@ def init_procedure(model: Optional[Classifier], procedure_name: str) -> Autotuni
 
 
 @SectionTimer('save results', log_level='debug')
-def save_show_results(autotuning_result: AutotuningResult, procedure: AutotuningProcedure, is_first_tuning: bool,
+def save_show_results(autotuning_result: AutotuningResult, procedure: AutotuningProcedure, force_save: bool,
                       nb_error_to_plot: int, nb_good_to_plot: int) -> [int, int]:
     """
     Save the current autotuning procedure results.
 
     :param procedure: The procedure which contains tuning stats.
     :param autotuning_result: The autotuning procedure results.
-    :param is_first_tuning: True if this is currently the first tuning of this diagram.
+    :param force_save: If True, force the save.
     :param nb_error_to_plot: The remaining number of error procedure that we want to plot.
     :param nb_good_to_plot: The remaining number of error procedure that we want to plot.
     :return: The remaining number of error procedure that we want to plot after this one.
     """
 
     success = autotuning_result.is_success_tuning
-    is_full_scan = isinstance(procedure, FullScan)
 
     # Log information
     logger.debug(f'End tuning {procedure.diagram.name} in {autotuning_result.nb_steps} steps '
@@ -156,6 +176,9 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
             nb_error_to_plot -= 1
         else:
             nb_good_to_plot -= 1
+    elif force_save:
+        procedure.plot_step_history(autotuning_result.final_coord, success)
+        procedure.plot_step_history_animation(autotuning_result.final_coord, success)
 
     return nb_error_to_plot, nb_good_to_plot
 
@@ -168,21 +191,16 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
     :param autotuning_results: The charge tuning result dictionary.
     """
 
-    from plots.autotuning import area_legend, corresponding_legend
-
-    # Definition charge_areas
-    charge_areas = area_legend()
-
     overall = Counter()
     headers = ['Procedure'] if len(settings.autotuning_procedures) > 1 else []
-    if settings.dot_number == 1:
-        headers += ['Diagram', 'Steps', 'Model Success'] + list(map(str, ChargeRegime)) + \
-                   ['Good', 'Bad', 'Tuning Success']
-    else:
-        headers += ['Diagram', 'Steps', 'Model Success'] + ['Good', 'Bad', 'Tuning Success'] + charge_areas
+
+    from plots.autotuning import area_legend, corresponding_legend
+    # Definition charge_areas
+    ChargeRegime_area = area_legend()
+    headers += ['Diagram', 'Steps', 'Model Success'] + ['Good', 'Bad', 'Tuning Success'] + ChargeRegime_area
+    target_regime = '1_1' if settings.dot_number == 1 else str(tuple([1] * settings.dot_number))
 
     results_table = [headers]
-    target_regime = '(1, 1)'
     # Process counter of each diagram
     for (procedure_name, diagram_name), tuning_results in autotuning_results.items():
         # Count total final regimes
@@ -193,15 +211,14 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
             else:
                 regimes[corresponding_legend(result.charge_area)] += 1
         overall += regimes
-
         # Count total steps
-        nb_steps = sum(r.nb_steps / settings.autotuning_nb_iteration for r in tuning_results)
+        nb_steps = sum(r.nb_steps for r in tuning_results)
         nb_good_inference = sum(r.nb_classification_success for r in tuning_results)
         if nb_steps > 0:
-            model_success = nb_good_inference / (nb_steps * settings.autotuning_nb_iteration)
+            model_success = nb_good_inference / nb_steps
         else:
             model_success = 0
-        overall['steps'] += nb_steps
+        overall['steps'] += nb_steps / settings.autotuning_nb_iteration
         overall['good'] += nb_good_inference
         nb_good_regime = regimes[target_regime]
         nb_total = len(tuning_results)
@@ -209,24 +226,21 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
 
         results_row = [procedure_name] if len(settings.autotuning_procedures) > 1 else []
         # 'Diagram', 'Steps', 'Model Success'
-        results_row += [diagram_name, nb_steps, model_success]
+        results_row += [diagram_name, int(nb_steps / settings.autotuning_nb_iteration), model_success]
 
+        # 'Good', 'Bad', 'Tuning Success'
+        results_row += [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
+        # Charge Regimes
         if settings.dot_number == 1:
-            # Charge Regimes
-            results_row += [regimes[regime] for regime in ChargeRegime]
-            # 'Good', 'Bad', 'Tuning Success'
-            results_row += [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
+            results_row += [regimes[regime] for regime in ChargeRegime.values()]
         else:
-            # 'Good', 'Bad', 'Tuning Success'
-            results_row += [nb_good_regime, nb_bad_regime, (nb_good_regime / nb_total)]
-            # Charge Regimes
-            results_row += [regimes[regime] for regime in charge_areas]
+            results_row += [regimes[regime] for regime in ChargeRegime_area]
         results_table.append(results_row)
 
     if settings.dot_number == 1:
         plot_autotuning_results(results_table, overall)
     else:
-        plot_autotuning_results_NDots(results_table, overall)
+        plot_autotuning_results_NDots(results_table)
 
     # Overall row
     nb_good_regime = overall[target_regime]

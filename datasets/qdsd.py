@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from datasets.diagram_ndot_offline import DiagramOfflineNDot
 from datasets.diagram_offline import DiagramOffline
 from utils.logger import logger
 from utils.output import load_data_cache, save_data_cache, save_normalization, save_results
@@ -156,12 +157,7 @@ class QDSDLines(Dataset):
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
 
-        if settings.dot_number == 2:
-            single_dot = False
-        elif settings.dot_number == 1:
-            single_dot = True
-        else:
-            single_dot = False
+        single_dot = True if settings.dot_number == 1 else False
         use_test_ratio = isinstance(test_ratio_or_names, float)
         test_patches = []
         patches = []
@@ -175,14 +171,14 @@ class QDSDLines(Dataset):
             # Fast load from cache
             patches = load_data_cache(cache_path)
         else:
+            model_diagram = DiagramOffline if settings.dot_number == 1 else DiagramOfflineNDot
             # Load fom files and labels (but lines only)
-            diagrams = DiagramOffline.load_diagrams(pixel_size,
-                                                    research_group,
-                                                    Path(DATA_DIR, 'interpolated_csv.zip'),
-                                                    Path(DATA_DIR, 'labels.json'),
-                                                    single_dot,
-                                                    True, False)
-
+            diagrams = model_diagram.load_diagrams(pixel_size,
+                                                   research_group,
+                                                   Path(DATA_DIR, 'interpolated_csv.zip'),
+                                                   Path(DATA_DIR, 'labels.json'),
+                                                   single_dot,
+                                                   True, False)
             for diagram in diagrams:
                 diagram_patches = diagram.get_patches(patch_size, overlap, label_offset)
                 if not use_test_ratio and diagram.name in test_ratio_or_names:

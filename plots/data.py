@@ -10,7 +10,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from math import ceil, sqrt
 from matplotlib import patches
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, Normalize
@@ -141,14 +140,19 @@ def plot_diagram(x_i, y_i,
                                    bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
 
     if transition_lines is not None:
-        for nb, line_number in enumerate(transition_lines):
-            for i, line in enumerate(line_number):
+        for nb, line in enumerate(transition_lines):
+            if settings.dot_number == 1:
                 line_x, line_y = line.coords.xy
-                # Import here because of a loop
-                from datasets.qdsd import QDSDLines
-                plt.plot(line_x, line_y, color=LINE_COLOR[nb],
-                         label=f'Line {QDSDLines.classes[nb + 1]} annotation' if i == 0 else None)
+                plt.plot(line_x, line_y, color='lime', label='Line annotation' if nb == 0 else None)
                 legend = True
+            else:
+                for i, line_nb in enumerate(line):
+                    line_x, line_y = line_nb.coords.xy
+                    # Import here because of a loop
+                    from datasets.qdsd import QDSDLines
+                    plt.plot(line_x, line_y, color=LINE_COLOR[nb],
+                             label=f'Line {QDSDLines.classes[nb + 1]} annotation' if i == 0 else None)
+                    legend = True
 
     if scan_history is not None and len(scan_history) > 0:
         from datasets.qdsd import QDSDLines  # Import here to avoid circular import

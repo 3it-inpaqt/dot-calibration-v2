@@ -3,7 +3,6 @@ from typing import List, Optional, Tuple
 
 import torch
 
-from utils.logger import logger
 from classes.classifier import Classifier
 from classes.data_structures import AutotuningResult, BoundaryPolicy, StepHistoryEntry
 from datasets.diagram import Diagram
@@ -114,12 +113,8 @@ class AutotuningProcedure:
                 # Send to the model for inference
                 prediction, confidence = self.model.infer(patch, settings.bayesian_nb_sample_test)
                 # Extract data from pytorch tensor
-                if settings.dot_number == 1:
-                    prediction = prediction.item()
-                    confidence = confidence.item()
-                else:
-                    prediction = QDSDLines.class_mapping(prediction)
-                    confidence = QDSDLines.conf_mapping(confidence, prediction)
+                prediction = prediction.item()
+                confidence = confidence.item()
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
@@ -484,7 +479,7 @@ class AutotuningProcedure:
         d = self.diagram
         values, x_axes, y_axes = d.get_values()
         is_online = isinstance(d, DiagramOnline)
-        transition_lines = None if is_online else d.transition_lines_list
+        transition_lines = None if is_online else d.transition_lines
         interpolation_method = None if is_online else 'nearest'
 
         if is_online:

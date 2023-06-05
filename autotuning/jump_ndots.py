@@ -1,6 +1,7 @@
+from math import atan2, ceil, pi, radians, tan
 from typing import List, Optional, Tuple
 
-from math import atan2, ceil, pi, radians, tan
+import torch
 
 from autotuning.jump_uncertainty import JumpUncertainty
 from classes.data_structures import BoundaryPolicy, StepHistoryEntry
@@ -26,6 +27,10 @@ class JumpNDots(JumpUncertainty):
     _line_distances_2: List[int] = None
     # Line state
     _previous_line_state: int = 0
+    # Parameters
+    _max_nb_line_leftmost: int = 4
+    _max_nb_line_bottommost: int = 4
+    # Class
     _class = QDSDLines.classes
 
     def default_slope(self, line_state: int) -> int:
@@ -175,6 +180,49 @@ class JumpNDots(JumpUncertainty):
         y_line = m * self.x + b
         y_delta = y_line - self.y
         return y_delta > 0
+
+    def is_transition_line(self) -> Tuple[int, float]:
+        """
+        Try to detect a line in a sub-area of the diagram using the current model or the oracle.
+
+        :return: The line classification (True = line detected) and
+         the confidence score (0: low confidence to 1: very high confidence).
+        """
+
+        # Check coordinates according to the current policy.
+        # They could be changed to fit inside the diagram if necessary
+        self._enforce_boundary_policy()
+
+        # Fetch ground truth from labels if available (all set to None if Online diagram)
+        ground_truth, soft_truth_larger, soft_truth_smaller = self.get_ground_truths(self.x, self.y)
+
+        result: Tuple[bool, float]
+        if self.is_oracle_enable:
+            # Oracle use ground truth with full confidence
+            prediction = ground_truth
+            confidence = 1
+        else:
+            with torch.no_grad():
+                # Cut the patch area and send it to the model for inference
+                patch = self.diagram.get_patch((self.x, self.y), self.patch_size)
+                # Reshape as valid input for the model (batch size, patch x, patch y)
+                size_x, size_y = self.patch_size
+                patch = patch.view((1, size_x, size_y))
+                # Send to the model for inference
+                prediction, confidence = self.model.infer(patch, settings.bayesian_nb_sample_test)
+                # Extract data from pytorch tensor
+                prediction = QDSDLines.class_mapping(prediction)
+                confidence = QDSDLines.conf_mapping(confidence, prediction)
+        # Record the diagram scanning activity.
+        decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
+        step_description = self._step_name + decr
+        self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
+                                                   soft_truth_larger, soft_truth_smaller, step_description))
+        x, y = self.diagram.coord_to_voltage(self.x, self.y)
+        logger.debug(f'Patch {self.get_nb_steps():03} classified as {QDSDLines.classes[prediction]} with confidence '
+                     f'{confidence:.2%} at coord ({x:.2f}, {y:.2f})')
+
+        return prediction, confidence
 
     ###########################
 
@@ -441,7 +489,7 @@ class JumpNDots(JumpUncertainty):
         directions = self._get_direction(line_state=self._previous_line_state)
 
         line_found = True
-        max_step = 10
+        max_step = 100
         step = 0
 
         while line_found and step < max_step:
@@ -484,7 +532,6 @@ class JumpNDots(JumpUncertainty):
             return False
 
         line_found = True
-        max_step = 100
         step = 0
         directions = self._get_direction(line_state=self._previous_line_state)
         substage = 0
@@ -529,17 +576,20 @@ class JumpNDots(JumpUncertainty):
         directions[2].no_line_count = 0  # Direction up
         directions[3].no_line_count = 0  # Direction down
 
+        # Reset direction
+        directions[0].is_stuck = False
+
         nb_search_steps = 0
 
         while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions[:2]):
             for direction in (d for d in directions[:2] if not d.is_stuck):
                 avg_line_distance = self._get_avg_line_step_distance(line_distances)
-                self._step_descr = f'init line: line {self._previous_line_state}\n' \
-                                   f'line slope: {str(target_line_slope)}°\n' \
-                                   f'avg line dist: {avg_line_distance:.1f}\n' \
-                                   f'nb line found: {nb_line_found}\n' \
-                                   f'leftmost line: {str(self._get_leftmost_line_coord_str())}\n' \
-                                   f'bottommost line: {str(self._get_bottommost_line_coord_str())}'
+                self._step_descr = f'Target line: {self._class[self._previous_line_state]}\n' \
+                                   f'Line slope: {str(target_line_slope)}°\n' \
+                                   f'Avg line dist: {avg_line_distance:.1f}\n' \
+                                   f'Nb line found: {nb_line_found}\n' \
+                                   f'Leftmost line: {str(self._get_leftmost_line_coord_str())}\n' \
+                                   f'Bottommost line: {str(self._get_bottommost_line_coord_str())}'
                 nb_search_steps += 1
 
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
@@ -667,7 +717,7 @@ class JumpNDots(JumpUncertainty):
 
     def _validate_line(self, directions: tuple) -> bool:
         """
-        Validate that the current leftmost line detected is really the leftmost one.
+        Validate that the current leftmost or the bottommost line detected is really the leftmost or the bottommost one.
         Try to find a line left by scanning area at regular interval on the left, where we could find a line.
         If a new line is found that way, do the validation again.
         """
@@ -675,42 +725,48 @@ class JumpNDots(JumpUncertainty):
         line_distance = self._line_distances_1 if self._previous_line_state == 1 else self._line_distances_2
         line_step_distance = self._get_avg_line_step_distance(line_distances=line_distance) * 2
         line_slope = self._line_slope_1 if self._previous_line_state == 1 else self._line_slope_2
-        max_nb_line = self._max_nb_line_leftmost if self._previous_line_state == 2 else self._max_nb_line_bottommost
-
+        max_nb_line = [self._max_nb_line_bottommost, self._max_nb_line_leftmost][self._previous_line_state - 1]
+        default_step = [self._default_step_y, self._default_step_x][self._previous_line_state - 1]
+        default_step_inv = [self._default_step_x, self._default_step_y][self._previous_line_state - 1]
         new_line_found = True
         start_point = self._leftmost_line_coord \
             if self._previous_line_state == 2 else self._bottommost_line_coord
+
+        # Case of start point is None
+        if not start_point:
+            start_point = self.diagram.get_random_starting_point()
+            self._leftmost_line_coord = start_point if self._previous_line_state == 2 else self._leftmost_line_coord
+            self._bottommost_line_coord = start_point if self._previous_line_state == 1 else self._bottommost_line_coord
+
         nb_steps = 0
         while new_line_found:
-            nb_line = 0
+            nb_line = 1
             new_line_found = False
-            # Both direction start at the leftmost point
+            # Both direction start at the leftmost/bottommost point
             directions[2].last_x, directions[2].last_y = start_point
             directions[3].last_x, directions[3].last_y = start_point
-            # Unstuck since we are stating at a new location
+            # Unstuck since we are starting at a new location
             directions[2].is_stuck = directions[3].is_stuck = False
             while not new_line_found and not Direction.all_stuck((directions[2], directions[3])):
                 for direction in (d for d in (directions[2], directions[3]) if not d.is_stuck):
-                    nb_line += 1
-                    # Check the number of repetition needed to find a line on the left or on the right
-                    if nb_line > max_nb_line:
-                        return False
-                    self._step_descr = f'Init line: {self._class[self._previous_line_state]}\n' \
+                    self._step_descr = f'Target line: {self._class[self._previous_line_state]}\n' \
+                                       f'Coord: {(direction.last_x, direction.last_y)}\n' \
                                        f'Leftmost line: {self._get_leftmost_line_coord_str()}\n' \
                                        f'Bottommost line: {self._get_bottommost_line_coord_str()}\n' \
                                        f'Line slope: {line_slope:.0f}°\n' \
-                                       f'Avg line dist: {line_step_distance:.1f}\n'
+                                       f'Avg line dist: {line_step_distance:.1f}'
                     self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
                     # Step distance relative to the line distance
-                    direction.move(round(self._default_step_y * line_step_distance))
+
+                    direction.move(round(default_step * line_step_distance))
                     # Save current position for next time
                     direction.last_x, direction.last_y = self.x, self.y
                     direction.is_stuck = direction.check_stuck()
                     if direction.is_stuck:
                         break  # We don't scan if we have reached the border
 
-                    # Skip 1.25 line distance left
-                    self._move_left_perpendicular_to_line(ceil(self._default_step_x * line_step_distance * 0.5))
+                    # Skip 30% line distance
+                    self._move_left_perpendicular_to_line(ceil(default_step_inv * line_step_distance * 0.3))
 
                     # Go left for 2x the line distance (total 1.5x the line distance)
                     for i in range(ceil(line_step_distance * 1.5)):
@@ -718,7 +774,7 @@ class JumpNDots(JumpUncertainty):
                         # If new line found and this is the new leftmost one, start again the checking loop
                         line_state, _ = self.is_transition_line()
 
-                        if line_state == self._previous_line_state or settings.dot_number + 1:
+                        if line_state == self._previous_line_state or line_state == settings.dot_number + 1:
                             coord = self._bottommost_line_coord \
                                 if self._previous_line_state == 1 else self._leftmost_line_coord
 
@@ -726,11 +782,16 @@ class JumpNDots(JumpUncertainty):
 
                             new_coord = self._bottommost_line_coord \
                                 if self._previous_line_state == 1 else self._leftmost_line_coord
-
                             # If line isn't the leftmost or bottommost: ignore
                             if coord == new_coord:
                                 continue
                             else:
+                                x, y = self.diagram.coord_to_voltage(coord[0], coord[1])
+                                xbis, ybis = self.diagram.coord_to_voltage(self.x, self.y)
+                                logger.debug(
+                                    f'Previous {"leftmost" if self._previous_line_state == 2 else "bottommost"} '
+                                    f'line: ({x:.2f}, {y:.2f}), After verification: ({xbis:.2f}, {ybis:.2f})')
+                                direction.last_x, direction.last_y = self.x, self.y
                                 self._nb_line_found_1 += 1 if self._previous_line_state == 1 else 0
                                 self._nb_line_found_2 += 1 if self._previous_line_state == 2 else 0
                                 return True
@@ -741,8 +802,13 @@ class JumpNDots(JumpUncertainty):
                             # Nothing else to see here
                             break
 
-                    if nb_steps > self._max_steps_validate_left_line:
+                    if nb_steps > self._max_steps_validate_line:
                         # Hard break to avoid infinite search in case of bad slope detection (>90°)
+                        return False
+
+                    nb_line += 1
+                    # Check the number of repetition needed to find a line on the left or on the right
+                    if nb_line > max_nb_line:
                         return False
         return False
 
@@ -769,7 +835,8 @@ class JumpNDots(JumpUncertainty):
                 self._step_name = f'Stage (3.{substage}) - ' \
                                   f'Slope calculation for {self._class[self._previous_line_state]}'
                 self._search_line_slope()
-            logger.debug(f'{self._class[self._previous_line_state]} already found at coord {str(tuple(start_coord))}')
+            x, y = self.diagram.coord_to_voltage(start_coord[0], start_coord[1])
+            logger.debug(f'{self._class[self._previous_line_state]} already found at coord ({x:.2f},{y:.2f})')
             return True
 
         # Start the research

@@ -22,16 +22,14 @@ class DiagramOffline(Diagram):
     """ Handle the diagram data and its annotations. """
 
     # The transition lines annotations
-    transition_lines_list: Optional[List[List[LineString]]]
+    transition_lines: Optional[List[LineString]]
 
     # The charge area lines annotations
-    charge_areas: Optional[List[Tuple[dict, Polygon]]]
+    charge_areas: Optional[List[Tuple[type(ChargeRegime), Polygon]]]
 
     def __init__(self, file_basename: str, x_axes: Sequence[float], y_axes: Sequence[float], values: torch.Tensor,
-                 transition_lines_list: Optional[List[List[LineString]]],
-                 charge_areas: Optional[List[Tuple[dict, Polygon]]]):
                  transition_lines: Optional[List[LineString]],
-                 charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]):
+                 charge_areas: Optional[List[Tuple[type(ChargeRegime), Polygon]]]):
         """
         Creat an instance of DiagramOffline based on a diagram file.
 
@@ -47,7 +45,7 @@ class DiagramOffline(Diagram):
         self.x_axes = x_axes
         self.y_axes = y_axes
         self.values = values
-        self.transition_lines_list = transition_lines_list
+        self.transition_lines = transition_lines
         self.charge_areas = charge_areas
 
     def get_random_starting_point(self) -> Tuple[int, int]:
@@ -119,19 +117,15 @@ class DiagramOffline(Diagram):
                 # Invert Y axis because the diagram origin (0,0) is top left
                 patch = self.values[diagram_size_y - end_y:diagram_size_y - start_y, start_x:end_x]
                 # Label is True if any line intersect the patch shape
-                labels = []
-                for transition_lines in self.transition_lines_list:
-                    labels.append(any([line.intersects(patch_shape) for line in transition_lines]))
+                label = any([line.intersects(patch_shape) for line in self.transition_lines])
+
                 # Verification plots
                 # plot_diagram(self.x[start_x:end_x], self.y[start_y:end_y],
                 #              self.values[diagram_size_y-end_y:diagram_size_y-start_y, start_x:end_x],
                 #              self.name + f' - patch {i:n} - line {label} - REAL',
                 #              'nearest', self.x[1] - self.x[0])
                 # self.plot((start_x_v, end_x_v, start_y_v, end_y_v), f' - patch {i:n} - line {label}')
-                if len(labels) == 1:
-                    yield patch, labels[0]
-                else:
-                    yield patch, labels
+                yield patch, label
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """
@@ -145,18 +139,13 @@ class DiagramOffline(Diagram):
         volt_y = self.y_axes[coord_y]
         point = Point(volt_x, volt_y)
 
-        # Coordinates not found in labeled areas. The charge area in this location is thus unknown.
-        regime = [ChargeRegime['UNKNOWN']] * settings.dot_number
-
         # Check coordinates in each labeled area
-        dot, count = 0, 0
-        for diagram_regime, area in self.charge_areas:
-            if count % 5 == 0:
-                dot += 1
+        for regime, area in self.charge_areas:
             if area.contains(point):
-                regime[dot - 1] = diagram_regime
-            count += 1
-        return regime
+                return regime
+
+        # Coordinates not found in labeled areas. The charge area in this location is thus unknown.
+        return ChargeRegime['UNKNOWN']
 
     def is_line_in_patch(self, coordinate: Tuple[int, int],
                          patch_size: Tuple[int, int],
@@ -186,29 +175,8 @@ class DiagramOffline(Diagram):
                                (end_x_v, end_y_v),
                                (start_x_v, end_y_v)])
 
-        if settings.dot_number == 1:
-            # Label is True if any line intersect the patch shape
-            return any([[line.intersects(patch_shape) for line in nb_line] for nb_line in self.transition_lines_list])
-        else:
-            classification = []
-            for line_type in self.transition_lines_list:
-                classification.append(any([line.intersects(patch_shape) for line in line_type]))
-            return self.Classification(classification)
-
-    def Classification(self, labels):
-        from datasets.qdsd import QDSDLines
-        labels = np.array(labels)
-        if (labels == np.zeros(settings.dot_number, dtype=bool)).all():
-            return 0  # No line
-        else:
-            if (labels == np.ones(settings.dot_number, dtype=bool)).all():
-                return len(QDSDLines.classes) - 1  # Crosspoint
-            else:
-                count = 1
-                for label in labels:
-                    if label:
-                        return count  # Line [count]
-                    count += 1
+        # Label is True if any line intersect the patch shape
+        return any([line.intersects(patch_shape) for line in self.transition_lines])
 
     def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
         """
@@ -245,7 +213,6 @@ class DiagramOffline(Diagram):
         :param load_lines: If True the line labels should be loaded.
         :param load_areas: If True the charge area labels should be loaded.
         :param white_list: If defined, only diagrams with base name include in this list will be loaded (no extension).
-        :param black_list: If defined, diagrams with base name include in this list will be excluded (no extension).
         :return: A list of Diagram objects.
         """
 
@@ -259,12 +226,6 @@ class DiagramOffline(Diagram):
         # Open the zip file and iterate over all csv files
         # in_zip_path should use "/" separator, no matter the current OS
         in_zip_path = f'{pixel_size * 1000}mV/' + ('single' if single_dot else 'double') + f'/{research_group}/'
-
-        # for general load
-        # in_zip_path = f'{pixel_size * 1000}mV/{settings.dot_number}_dot/{research_group}/'
-
-        logger.debug(f'Path file: {in_zip_path}')
-
         zip_dir = zipfile.Path(diagrams_path, at=in_zip_path)
 
         if not zip_dir.is_dir():
@@ -273,27 +234,17 @@ class DiagramOffline(Diagram):
 
         diagrams = []
         nb_no_label = 0
-        nb_excluded_blacklist = 0
-        nb_excluded_whitelist = 0
-        list_blacklist = []
-        list_whitelist = []
-
+        nb_excluded = 0
         # Iterate over all csv files inside the zip file
         for diagram_name in zip_dir.iterdir():
             file_basename = Path(str(diagram_name)).stem  # Remove extension
 
             if white_list and not (file_basename in white_list):
-                nb_excluded_whitelist += 1
-                list_whitelist.append(file_basename)
-                continue
-
-            if settings.black_list and (file_basename in settings.black_list):
-                nb_excluded_blacklist += 1
-                list_blacklist.append(file_basename)
+                nb_excluded += 1
                 continue
 
             if f'{file_basename}.png' not in labels:
-                logger.warning(f'No label found for {file_basename}')
+                logger.debug(f'No label found for {file_basename}')
                 nb_no_label += 1
                 continue
 
@@ -306,40 +257,35 @@ class DiagramOffline(Diagram):
                 current_labels = labels[f'{file_basename}.png']['Label']
                 label_pixel_size = float(next(filter(lambda l: l['title'] == 'pixel_size_volt',
                                                      current_labels['classifications']))['answer'])
-
-                transition_lines_list = []
-                charge_areas = None
+                transition_lines = None
+                charge_area = None
 
                 if load_lines:
-                    for nb in range(1, settings.dot_number + 1):
-                        transition_lines = None
-                        # Load transition line annotations
-                        transition_lines = DiagramOffline._load_lines_annotations(
-                            filter(lambda l: l['title'] == f'line_{nb}', current_labels['objects']), x, y,
-                            pixel_size=label_pixel_size,
-                            snap=1)
+                    # Load transition line annotations
+                    transition_lines = DiagramOffline._load_lines_annotations(
+                        filter(lambda l: l['title'] == 'line_1', current_labels['objects']), x, y,
+                        pixel_size=label_pixel_size,
+                        snap=1)
 
-                        transition_lines_list.append(transition_lines)
-
-                    if len(transition_lines_list) != len(np.zeros(settings.dot_number)):
-                        logger.warning(f'No line label found for {file_basename}')
+                    if len(transition_lines) == 0:
+                        logger.debug(f'No line label found for {file_basename}')
                         nb_no_label += 1
                         continue
 
                 if load_areas:
                     # TODO adapt for double dot (load N_electron_2 too)
                     # Load charge area annotations
-                    charge_areas = DiagramOffline._load_charge_annotations(filter(lambda l: l['title']
-                                                                                            in ChargeRegime.keys(),
-                                                                                  current_labels['objects']), x, y,
-                                                                           pixel_size=label_pixel_size, snap=1)
+                    charge_area = DiagramOffline._load_charge_annotations(
+                        filter(lambda l: l['title'] != 'line_1', current_labels['objects']), x, y,
+                        pixel_size=label_pixel_size,
+                        snap=1)
 
-                    if not charge_areas:
-                        logger.warning(f'No charge label found for {file_basename}')
+                    if len(charge_area) == 0:
+                        logger.debug(f'No charge label found for {file_basename}')
                         nb_no_label += 1
                         continue
 
-                diagram = DiagramOffline(file_basename, x, y, values, transition_lines_list, charge_areas)
+                diagram = DiagramOffline(file_basename, x, y, values, transition_lines, charge_area)
                 diagrams.append(diagram)
                 if settings.plot_diagrams:
                     diagram.plot()
@@ -347,12 +293,8 @@ class DiagramOffline(Diagram):
         if nb_no_label > 0:
             logger.warning(f'{nb_no_label} diagram(s) skipped because no label found')
 
-        if nb_excluded_whitelist > 0:
-            logger.warning(f'{nb_excluded_whitelist} diagram(s) excluded because not in white list')
-            logger.debug(f'Diagram not in the whitelist: {list_whitelist}')
-        if nb_excluded_blacklist > 0:
-            logger.warning(f'{nb_excluded_blacklist} diagram(s) excluded because in black list')
-            logger.debug(f'Diagram in the blacklist: {list_blacklist}')
+        if nb_excluded > 0:
+            logger.info(f'{nb_excluded} diagram(s) excluded because not in white list')
 
         if len(diagrams) == 0:
             logger.error(f'No diagram loaded in "{zip_dir}"')
@@ -406,7 +348,7 @@ class DiagramOffline(Diagram):
 
     @staticmethod
     def _load_charge_annotations(charge_areas: Iterable, x, y, pixel_size: float, snap: int = 1) \
-            -> List[Tuple[dict, Polygon]]:
+            -> List[Tuple[type(ChargeRegime), Polygon]]:
         """
         Load regions annotation for an image.
 

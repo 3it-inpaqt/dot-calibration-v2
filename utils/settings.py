@@ -1,10 +1,10 @@
 import argparse
 import re
 from dataclasses import asdict, dataclass
+from math import isnan
 from typing import Sequence, Union
 
 import configargparse
-from math import isnan
 from numpy.distutils.misc_util import is_sequence
 
 from utils.logger import logger
@@ -295,10 +295,14 @@ class Settings:
     # Feature only available on jump algorithm.
     auto_detect_slope: bool = True
 
-    # If True the Jump algorithm will validate the leftmost line at different Y-position to avoid mistake in the case of
-    # fading lines.
+    # If True the Jump algorithm will validate the leftmost line at different Y-position
+    # (for the Jump_Ndots validate at different X-position) to avoid mistake in the case of fading lines.
     validate_left_line: bool = True
+    # If True the Jump_NDots algorithm will validate the bottommost line at different Y-position
+    # to avoid mistake in the case of fading lines.
     validate_bottom_line: bool = True
+    # If True the algorithm will check if the line is a parasit dot or not
+    parasit_dot_procedure: bool = False
 
     # If the oracle is enabled, these numbers corrupt its precision.
     # 0.0 = all predictions are based on the ground truth (labels), means 100% precision
@@ -315,6 +319,7 @@ class Settings:
     # Nb of video to save for good autotuning and bad autotuning
     nb_error_to_plot: int = 5
     nb_good_to_plot: int = 2
+
 
     # ==================================================================================================================
     # ==================================================== Connector ===================================================
@@ -428,6 +433,10 @@ class Settings:
         for procedure in self.autotuning_procedures:
             assert isinstance(procedure, str) and procedure.lower() in procedures_allow, \
                 f'Invalid autotuning procedure name {procedure}'
+            if procedure == 'jump_ndots':
+                assert self.dot_number != 1, f'The autotuning procedure {procedure} ' \
+                                             f'for Ndot cannot be used with only one dot.'
+
         assert self.autotuning_nb_iteration >= 1, 'At least 1 autotuning iteration required'
 
         # Connector

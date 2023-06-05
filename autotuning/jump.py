@@ -1,8 +1,6 @@
 from math import atan2, ceil, cos, pi, radians, sin, tan
 from typing import List, Optional, Tuple
 
-from math import atan2, ceil, cos, pi, radians, sin, tan
-
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.data_structures import Direction, SearchLineSlope
 from utils.logger import logger
@@ -14,7 +12,8 @@ class Jump(AutotuningProcedure):
     _max_steps_exploration: int = 1000  # Nb of step
     _max_steps_search_empty: int = 100  # Nb of step
     _max_line_explore_right: int = 5  # Nb detected lines
-    _max_steps_validate_left_line: int = 250  # Nb steps
+    _max_steps_validate_line: int = 100  # Nb steps
+    _max_steps_validate_left_line: int = 100  # Nb steps
     _max_nb_leftmost_checking: int = 6
 
     _nb_line_found: int = 0
@@ -453,6 +452,18 @@ class Jump(AutotuningProcedure):
             return 'None'
 
         x, y = self._leftmost_line_coord
+        x_volt, y_volt = self.diagram.coord_to_voltage(x, y)
+
+        return f'{x_volt:.2f}V,{y_volt:.2f}V'
+
+    def _get_bottommost_line_coord_str(self) -> str:
+        """
+        :return: Bottommost coordinates with volt conversion.
+        """
+        if self._bottommost_line_coord is None:
+            return 'None'
+
+        x, y = self._bottommost_line_coord
         x_volt, y_volt = self.diagram.coord_to_voltage(x, y)
 
         return f'{x_volt:.2f}V,{y_volt:.2f}V'

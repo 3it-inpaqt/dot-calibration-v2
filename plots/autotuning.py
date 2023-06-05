@@ -3,34 +3,32 @@ import pandas as pd
 import seaborn as sns
 from pandas import DataFrame
 
-from datasets.diagram_offline import ChargeRegime
 from utils.output import save_plot
 from utils.settings import settings
 
 
 def plot_autotuning_results(results, overall) -> None:
+
     # Convert to dataframe to please seaborn
     df = DataFrame(results[1:], columns=results[0])
     # Compute steps stats
     avg_steps = df['Steps'].mean()
-    model_success_rate = overall['good'] / overall['steps'] if overall['steps'] > 0 else 0
     # Remove useless columns
-    df = df.loc[:, ['Diagram'] + [str(r) for r in ChargeRegime]]
+    df = df.loc[:, ['Diagram'] + [str(r) for r in area_legend()]]
     # One row per regime and diagram
     df = df.melt(id_vars=['Diagram'], var_name='Number of electrons', value_name='Quantity')
     # Plot
     plot = sns.barplot(x='Number of electrons', y='Quantity', data=df, saturation=.7,
                        palette=['grey', 'tab:red', 'tab:green', 'tab:red', 'tab:red', 'tab:red'])
     plot.set_title(f'Final dot regime after autotuning.\nAverage steps: {avg_steps:.1f} '
-                   f'({model_success_rate:.1%} line detection success)')
+                   f'({results[1][2]:.1%} line detection success)')
 
     save_plot(f'autotuning_results')
 
 
-def plot_autotuning_results_NDots(results, overall) -> None:
+def plot_autotuning_results_NDots(results) -> None:
     # Convert to dataframe to please seaborn
     df_log = DataFrame(results[1:], columns=results[0])
-    model_success_rate = results[1][2]
     df_log = df_log.loc[:, ['Diagram'] + area_legend()]
     # One row per regime and diagram
     df_log = df_log.melt(id_vars=['Diagram'], var_name='Number of electrons', value_name='Quantity')
@@ -40,19 +38,18 @@ def plot_autotuning_results_NDots(results, overall) -> None:
 
     plot = sns.barplot(x='Number of electrons', y='Quantity', data=df_log, saturation=.7, palette=palette)
     plot.set_title(f'Final dot regime after autotuning.\nAverage steps: {results[1][1]:.1f} '
-                   f'({model_success_rate:.1%} line detection success)')
+                   f'({results[1][2]:.1%} line detection success)')
 
     save_plot(f'autotuning_results')
-
     ### table ###
 
     data, legend = decompose_axis(results)
     columns = legend[1]
     rows = legend[0]
-    print('data = ', data, '\ncolumns = ', columns, '\nline = ', rows)
+    # print('data = ', data, '\ncolumns = ', columns, '\nline = ', rows)
     plot, ax = plt.subplots(1, 1)
-    ax.set_title(f'Final dot regime after autotuning.\nAverage steps: {results[1][1]:.1f} '
-                 f'({model_success_rate:.1%} line detection success), Success: {results[1][5] * 100}%')
+    ax.set_title(f'Final dot regime after autotuning.\nAverage steps: {results[1][1]} '
+                 f'({results[1][2]:.1%} line detection success), Success: {results[1][5]:.1%}%')
     ax.axis('tight')
     ax.axis('off')
     df = pd.DataFrame(data, columns=columns, index=rows)
@@ -76,7 +73,6 @@ def plot_autotuning_results_NDots(results, overall) -> None:
 
     save_plot(f'autotuning_results-table')
 
-
 def decompose_axis(result):
     data = result[1][6:]
     legend = result[0][6:]
@@ -99,7 +95,7 @@ def decompose_axis(result):
 
 def area_legend():
     if settings.dot_number == 1:
-        return list(map(str, ChargeRegime))
+        return ['UNKNOWN', '0', '1', '2', '3', '4+']
     else:
         import itertools
         charge_areas = ["UNKNOWN"]
