@@ -85,9 +85,8 @@ def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Opt
         ax.imshow(np.zeros((len(x_i), len(y_i))), cmap=cmap, extent=axes_matching)
         return
 
-    nb_scan = len(scan_history)
     # If the fog of war is enabled, mask the pixels that have not been scanned yet according to the scan history
-    if fog_of_war and scan_history is not None and nb_scan > 0:
+    if fog_of_war and scan_history is not None:
         mask = np.full_like(pixels, True)
         for scan in scan_history:
             x, y = scan.coordinates
@@ -95,8 +94,8 @@ def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Opt
         pixels = np.ma.masked_array(pixels, mask)
 
     # Plot the pixels
-    ax.imshow(pixels, interpolation='none', cmap=PIXELS_CMAP, extent=axes_matching, vmin=vmin, vmax=vmax,
-              origin='lower')
+    im = ax.imshow(pixels, interpolation='none', cmap=PIXELS_CMAP, extent=axes_matching, vmin=vmin, vmax=vmax,
+                   origin='lower')
 
     # Add the scale bar
     if scale_bar:
@@ -104,7 +103,8 @@ def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Opt
             measuring = MEASURE_UNIT[settings.research_group]
         else:
             measuring = 'I'
-        ax.colorbar(shrink=0.85, label=f'{measuring} (A)')
+        # Add the scale bar that way because we already are inside a subplot
+        plt.colorbar(im, ax=ax, shrink=0.85, label=f'{measuring} (A)')
 
 
 def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, vmin, vmax, axes_matching: List[float]):
@@ -308,30 +308,30 @@ def plot_diagram(x_i: Sequence[float],
 
 
 def plot_diagram_old(x_i, y_i,
-                 pixels: Optional,
-                 file_name: str = None,
-                 title: str = None,
-                 charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
-                 transition_lines: Iterable[LineString] = None,
-                 show_offset: bool = False,
-                 scan_history: List["StepHistoryEntry"] = None,
-                 focus_area: Optional[Union[bool, Tuple[float, float, float, float]]] = None,
-                 focus_area_title: str = 'Focus area',
-                 scan_errors: bool = False,
-                 confidence_thresholds: List[float] = None,
-                 fog_of_war: bool = False,
-                 fading_history: int = 0,
-                 history_uncertainty: bool = False,
-                 scale_bar: bool = False,
-                 final_coord: Tuple[int, int] = None,
-                 save_in_buffer: bool = False,
-                 description: bool = False,
-                 show_title: Optional[bool] = None,
-                 show_crosses: bool = True,
-                 vmin: float = None,
-                 vmax: float = None,
-                 diagram_boundaries: Optional[Tuple[float, float, float, float]] = None,
-                 allow_overwrite: bool = False) -> Optional[Union[Path, io.BytesIO]]:
+                     pixels: Optional,
+                     file_name: str = None,
+                     title: str = None,
+                     charge_regions: Iterable[Tuple["ChargeRegime", Polygon]] = None,
+                     transition_lines: Iterable[LineString] = None,
+                     show_offset: bool = False,
+                     scan_history: List["StepHistoryEntry"] = None,
+                     focus_area: Optional[Union[bool, Tuple[float, float, float, float]]] = None,
+                     focus_area_title: str = 'Focus area',
+                     scan_errors: bool = False,
+                     confidence_thresholds: List[float] = None,
+                     fog_of_war: bool = False,
+                     fading_history: int = 0,
+                     history_uncertainty: bool = False,
+                     scale_bar: bool = False,
+                     final_coord: Tuple[int, int] = None,
+                     save_in_buffer: bool = False,
+                     description: bool = False,
+                     show_title: Optional[bool] = None,
+                     show_crosses: bool = True,
+                     vmin: float = None,
+                     vmax: float = None,
+                     diagram_boundaries: Optional[Tuple[float, float, float, float]] = None,
+                     allow_overwrite: bool = False) -> Optional[Union[Path, io.BytesIO]]:
     """
     Plot the interpolated image. This function is a multi-tool nightmare.
 
