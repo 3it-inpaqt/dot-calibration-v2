@@ -1,6 +1,7 @@
 import io
 from copy import copy
 from functools import partial
+from itertools import chain
 from math import ceil, sqrt
 from multiprocessing import Pool
 from pathlib import Path
@@ -14,6 +15,7 @@ from matplotlib import patches
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.legend_handler import HandlerBase
+from matplotlib.text import Text
 from shapely.geometry import LineString, Polygon
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
@@ -134,18 +136,27 @@ def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, vmin, v
 
 
 def _plot_labels(ax, charge_regions: List[Tuple["ChargeRegime", Polygon]], transition_lines: List[LineString]):
+    labels_handlers = []
+
     if charge_regions:
-        for regime, polygon in charge_regions:
+        for i, (regime, polygon) in enumerate(charge_regions):
             polygon_x, polygon_y = polygon.exterior.coords.xy
             ax.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
             label_x, label_y = list(polygon.centroid.coords)[0]
-            charge_text = ax.text(label_x, label_y, str(regime), ha="center", va="center", color='b', weight='bold',
-                                  bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
+            params = dict(x=label_x, y=label_y, ha="center", va="center", color='b', weight='bold',
+                          bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
+            ax.text(**params, s=str(regime))
+
+            if i == 0:
+                # Create custom label for charge regime
+                labels_handlers.append((Text(**params, text='N'), 'Charge regime'))
 
     if transition_lines:
         for i, line in enumerate(transition_lines):
             line_x, line_y = line.coords.xy
-            ax.plot(line_x, line_y, color='lime', label='Line annotation' if i == 0 else None)
+            ax.plot(line_x, line_y, color='lime', label='Line annotation')
+
+    return labels_handlers
 
 
 def _plot_scan_history(diagram_ax, focus_ax, x_i, y_i, scan_history, scan_history_mode, scan_history_alpha,
@@ -243,12 +254,50 @@ def _plot_final_coord(diagram_ax, focus_area_ax, final_volt_coord: Tuple[float, 
                        linewidths=lw, zorder=9999)
 
 
+def _plot_legend_ax(legend_ax, diagram_ax, custom_legend, pixel_info: bool = True):
+    legend_ax.axis('off')
+    label_handlers = dict()
+
+    if pixel_info:
+        # Add the pixel size to the legend
+        label_handlers[f'Pixel size: {settings.pixel_size * 1_000} mV'] = patches.Rectangle((0, 0), 1, 1, alpha=0)
+
+    # Extract legend elements from the diagram axes and the custom list
+    for ax_handler, ax_label in chain(zip(*diagram_ax.get_legend_handles_labels()), custom_legend):
+        # Remove possible duplicates
+        if ax_label not in label_handlers:
+            label_handlers[ax_label] = ax_handler
+
+    if len(label_handlers) == 0:
+        return
+
+    class TextHandler(HandlerBase):
+        """
+        Custom legend handler for text field.
+        From: https://stackoverflow.com/a/47382270/2666094
+        """
+
+        def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+            h = copy(orig_handle)
+            h.set_position((width / 2., height / 2.))
+            h.set_transform(trans)
+            h.set_ha("center")
+            h.set_va("center")
+            fp = orig_handle.get_font_properties().copy()
+            fp.set_size(fontsize)
+            h.set_font_properties(fp)
+            return [h]
+
+    # Add every the legend element to the legend axes
+    legend_ax.legend(handles=label_handlers.values(), labels=label_handlers.keys(), ncols=6, loc='center',
+                     handler_map={Text: TextHandler()})
+
+
 def plot_diagram(x_i: Sequence[float],
                  y_i: Sequence[float],
                  pixels: Optional[Tensor],
                  title: Optional[str] = None,
                  fog_of_war: bool = False,
-                 scale_bar: bool = False,
                  charge_regions: List[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: List[LineString] = None,
                  scan_history: List["StepHistoryEntry"] = None,
@@ -258,7 +307,8 @@ def plot_diagram(x_i: Sequence[float],
                  focus_area_title: str = 'Focus area',
                  final_volt_coord: Tuple[float, float] = None,
                  text: Optional[str | bool] = None,
-                 legend: Optional[bool] = None,
+                 scale_bar: bool = False,
+                 legend: Optional[bool] = True,
                  vmin: float = None,
                  vmax: float = None,
                  file_name: str = None,
@@ -270,6 +320,7 @@ def plot_diagram(x_i: Sequence[float],
     show_text_ax = text is not None
     show_legend_ax = legend is not None
     fig, diagram_ax, focus_area_ax, text_ax, legend_ax = _get_layout(show_focus_area_ax, show_text_ax, show_legend_ax)
+    custom_legend = []
 
     # Set the plot coordinates to fit the image with the axes, with the center of pixels aligned with the coordinates.
     half_p = settings.pixel_size / 2
@@ -281,7 +332,7 @@ def plot_diagram(x_i: Sequence[float],
 
     # Show labels if provided
     if charge_regions or transition_lines:
-        _plot_labels(diagram_ax, charge_regions, transition_lines)
+        custom_legend.extend(_plot_labels(diagram_ax, charge_regions, transition_lines))
 
     # Build the focus area subplot
     if show_focus_area_ax:
@@ -304,6 +355,9 @@ def plot_diagram(x_i: Sequence[float],
             # If the text is not a string, it means that we want to generate the text from the scan history
             text = StepHistoryEntry.get_text_description(scan_history)
         _plot_text_ax(text_ax, text)
+
+    if show_legend_ax:
+        _plot_legend_ax(legend_ax, diagram_ax, custom_legend)
 
     # Save the plot
     return save_plot(file_name, allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer, figure=fig)
@@ -645,19 +699,19 @@ def plot_diagram_old(x_i, y_i,
     diagram_ax.tick_params(axis='x', labelrotation=30)
     diagram_ax.set_ylabel('G2 (V)')
 
-    # if legend:
-    #     handles, labels = diagram_ax.get_legend_handles_labels()
-    #     handler_map = None
-    #     if charge_text is not None:
-    #         # Create custom legend for charge regime text
-    #         charge_text = copy(charge_text)
-    #         charge_text.set(text='N')
-    #         handler_map = {type(charge_text): TextHandler()}
-    #         handles.append(charge_text)
-    #         labels.append('Charge regime')
-    #
-    #     diagram_ax.legend(ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.35), handles=handles, labels=labels,
-    #                handler_map=handler_map)
+    if legend:
+        handles, labels = diagram_ax.get_legend_handles_labels()
+        handler_map = None
+        if charge_text is not None:
+            # Create custom legend for charge regime text
+            charge_text = copy(charge_text)
+            charge_text.set(text='N')
+            handler_map = {type(charge_text): TextHandler()}
+            handles.append(charge_text)
+            labels.append('Charge regime')
+
+        diagram_ax.legend(ncol=4, loc='lower center', bbox_to_anchor=(0.5, -0.35), handles=handles, labels=labels,
+                          handler_map=handler_map)
 
     return save_plot(file_name, allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer, figure=fig)
 
@@ -910,21 +964,3 @@ def plot_data_space_distribution(datasets: Sequence[Dataset], title: str, file_n
 
     fig.suptitle(title)
     save_plot(f'data_distribution_{file_name}')
-
-
-class TextHandler(HandlerBase):
-    """
-    Custom legend handler for text field.
-    From: https://stackoverflow.com/a/47382270/2666094
-    """
-
-    def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
-        h = copy(orig_handle)
-        h.set_position((width / 2., height / 2.))
-        h.set_transform(trans)
-        h.set_ha("center")
-        h.set_va("center")
-        fp = orig_handle.get_font_properties().copy()
-        fp.set_size(fontsize)
-        h.set_font_properties(fp)
-        return [h]

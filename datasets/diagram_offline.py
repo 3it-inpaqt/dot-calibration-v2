@@ -184,19 +184,18 @@ class DiagramOffline(Diagram):
         :param label_extra: Optional extra information for the plot label.
         """
         # Vanilla plot, no labels
-        plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}',
-                     transition_lines=None, charge_regions=None,
-                     scale_bar=True, file_name=f'diagram_{self.name}', allow_overwrite=True)
+        plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}', transition_lines=None,
+                     charge_regions=None, scale_bar=True, file_name=f'diagram_{self.name}', allow_overwrite=True)
         if self.transition_lines:
             # With labels lines
             plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}',
-                         transition_lines=self.transition_lines, charge_regions=None,
-                         scale_bar=True, file_name=f'diagram_{self.name}_lines', allow_overwrite=True)
+                         transition_lines=self.transition_lines, charge_regions=None, scale_bar=True,
+                         file_name=f'diagram_{self.name}_lines', allow_overwrite=True)
         if self.charge_areas:
             # With labels lines and areas
             plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}',
-                         transition_lines=self.transition_lines, charge_regions=self.charge_areas,
-                         scale_bar=True, file_name=f'diagram_{self.name}_area', allow_overwrite=True)
+                         transition_lines=self.transition_lines, charge_regions=self.charge_areas, scale_bar=True,
+                         file_name=f'diagram_{self.name}_area', allow_overwrite=True)
 
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'
