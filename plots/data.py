@@ -47,27 +47,29 @@ def _get_layout(show_focus_area_ax, show_text_ax, show_legend_ax):
     # Optional axes
     focus_area_ax = text_ax = legend_ax = None
 
-    fig = plt.figure(figsize=(16, 9))
-    spec = fig.add_gridspec(10, 10)
+    # Temporary change default the axe style (avoid white ticks)
+    with sns.axes_style("ticks"):
+        fig = plt.figure(figsize=(16, 9))
+        spec = fig.add_gridspec(10, 10)
 
-    y_bottom = 9
-    # Layout with legend at the bottom
-    if show_legend_ax:
-        y_bottom = 8
-        legend_ax = fig.add_subplot(spec[y_bottom:, :])
+        y_bottom = 9
+        # Layout with legend at the bottom
+        if show_legend_ax:
+            y_bottom = 8
+            legend_ax = fig.add_subplot(spec[y_bottom:, :])
 
-    # 2 columns layout
-    if show_focus_area_ax or show_text_ax:
-        x_end_col_1 = 6
-        diagram_ax = fig.add_subplot(spec[:y_bottom, :x_end_col_1])
-        if show_focus_area_ax:
-            focus_area_ax = fig.add_subplot(spec[:2, x_end_col_1:])
-        if show_text_ax:
-            text_ax = fig.add_subplot(spec[2 if show_focus_area_ax else 0:y_bottom, x_end_col_1:])
+        # 2 columns layout
+        if show_focus_area_ax or show_text_ax:
+            x_end_col_1 = 6
+            diagram_ax = fig.add_subplot(spec[:y_bottom, :x_end_col_1])
+            if show_focus_area_ax:
+                focus_area_ax = fig.add_subplot(spec[:2, x_end_col_1:])
+            if show_text_ax:
+                text_ax = fig.add_subplot(spec[2 if show_focus_area_ax else 0:y_bottom, x_end_col_1:])
 
-    # 1 column layout
-    else:
-        diagram_ax = fig.add_subplot(spec[:y_bottom, :])
+        # 1 column layout
+        else:
+            diagram_ax = fig.add_subplot(spec[:y_bottom, :])
 
     return fig, diagram_ax, focus_area_ax, text_ax, legend_ax
 
@@ -104,7 +106,7 @@ def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Opt
         else:
             measuring = 'I'
         # Add the scale bar that way because we already are inside a subplot
-        plt.colorbar(im, ax=ax, shrink=0.85, label=f'{measuring} (A)')
+        plt.colorbar(im, ax=ax, shrink=0.85, pad=0.02, label=f'{measuring} (A)')
 
 
 def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, vmin, vmax, axes_matching: List[float]):

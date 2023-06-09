@@ -220,12 +220,13 @@ def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: boo
     """
     Save a plot image in the directory
 
-    :param file_name: the output png file name (no extension).
-    :param allow_overwrite: If True, overwrite existing file if existing with same name. If False, add a number to the
-    file name to avoid overwriting.
+    :param file_name: The output png file name (no extension).
+    :param allow_overwrite: If True, overwrite existing file if one existing with the same name.
+     If False, add a number to the file name to avoid overwriting.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
+    :param figure: The matplotlib figure to save. If None, use one currently active.
 
-    :return: The path where the plot is saved, or None if not saved.
+    :return: The image path if it is saved on the disk, the bytes if it is saved in buffer, None if it is not saved.
     """
 
     # If the figure is not provided, use the one currently active in matplotlib
@@ -248,7 +249,8 @@ def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: boo
         out_format = 'svg' if settings.image_latex_format else 'png'
         save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, out_format, allow_overwrite)
 
-        figure.savefig(save_path, dpi=200, transparent=settings.image_latex_format)
+        # The tight bbox will remove white space around the image, the image "figsize" won't be respected.
+        figure.savefig(save_path, dpi=200, transparent=settings.image_latex_format, bbox_inches='tight')
         logger.debug(f'Plot saved in {save_path}')
 
     # Plot image or close it
