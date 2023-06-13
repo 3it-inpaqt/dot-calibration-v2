@@ -474,12 +474,12 @@ class AutotuningProcedure:
         """ Return the number of patch inferences pending. """
         return len(self._batch_pending)
 
-    def plot_step_history(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
+    def plot_step_history(self, final_volt_coord: Tuple[float, float], success_tuning: bool) -> None:
         """
         Plot the diagram with the tuning steps of the current procedure.
 
-        :param final_coord: The final coordinate of the tuning procedure
-        :param success_tuning: Result of the tuning (True = Success)
+        :param final_volt_coord: The final coordinate of the tuning procedure as volt.
+        :param success_tuning: Result of the tuning (True = Success).
         """
 
         if (not settings.save_images or not settings.is_named_run()) and not settings.show_images:
@@ -496,46 +496,48 @@ class AutotuningProcedure:
             file_name += "_GOOD" if success_tuning else "_FAIL"
             title = "[GOOD] " if success_tuning else "[FAIL] " + title
 
-        # Parallel plotting for speed.
+        # Base arguments for all plots
+        common_kwargs = dict(
+            x_i=x_axes, y_i=y_axes, title=title, transition_lines=transition_lines, scan_history=self._scan_history,
+            final_volt_coord=final_volt_coord, scale_bar=True
+        )
+
+        # Parallel plotting for speed
         with Pool(get_nb_loader_workers()) as pool:
             # diagram + label + step with classification color
-            pool.apply_async(plot_diagram,
-                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'file_name': file_name,
-                                   'title': title, 'transition_lines': transition_lines,
-                                   'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                   'history_uncertainty': False})
+            pool.apply_async(plot_diagram, kwds=common_kwargs | {
+                'file_name': file_name,
+                'pixels': values,
+                'scan_history_mode': 'classes',
+            })
             # label + step with classification color and uncertainty
-            pool.apply_async(plot_diagram,
-                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                   'file_name': file_name + '_uncertainty', 'title': title,
-                                   'transition_lines': transition_lines, 'scan_history': self._scan_history,
-                                   'final_coord': final_coord, 'show_offset': False, 'history_uncertainty': True})
+            pool.apply_async(plot_diagram, kwds=common_kwargs | {
+                'file_name': file_name + '_uncertainty',
+                'scan_history_alpha': 'uncertainty',
+            })
+            # If it makes sense, also plot the classification errors
             if not settings.autotuning_use_oracle and not is_online:
                 # step with error and soft error color
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'file_name': file_name + '_errors',
-                                       'title': title, 'pixel_size': settings.pixel_size,
-                                       'transition_lines': transition_lines, 'scan_history': self._scan_history,
-                                       'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
-                                       'confidence_thresholds': self.model.confidence_thresholds,
-                                       'history_uncertainty': False})
+                pool.apply_async(plot_diagram, kwds=common_kwargs | {
+                    'file_name': file_name + '_errors',
+                    'scan_history_mode': 'error',
+                })
                 # step with error color and uncertainty
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                       'file_name': file_name + '_errors_uncertainty', 'title': title,
-                                       'transition_lines': transition_lines, 'scan_history': self._scan_history,
-                                       'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
-                                       'history_uncertainty': True})
+                pool.apply_async(plot_diagram, kwds=common_kwargs | {
+                    'file_name': file_name + '_errors_uncertainty',
+                    'scan_history_mode': 'error',
+                    'scan_history_alpha': 'uncertainty',
+                })
 
             # Wait for the processes to finish
             pool.close()
             pool.join()
 
-    def plot_step_history_animation(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
+    def plot_step_history_animation(self, final_volt_coord: Tuple[float, float], success_tuning: bool) -> None:
         """
         Plot the animated diagram with the tuning steps of the current procedure.
 
-        :param final_coord: The final coordinate of the tuning procedure
+        :param final_volt_coord: The final coordinate of the tuning procedure as volt.
         :param success_tuning: Result of the tuning (True = Success)
         """
         is_online = isinstance(self.diagram, DiagramOnline)
@@ -546,7 +548,7 @@ class AutotuningProcedure:
             title = "[GOOD] " if success_tuning else "[FAIL] " + title
 
         # Generate a gif and / or video
-        plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_coord)
+        plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_volt_coord)
 
     def setup_next_tuning(self, diagram: Diagram, start_coord: Optional[Tuple[int, int]] = None) -> None:
         """
@@ -580,6 +582,7 @@ class AutotuningProcedure:
         """
 
         tuned_x, tuned_y = self._tune()
+        tuned_x_v, tuned_y_v = self.diagram.coord_to_voltage(tuned_x, tuned_y)
 
         return AutotuningResult(diagram_name=self.diagram.name,
                                 procedure_name=str(self),
@@ -587,4 +590,5 @@ class AutotuningProcedure:
                                 nb_steps=self.get_nb_steps(),
                                 nb_classification_success=self.get_nb_line_detection_success(),
                                 charge_area=self.diagram.get_charge(tuned_x, tuned_y),
-                                final_coord=(tuned_x, tuned_y))
+                                final_coord=(tuned_x, tuned_y),
+                                final_volt_coord=(tuned_x_v, tuned_y_v))

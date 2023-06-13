@@ -197,6 +197,7 @@ class AutotuningResult:
     nb_classification_success: int
     charge_area: ChargeRegime
     final_coord: Tuple[int, int]
+    final_volt_coord: Tuple[float, float]
 
     @property
     def is_success_tuning(self):

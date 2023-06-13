@@ -295,14 +295,14 @@ def _plot_legend_ax(legend_ax, diagram_ax, custom_legend, pixel_info: bool = Tru
 
 def plot_diagram(x_i: Sequence[float],
                  y_i: Sequence[float],
-                 pixels: Optional[Tensor],
+                 pixels: Optional[Tensor] = None,
                  title: Optional[str] = None,
                  fog_of_war: bool = False,
                  charge_regions: List[Tuple["ChargeRegime", Polygon]] = None,
                  transition_lines: List[LineString] = None,
                  scan_history: List["StepHistoryEntry"] = None,
-                 scan_history_mode: Literal['classes', 'error', 'uncertainty'] | None = None,
-                 scan_history_alpha: Literal['uncertainty'] | int | None = None,
+                 scan_history_mode: Literal['classes', 'error'] = 'classes',
+                 scan_history_alpha: Optional[Literal['uncertainty'] | int] = None,
                  focus_area: Optional[bool | Tuple[float, float, float, float]] = None,
                  focus_area_title: str = 'Focus area',
                  final_volt_coord: Tuple[float, float] = None,
@@ -315,6 +315,55 @@ def plot_diagram(x_i: Sequence[float],
                  allow_overwrite: bool = False,
                  save_in_buffer: bool = False
                  ) -> Optional[Path | io.BytesIO]:
+    """
+    Versatile function to plot a stability diagram with the following elements:
+    - The diagram itself
+    - The tuning steps (class, error and uncertainty)
+    - Focus area
+    - The labels (line and charge area)
+    - A scale bar and legends
+    - Text description
+
+    :param x_i: An array that gives the x-axis voltage values of the diagram per coordinate.
+    :param y_i: An array that gives the y-axis voltage values of the diagram per coordinate.
+    :param pixels: The pixel values of the diagram as measured current.
+     If None, the diagram will be blank.
+    :param title: The main title of the diagram.
+    :param fog_of_war: If True and the scan history is defined, hide the pixels that were not measured yet.
+    :param charge_regions: The charge region annotations to draw on top of the image.
+    :param transition_lines: The transition line annotation to draw on top of the image.
+    :param scan_history: A list of scan history entries from a tuning procedure.
+     The type of information plot will depend on the scan_history_mode and scan_history_alpha.
+    :param scan_history_mode: Influence what information plot from the scan history.
+        - 'classes': Plot the inferred class for each tuning step.
+        - 'error': Plot the error of the inferred class for each tuning step.
+    :param scan_history_alpha: Influence the transparency of the scan history plot.
+        - None: No transparency.
+        - 'uncertainty': The transparency is proportional to the uncertainty of the inferred class.
+        - int: No transparency for the last N plotted steps, then the transparency increased for older steps.
+    :param focus_area: Add a subplot to the right of the diagram to show a zoomed-in section of the diagram.
+        - If None, no focus area subplot.
+        - If a tuple, the focus area is chosen to be the given coordinates (x_start, x_end, y_start, y_end).
+        - If True, the focus area is automatically chosen to be the last patch.
+    :param focus_area_title: Title for the focus area subplot.
+    :param final_volt_coord: The final voltage coordinates that is within the target area, according to the tuning
+     procedure (x, y).
+    :param text: A text to display at the left of the diagram.
+        - If None, no text subplot.
+        - If True, the text is automatically created to describe the step history.
+        - If str, the text is the given string.
+    :param scale_bar: If True, add a scale bar to the right of the diagram. The scale can either represent the current
+     range of the pixel, or the uncertainty of classification.
+    :param legend: If True, add a legend in a subplot at the bottom of the figure.
+    :param vmin: If set, define the minimal value of the colorscale of the diagram's pixels.
+    :param vmax: If set, define the maximal value of the colorscale of the diagram's pixels.
+    :param file_name: The name of the output file (without the extension).
+    :param allow_overwrite: If True, allow overwriting existing output files.
+     If False, add a number to the file name to avoid overwriting.
+    :param save_in_buffer: If True, save the figure in a BytesIO buffer instead of a file.
+    :return: The path where the plot is saved, or None if not saved. If save_in_buffer is True, return image bytes
+     instead of the path.
+    """
     # Choose the appropriate layout
     show_focus_area_ax = focus_area is not None
     show_text_ax = text is not None
@@ -717,14 +766,14 @@ def plot_diagram_old(x_i, y_i,
 
 
 def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_history: List["StepHistoryEntry"],
-                                final_coord: Tuple[int, int], show_crosses: bool = True) -> None:
+                                final_volt_coord: Tuple[float, float], show_crosses: bool = True) -> None:
     """
     Plot an animation of the tuning procedure.
 
     :param d: The diagram to plot.
     :param image_name: The name of the image, used for plot title and file name
     :param scan_history: The tuning steps history (see StepHistoryEntry dataclass)
-    :param final_coord: The final tuning coordinates
+    :param final_volt_coord: The final tuning coordinates as volt.
     :param show_crosses: If True, show the starting and ending crosses on the diagram during the step by step animation.
         They are shown anyway during the final steps.
     """
