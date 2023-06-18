@@ -222,18 +222,20 @@ def _plot_scan_history(diagram_ax, focus_ax, x_i, y_i, scan_history, scan_histor
                 color = scan_entry.uncertainty_color
 
         if full_squares:
-            # Filled patch if white background
+            # Filled patch
             square_params['facecolor'] = color
+            square_params['edgecolor'] = 'none'
         else:
-            # Empty patch if to see the diagram
+            # Empty patch to see the diagram behind
             square_params['edgecolor'] = color
+            square_params['facecolor'] = 'none'
 
         rec = patches.Rectangle(linewidth=1, **square_params)
         diagram_ax.add_patch(rec)
 
         # Show the rectangle label offset for the last scan
         if focus_ax and i == 0:
-            square_params['facecolor'] = None
+            square_params['facecolor'] = 'none'
             square_params['edgecolor'] = color
             focus_ax.add_patch(patches.Rectangle(linewidth=2, **square_params))
 
@@ -406,7 +408,7 @@ def plot_diagram(x_i: Sequence[float],
         _plot_text_ax(text_ax, text)
 
     if show_legend_ax:
-        _plot_legend_ax(legend_ax, diagram_ax, custom_legend)
+        _plot_legend_ax(legend_ax, diagram_ax, custom_legend, pixels is not None)
 
     # Save the plot
     return save_plot(file_name, allow_overwrite=allow_overwrite, save_in_buffer=save_in_buffer, figure=fig)
