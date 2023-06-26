@@ -816,7 +816,7 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
 
             # Final frames
             async_result_end = [
-                # Show diagram with all inference and fog of war
+                # Show diagram with all inferences and fog of war
                 pool.apply_async(plot_diagram,
                                  kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
                                        'scan_history': scan_history, 'focus_area': final_area,
@@ -833,7 +833,7 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
                                        'vmax': vmax})
             ]
 
-            # If online, we don't have label to show
+            # If online, we don't have any label to show
             if is_online:
                 end_durations = [base_fps * 15, base_fps * 40]
             else:

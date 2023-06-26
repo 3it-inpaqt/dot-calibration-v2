@@ -3,7 +3,7 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="eaf9a961-5c4f-427d-b007-8cda6fd15455" name="victoryon@35.232.161.209:22 key">
-        <fileTransfer accessType="SFTP" host="graham.computecanada.ca" port="22" sshConfigId="f4b51445-4386-42d6-bee9-b942027af953" sshConfig="vyon@graham.computecanada.ca:22 key" keyPair="true" />
+        <fileTransfer accessType="SFTP" sshConfigId="f4b51445-4386-42d6-bee9-b942027af953" sshConfig="vyon@graham.computecanada.ca:22 key" />
       </webServer>
     </option>
   </component>
