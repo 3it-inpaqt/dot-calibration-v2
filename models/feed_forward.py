@@ -44,8 +44,10 @@ class FeedForward(ClassifierNN):
                 # Activation function
                 if settings.simulate_circuit:
                     layer.append(nn.Hardtanh(min_val=0, max_val=1))
+                    # layer.append(nn.ReLU())
                 else:
-                    layer.append(nn.ReLU())
+                    # layer.append(nn.ReLU())
+                    layer.append(nn.Sigmoid())
                 # Dropout
                 if settings.dropout > 0:
                     layer.append(nn.Dropout(settings.dropout))

@@ -33,7 +33,7 @@ def run_circuit_simulation(model: ClassifierNN, inputs: List, is_first_run: bool
          The binary output value before threshold.
     """
     # Generate netlist for circuit simulation
-    netlist = generate_netlist_from_model(model, inputs)
+    netlist, nb_layers = generate_netlist_from_model(model, inputs, is_first_run)
 
     if is_first_run:
         # Save the netlist
@@ -70,7 +70,7 @@ def run_circuit_simulation(model: ClassifierNN, inputs: List, is_first_run: bool
             save_xyce_results(sim_results)
 
         # Detect output pulses
-        model_output_before_threshold, model_output = detect_model_output(sim_results)
+        model_output_before_threshold, model_output = detect_model_output(sim_results, nb_layers)
 
     except subprocess.CalledProcessError as e:
         # If Xyce process fail, the output is printed and the whole program is stopped by an error.
@@ -89,12 +89,13 @@ def run_circuit_simulation(model: ClassifierNN, inputs: List, is_first_run: bool
         Path(netlist_file.name + '.mt0').unlink(missing_ok=True)
 
     # Create some plots to visualise the results
-    # plot_simulation_state_evolution(sim_results)
+    if is_first_run:
+        plot_simulation_state_evolution(sim_results, nb_layers)
 
     return sim_results, model_output_before_threshold, model_output
 
 
-def detect_model_output(sim_results: pd.DataFrame) -> (float, int):
+def detect_model_output(sim_results: pd.DataFrame, nb_layers: int) -> (float, int):
     """
     Detect the model output before and after the threshold, according to the pulse shape measured during Xyce simulation
     and stored in variables 'V(SUM_H_OUT_001)' and 'V(HIDDEN_ACTIV_OUT_H_001)'.
@@ -102,25 +103,30 @@ def detect_model_output(sim_results: pd.DataFrame) -> (float, int):
     Args:
         sim_results: A pandas dataframe that represent the measurements defined in the simulation. One column for each
          variable defined in the line ".PRINT" of the netlist.
+        nb_layers: nb of hidden layers in the model
 
     Returns:
         The analog output value before threshold (V)
         The binary output value after threshold (0 or 1)
 
     """
-    output_signal = sim_results['V(SUM_H_OUT__001)']
-    output_threshold = sim_results['V(HIDDEN_ACTIV_OUT_H_001)']
+    output_signal = sim_results[f'V(SUM_H_OUT_{nb_layers:03}_001)']
+    output_threshold = sim_results[f'V(HIDDEN_ACTIV_OUT_H{nb_layers:03}_001)']
     t = sim_results['TIME']
 
-    window_mean = 1e-8
-    v_out_threshold = 4.9
-    i_min = np.where(t > settings.xyce_init_latency)[0][0]
-    # Search the index of the end of this inference
-    i_max = len(t) - 1
-    if np.max(output_threshold[i_min:i_max]) > v_out_threshold:
+    t_min_v_out = nb_layers * settings.xyce_layer_latency + settings.xyce_init_latency + settings.xyce_pulse_rise_delay
+    # Make sure that we let the chance to the current to stabilize (that's why we add 8e-8)
+    t_min_v_out = t_min_v_out + 8e-8
+    # Make sure we don't overshoot the time window width (that's why we subtract 1.2e-7)
+    window_width = settings.xyce_pulse_width - settings.xyce_pulse_rise_delay - settings.xyce_pulse_fall_delay - 1.2e-7
+    t_max_v_out = t_min_v_out + window_width
+    i_min = np.where(t > t_min_v_out)[0][0]
+    i_max = np.where(t > t_max_v_out)[0][0]
+
+    output = output_signal[i_min:i_max].min()
+    v_out_threshold = 0
+    if output > v_out_threshold:
         prediction = 1
     else:
         prediction = 0
-    i_abs = np.argmax(np.abs(output_signal[i_min:i_max]))
-    output = np.mean(output_signal[np.where(t > t[i_min + i_abs] - window_mean)[0][0]:i_abs + i_min])
     return output, prediction

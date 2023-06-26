@@ -102,18 +102,18 @@ class Settings:
     use_data_cache: bool = False
 
     # The size of a diagram patch send to the network input (number of pixel)
-    patch_size_x: int = 18
-    patch_size_y: int = 18
+    patch_size_x: int = 5
+    patch_size_y: int = 5
 
     # The patch overlapping (number of pixel)
-    patch_overlap_x: int = 10
-    patch_overlap_y: int = 10
+    patch_overlap_x: int = 1
+    patch_overlap_y: int = 1
 
     # The width of the border to ignore during the patch labeling (number of pixel)
     # E.g.: If one line touch only 1 pixel at the right of the patch and the label_offset_x is >1 then the patch will be
     # labeled as "no_line"
-    label_offset_x: int = 6
-    label_offset_y: int = 6
+    label_offset_x: int = 0
+    label_offset_y: int = 0
 
     # The size of the interpolated pixel in Volt.
     # Should be available in the dataset folder.
@@ -122,7 +122,7 @@ class Settings:
     # The name of the research group who provide the data.
     # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier'
     # Should be available in the dataset folder.
-    research_group: str = 'michel_pioro_ladriere'
+    research_group: str = 'louis_gaudreau'
 
     # The percentage of data kept for testing only.
     # If test_diagram is set, this value should be 0.
@@ -164,7 +164,7 @@ class Settings:
     model_type: str = 'FF'
 
     # The number of fully connected hidden layer and their respective number of neurons.
-    hidden_layers_size: Sequence = (200, 100)
+    hidden_layers_size: Sequence = (10,5)
 
     # The number of convolution layers and their respective properties (for CNN models only).
     conv_layers_kernel: Sequence = (4, 4)
@@ -176,7 +176,7 @@ class Settings:
 
     # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
     # Have to match the number of layers (convolution + linear)
-    batch_norm_layers: Sequence = (False, False)
+    batch_norm_layers: Sequence = (False,False)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -355,7 +355,7 @@ class Settings:
     xyce_pulse_amplitude = 0.2
 
     # The pulse duration for the input encoding (s)
-    xyce_pulse_width = 1e-7
+    xyce_pulse_width = 4e-7
 
     # The resting time after a pulse (s)
     xyce_resting_time = 5e-8
@@ -374,13 +374,13 @@ class Settings:
 
     # The estimated delay between the input and the output of the sigmoid analog bloc. Used to synchronise the pulse
     # between layers.
-    xyce_sigmoid_latency = 1e-8
+    xyce_layer_latency = 1e-8
 
     # Maximum number of test inferences to run on Xyce (0 means the whole test set)
-    xyce_max_test_inference = 0
+    xyce_max_test_inference = 1000
 
     # Number of parallel process to run (0 means the number of cpu cores)
-    xyce_nb_process = 0
+    xyce_nb_process = 1
 
 
     def is_named_run(self) -> bool:

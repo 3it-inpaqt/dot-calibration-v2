@@ -25,7 +25,7 @@ NODE_MAP = {
     'TIA_H_OUT_': SimOut('tab:olive', 'Line sum', '-', 'Neuron', polarized=True),
     'HIDDEN_ACTIV_OUT_H': SimOut('tab:purple', 'Activation out', '-', 'Neuron'),
     'SUM_H': SimOut('tab:pink', 'Activation input', '--', 'Neuron'),
-    'SUM_H_OUT__': SimOut('tab:orange', 'Threshold in', '--', 'Neuron'),
+    'SUM_H_OUT_': SimOut('tab:orange', 'Threshold in', '--', 'Neuron'),
 }
 
 
@@ -42,7 +42,8 @@ def node_v_str(prefix: str, index: int, polarity: bool = True) -> str:
         The string that represent the voltage at a specific node.
     """
     suffix = ''
-    if NODE_MAP[prefix].polarized:
+    mapped_prefix = prefix[:-4] if prefix[-2].isdigit() else prefix
+    if NODE_MAP[mapped_prefix].polarized:
         suffix = '+' if polarity else '-'
 
     if not prefix.endswith('_') and index == 0:
@@ -63,7 +64,8 @@ def iterate_nodes(prefixes: List[str]) -> Generator[Tuple[str, Optional[bool]], 
         A tuple generator: (the prefix, the polarity as boolean or None if not applicable)
     """
     for prefix in prefixes:
-        if NODE_MAP[prefix].polarized:
+        mapped_prefix = prefix[:-4] if prefix[-2].isdigit() else prefix
+        if NODE_MAP[mapped_prefix].polarized:
             yield prefix, True  # +
             yield prefix, False  # -
         yield prefix, None  # Polarity will be ignored
@@ -105,7 +107,7 @@ def plot_digital_vs_analog_outputs(results: pd.DataFrame, log_dir_path: Path, be
 
 # noinspection PyUnboundLocalVariable
 def plot_v_evolution(results: pd.DataFrame, node_prefixes: List[str], title: str, file_name: str,
-                     max_subplot: int = 8, mode: str = 'merge'):
+                     max_subplot: int = 20, mode: str = 'merge'):
     """
     Plot the electric tension evolution for one node of the simulation.
     Note: I would like to apologize for this over-complicated plot function.
@@ -194,16 +196,20 @@ def plot_v_evolution(results: pd.DataFrame, node_prefixes: List[str], title: str
 
             # Iterate node to show for each subplot
             for prefix, polarity in iterate_nodes(current_prefixes):
+                mapped_prefix = prefix[:-4] if prefix[-2].isdigit() else prefix
                 node_str = node_v_str(prefix, index, polarity)
                 polarity_str = '' if polarity is None else ('+' if polarity else '–')
                 show_label = ((len(current_prefixes) > 1 and mode == 'merge') or polarity is not None) and i_row == 0
+                linestyle = NODE_MAP[mapped_prefix].line_style
+                if polarity is False:
+                    linestyle = 'dotted'
                 sns.lineplot(data=results, x='TIME', y=node_str,
-                             color=NODE_MAP[prefix].color,
-                             linestyle=':' if polarity is False else NODE_MAP[prefix].line_style,
-                             label=NODE_MAP[prefix].label + polarity_str if show_label else None,
+                             color=NODE_MAP[mapped_prefix].color,
+                             linestyle=linestyle,
+                             label=NODE_MAP[mapped_prefix].label + polarity_str if show_label else None,
                              ax=ax)
                 if i_col == 0:
-                    ax.set_ylabel(f'{NODE_MAP[prefix].y_prefix} {index + 1}' if len(node_prefixes) > 1
+                    ax.set_ylabel(f'{NODE_MAP[mapped_prefix].y_prefix} {index + 1}' if len(node_prefixes) > 1
                                   else f'{index + 1}{polarity_str}')
                 else:
                     ax.set_ylabel(None)  # y-label only on the first column, because it should always be the same
@@ -216,7 +222,8 @@ def plot_v_evolution(results: pd.DataFrame, node_prefixes: List[str], title: str
     # Build a fancy global y-label
     global_y_labels = set()
     for label, value in nb.items():
-        node_prefix = NODE_MAP[label].y_prefix
+        mapped_prefix = label[:-4] if label[-2].isdigit() else label
+        node_prefix = NODE_MAP[mapped_prefix].y_prefix
         y_label = str(value) if value == nb_max[label] else f'{value}/{nb_max[label]}'
         y_label += ' ' + node_prefix + ('s' if value > 1 and node_prefix[-1] != 's' else '')
         global_y_labels.add(y_label)
@@ -231,7 +238,7 @@ def plot_v_evolution(results: pd.DataFrame, node_prefixes: List[str], title: str
     save_plot(file_name)
 
 
-def plot_simulation_state_evolution(results: pd.DataFrame):
+def plot_simulation_state_evolution(results: pd.DataFrame, nb_layers: int):
     """
     Plot the evolution of physical variables measured during the simulation.
 
@@ -240,7 +247,9 @@ def plot_simulation_state_evolution(results: pd.DataFrame):
     """
 
     plot_v_evolution(results, ['I_', 'B_'], 'Inputs pulses', 'sim_inputs', mode='concat')
-    plot_v_evolution(results, ['SUM_H', 'HIDDEN_ACTIV_OUT_H'],
-                     'Signal before and after activation', 'sim_activation')
-    plot_v_evolution(results, ['TIA_H_OUT_', 'SUM_H_OUT__'],
-                     'Difference at the input of the output layer', 'sim_diff_output', mode='split')
+    for i in range(nb_layers):
+        plot_v_evolution(results, [F'SUM_H_OUT_{i+1:03}_', F'HIDDEN_ACTIV_OUT_H{i+1:03}_'],
+                         'Signal before and after activation', 'sim_activation')
+    for i in range(nb_layers):
+        plot_v_evolution(results, [f'TIA_H_OUT_{i+1:03}_', f'SUM_H_OUT_{i+1:03}_'],
+                         'Difference at the input of the output layer', 'sim_diff_output', mode='split')

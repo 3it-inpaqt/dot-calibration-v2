@@ -21,21 +21,20 @@
 * OUTPUTS: Variables to track (similar to .PRINT but for variability)
 * NUMSAMPLES: Number of sample
 * REGRESSION_PCE: Enable regression based on polynomial chaos expansion
-.OPTIONS EMBEDDEDSAMPLES OUTPUTS={V(sum_h_out__001)},{V(hidden_activ_out_h_001)} NUMSAMPLES={{ var_sample_size }} PROJECTION_PCE=FALSE
-.PRINT ES FORMAT=CSV
+.OPTIONS EMBEDDEDSAMPLES OUTPUTS={V(sum_h_out_{{ nb_layers|i }}_001)},{V(hidden_activ_out_h{{ nb_layers|i }}_001)} NUMSAMPLES={{ var_sample_size }} PROJECTION_PCE=FALSE
+.PRINT ES FORMAT=CSV OUTPUT_ALL_SAMPLES=true
 
 {% endif -%}
 * List variables to save in the result table
-.PRINT TRAN V(sum_h_out__001) V(hidden_activ_out_h_001)
+.PRINT TRAN V(sum_h_out_{{ nb_layers|i }}_001) V(hidden_activ_out_h{{ nb_layers|i }}_001)
 + {%- for _ in pulses_sequences %} V(i_{{ loop.index|i }}) {%- endfor %}
 {%- for layer_nb in range(nb_layers) %}
-+ {%- for _ in layers['weight_{}'.format(layer_nb)] %} V(sum_h_out_{{ layer_nb|i if layer_nb != nb_layers - 1 else '' }}_{{ loop.index|i }}) V(hidden_activ_out_h{{ layer_nb|i if layer_nb != nb_layers - 1 else '' }}_{{ loop.index|i }}) {%- endfor %}
-+ {%- for _ in layers['weight_{}'.format(layer_nb)] %} V(tia_h_out_{{ layer_nb|i }}_{{ loop.index|i }}+) V(tia_h_out_{{ layer_nb|i }}_{{ loop.index|i }}-) {%- endfor %}
++ {%- for _ in layers['weight_{}'.format(layer_nb)] %} V(sum_h_out_{{ (layer_nb + 1)|i }}_{{ loop.index|i }}) V(hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ loop.index|i }}) {%- endfor %}
++ {%- for _ in layers['weight_{}'.format(layer_nb)] %} V(tia_h_out_{{ (layer_nb + 1)|i }}_{{ loop.index|i }}+) V(tia_h_out_{{ (layer_nb + 1)|i }}_{{ loop.index|i }}-) {%- endfor %}
     {%- if 'bias_{}'.format(layer_nb) in bias_pulses %}
-+ V(b_{{ layer_nb|i }})
++ V(b_{{ (layer_nb + 1)|i }})
     {%- endif %}
 {%- endfor %}
-{% if 'bias_ih' in layers %}+ V(ib) {%- endif %}
 
 * =============================== Models ==================================
 
@@ -65,7 +64,7 @@ Vi_{{ input_num|i }}    i_{{ input_num|i }}    0    PWL
 * Vb_num: The bias voltage as pulse sequences
 {% for layer_nb in range(nb_layers) %}
     {%- if 'bias_{}'.format(layer_nb) in bias_pulses %}
-Vb_{{ layer_nb|i }}    b_{{ layer_nb|i }}    0    PWL
+Vb_{{ (layer_nb + 1)|i }}    b_{{ (layer_nb + 1)|i }}    0    PWL
         {%- for bias_time, bias_value in bias_pulses['bias_{}'.format(layer_nb)] %} {{ bias_time|s }} {{ bias_value|v }}
         {%- endfor -%}
     {%- endif -%}
@@ -87,17 +86,17 @@ Vcc+      Vcc+     0    5
 
 {% for layer_nb in range(nb_layers) %}
 * ----- Weights
-* Layer {{ layer_nb|i }}
+* Layer {{ (layer_nb + 1)|i }}
     {%- for neuron in layers['weight_{}'.format(layer_nb)] %}{% set neuron_num = loop.index %}
 
 * Neuron {{ neuron_num }}
         {%- for r_plus, r_minus in neuron -%}{% set input_num = loop.index %}
             {%- if layer_nb == 0 %}
-Rh{{ layer_nb|i }}_{{ input_num|i }}_{{ neuron_num|i }}+    i_{{ input_num|i }}    tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}+    {{ r_plus }}
-Rh{{ layer_nb|i }}_{{ input_num|i }}_{{ neuron_num|i }}-    i_{{ input_num|i }}    tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}-    {{ r_minus }}
+Rh{{ (layer_nb + 1)|i }}_{{ input_num|i }}_{{ neuron_num|i }}+    i_{{ input_num|i }}    tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+    {{ r_plus }}
+Rh{{ (layer_nb + 1)|i }}_{{ input_num|i }}_{{ neuron_num|i }}-    i_{{ input_num|i }}    tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}-    {{ r_minus }}
             {%- else %}
-Rh{{ layer_nb|i }}_{{ input_num|i }}_{{ neuron_num|i }}+    hidden_activ_out_h{{ (layer_nb - 1)|i }}_{{ input_num|i }}    tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}+    {{ r_plus }}
-Rh{{ layer_nb|i }}_{{ input_num|i }}_{{ neuron_num|i }}-    hidden_activ_out_h{{ (layer_nb - 1)|i }}_{{ input_num|i }}    tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}-    {{ r_minus }}
+Rh{{ (layer_nb + 1)|i }}_{{ input_num|i }}_{{ neuron_num|i }}+    hidden_activ_out_h{{ (layer_nb)|i }}_{{ input_num|i }}    tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+    {{ r_plus }}
+Rh{{ (layer_nb + 1)|i }}_{{ input_num|i }}_{{ neuron_num|i }}-    hidden_activ_out_h{{ (layer_nb)|i }}_{{ input_num|i }}    tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}-    {{ r_minus }}
             {%- endif -%}
             {%- if read_std > 0 %}
 .EMBEDDEDSAMPLING param=Rh_{{ input_num|i }}_{{ neuron_num|i }}+:R,Rh_{{ input_num|i }}_{{ neuron_num|i }}-:R type=normal,normal means={{ r_plus }},{{ r_minus }} std_deviations={{ r_plus * read_std }},{{ r_minus * read_std }}
@@ -108,8 +107,8 @@ Rh{{ layer_nb|i }}_{{ input_num|i }}_{{ neuron_num|i }}-    hidden_activ_out_h{{
 * ----- Bias
     {% if 'bias_{}'.format(layer_nb) in layers %}
         {% for r_plus, r_minus in layers['bias_{}'.format(layer_nb)] %}{% set neuron_num = loop.index %}
-Rb_h{{ layer_nb|i }}_{{ neuron_num|i }}+    b_{{ layer_nb|i }}    tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}+    {{ r_plus }}
-Rb_h{{ layer_nb|i }}_{{ neuron_num|i }}-    b_{{ layer_nb|i }}    tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}-    {{ r_minus }}
+Rb_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+    b_{{ (layer_nb + 1)|i }}    tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+    {{ r_plus }}
+Rb_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}-    b_{{ (layer_nb + 1)|i }}    tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}-    {{ r_minus }}
             {%- if read_std > 0 %}
 .EMBEDDEDSAMPLING param=Rb_{{ neuron_num|i }}+:R,Rb_{{ neuron_num|i }}-:R type=normal,normal means={{ r_plus }},{{ r_minus }} std_deviations={{ r_plus * read_std }},{{ r_minus * read_std }}
             {%- endif -%}
@@ -122,15 +121,15 @@ Rb_h{{ layer_nb|i }}_{{ neuron_num|i }}-    b_{{ layer_nb|i }}    tia_h_in_{{ la
 * Layer {{ layer_nb|i }}
     {%- for neuron in layers['weight_{}'.format(layer_nb)] %}{% set neuron_num = loop.index %}
 * Neuron {{ neuron_num }}
-Rh{{ layer_nb|i }}_fb_{{ neuron_num|i }}+     tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}+ tia_h_out_{{ layer_nb|i }}_{{ neuron_num|i }}+ {{ gain_tia }}
-Rh{{ layer_nb|i }}_fb_{{ neuron_num|i }}-     tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}- tia_h_out_{{ layer_nb|i }}_{{ neuron_num|i }}- {{ gain_tia }}
-XUh{{ layer_nb|i }}_{{ neuron_num|i }}+       0 tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}+ Vcc+ Vcc- tia_h_out_{{ layer_nb|i }}_{{ neuron_num|i }}+ Ve OPA684_0
-XUh{{ layer_nb|i }}_{{ neuron_num|i }}-       0 tia_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}- Vcc+ Vcc- tia_h_out_{{ layer_nb|i }}_{{ neuron_num|i }}- Ve OPA684_0
-Rh{{ layer_nb|i }}_sum_{{ neuron_num|i }}+    tia_h_out_{{ layer_nb|i }}_{{ neuron_num|i }}+ sum_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}- 260
-Rh{{ layer_nb|i }}_sum_{{ neuron_num|i }}-    tia_h_out_{{ layer_nb|i }}_{{ neuron_num|i }}- sum_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}+ 260
-Rh{{ layer_nb|i }}_sum_l_{{ neuron_num|i }}   sum_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}+ 0 {{ gain_sum }}
-Rh{{ layer_nb|i }}_sum_fb_{{ neuron_num|i }}  sum_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}- sum_h_out_{{ layer_nb|i if layer_nb != nb_layers - 1 else '' }}_{{ neuron_num|i }} {{ gain_sum }}
-XUh{{ layer_nb|i }}_sum_{{ neuron_num|i }}    sum_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}+ sum_h_in_{{ layer_nb|i }}_{{ neuron_num|i }}- Vcc+ Vcc- sum_h_out_{{ layer_nb|i if layer_nb != nb_layers - 1 else '' }}_{{ neuron_num|i }} MAX4223
+Rh{{ (layer_nb + 1)|i }}_fb_{{ neuron_num|i }}+     tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+ tia_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+ {{ gain_tia }}
+Rh{{ (layer_nb + 1)|i }}_fb_{{ neuron_num|i }}-     tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}- tia_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}- {{ gain_tia }}
+XUh{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+       0 tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+ Vcc+ Vcc- tia_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+ Ve OPA684_0
+XUh{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}-       0 tia_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}- Vcc+ Vcc- tia_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}- Ve OPA684_0
+Rh{{ (layer_nb + 1)|i }}_sum_{{ neuron_num|i }}+    tia_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+ sum_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}- 260
+Rh{{ (layer_nb + 1)|i }}_sum_{{ neuron_num|i }}-    tia_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}- sum_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+ 260
+Rh{{ (layer_nb + 1)|i }}_sum_l_{{ neuron_num|i }}   sum_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+ 0 {{ gain_sum }}
+Rh{{ (layer_nb + 1)|i }}_sum_fb_{{ neuron_num|i }}  sum_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}- sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} {{ gain_sum }}
+XUh{{ (layer_nb + 1)|i }}_sum_{{ neuron_num|i }}    sum_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}+ sum_h_in_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }}- Vcc+ Vcc- sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} MAX4223
     {%- endfor %}
 {% endfor %}
 
@@ -140,7 +139,7 @@ XUh{{ layer_nb|i }}_sum_{{ neuron_num|i }}    sum_h_in_{{ layer_nb|i }}_{{ neuro
 * Layer {{ layer_nb|i }}
     {%- for neuron in layers['weight_{}'.format(layer_nb)] %}{% set neuron_num = loop.index %}
 * Neuron {{ neuron_num }}
-XHardTanh_h{{ layer_nb|i }}_{{ neuron_num|i }} sum_h_out_{{ layer_nb|i if layer_nb != nb_layers - 1 else '' }}_{{ neuron_num|i }} hidden_activ_out_h{{ layer_nb|i if layer_nb != nb_layers - 1 else '' }}_{{ neuron_num|i }} HardTanh PARAMS: V_clip={{ tanh_upper_bound }}
+XHardTanh_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} HardTanh PARAMS: V_clip={{ tanh_upper_bound }}
     {%- endfor %}
 {% endfor %}
 

@@ -1,11 +1,13 @@
 from pathlib import Path
 from typing import Literal
+import math
 
 import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 from torchmetrics.classification import BinaryConfusionMatrix
+import numpy as np
 
 from utils.output import save_plot
 from utils.misc import short_number
@@ -89,8 +91,8 @@ def plot_analog_vs_digital_before_threshold(inferences: DataFrame) -> None:
     plt.axline((0, 0), slope=1, color='tab:gray', alpha=0.5, label='Perfect matching')
 
     # Draw thresholds
-    plt.axhline(y=0.5, color='tab:red', linestyle='--', alpha=0.5, label='Thresholds')
-    plt.axvline(x=0.5, color='tab:red', linestyle='--', alpha=0.5)
+    plt.axhline(y=0, color='tab:red', linestyle='--', alpha=0.5, label='Thresholds')
+    plt.axvline(x=0, color='tab:red', linestyle='--', alpha=0.5)
 
     # Draw comparison plots
     inferences['Fidelity'] = inferences['analog_output'] == inferences['digital_output']
@@ -102,3 +104,27 @@ def plot_analog_vs_digital_before_threshold(inferences: DataFrame) -> None:
     plt.xlabel('Digital output')
     plt.title('Model output before threshold comparison\nbetween the digital and the analog simulation')
     save_plot('outputs_before_threshold_comparison')
+
+
+def plot_analog_before_threshold_hist(analog_before_threshold):
+    """
+    Plot a histogram of the voltage at the output of the circuit
+    :param analog_before_threshold: voltage at the output of the circuit
+    """
+    threshold_precision = 0.01
+    step = threshold_precision / 2
+
+    v_max = max(analog_before_threshold)
+    v_max_sign = math.copysign(1, v_max)
+    v_max = math.ceil(abs(v_max)/(threshold_precision/2)) * step * v_max_sign
+
+    v_min = min(analog_before_threshold)
+    v_min_sign = math.copysign(1, v_min)
+    v_min = math.ceil(abs(v_min)/(threshold_precision/2)) * step * v_min_sign
+
+    bins = np.arange(v_min, v_max + step, step)
+    plt.hist(analog_before_threshold, bins=bins)
+    plt.xlabel("(V)")
+    plt.ylabel("Frequency")
+    plt.title("Voltage at the output of the circuit before the threshold")
+    save_plot("analog_before_threshold_hist")

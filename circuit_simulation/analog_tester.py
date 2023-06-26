@@ -8,7 +8,8 @@ import time
 from classes.classifier_nn import ClassifierNN
 from circuit_simulation.xyce_simulation import run_circuit_simulation
 from utils.logger import logger
-from plots.model_performance import plot_confusion_matrix, plot_analog_vs_digital_before_threshold
+from plots.model_performance import plot_confusion_matrix, plot_analog_vs_digital_before_threshold, \
+    plot_analog_before_threshold_hist
 from utils.settings import settings
 from utils.timer import duration_to_str
 from utils.output import save_inferences
@@ -85,6 +86,8 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
 
     plot_analog_vs_digital_before_threshold(DataFrame(outputs_table))
 
+    plot_analog_before_threshold_hist(outputs_table['analog_before_th'])
+
     save_inferences(outputs_table)
 
 
@@ -99,7 +102,7 @@ def inference_job(model: ClassifierNN, inputs: torch.tensor, label: torch.tensor
     """
 
     digital_output_before_thr = model(inputs)
-    digital_output = (digital_output_before_thr > 0.5).int()
+    digital_output = (digital_output_before_thr > 0).int()
 
     inputs = torch.flatten(inputs).tolist()
 
