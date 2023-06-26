@@ -3,7 +3,7 @@ import json
 import zipfile
 from pathlib import Path
 from random import randrange
-from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -217,10 +217,10 @@ class DiagramOffline(Diagram):
         :param single_dot: If True, only the single dot diagram will be loaded, if False only the double dot
         :param diagrams_path: The path to the zip file containing all stability diagrams data.
         :param labels_path: The path to the json file containing line and charge area labels.
-        :param load_lines: If True the line labels should be loaded.
-        :param load_areas: If True the charge area labels should be loaded.
-        :param white_list: If defined, only diagrams with base name include in this list will be loaded (no extension).
-        :return: A list of Diagram objects.
+        :param load_lines: If True, the line labels should be loaded.
+        :param load_areas: If True, the charge area labels should be loaded.
+        :param white_list: If defined, only diagrams with base name included in this list will be loaded (no extension).
+        :return: A list of offline Diagram objects.
         """
 
         # Open the json file that contains annotations for every diagram
@@ -266,12 +266,12 @@ class DiagramOffline(Diagram):
                     filter(lambda l: l['name'].upper() == 'QDSD', labels[f'{file_basename}.png']['projects'].values())
                 )['labels'][0]['annotations']
             except StopIteration:
-                # In case we found a row for this diagram, but no label
+                # In case, we found a row for this diagram, but no label
                 logger.debug(f'No label found for {file_basename}')
                 nb_no_label += 1
                 continue
 
-            # After python 3.9 it is necessary to specify binary mode for zip open
+            # After python 3.9, it is necessary to specify binary mode for zip open
             with diagram_name.open(mode='rb') as diagram_file:
                 # Load values from CSV file
                 x, y, values = DiagramOffline._load_interpolated_csv(gzip.open(diagram_file))
@@ -325,11 +325,14 @@ class DiagramOffline(Diagram):
         return diagrams
 
     @staticmethod
-    def _load_interpolated_csv(file_path: Union[IO, str, Path]) -> Tuple:
+    def _load_interpolated_csv(file_path: IO | str | Path | gzip.GzipFile, invert_y_axis: bool = True) -> Tuple:
         """
         Load the stability diagrams from CSV file.
 
         :param file_path: The path to the CSV file or the byte stream.
+        :param invert_y_axis: If True, the y-axis will be inverted. This is necessary when the diagram is saved as an
+         image, because the standard origin is the top left corner for images, while the origin of matrix is usually the
+         bottom left.
         :return: The stability diagram data as a tuple: x, y, values
         """
         compact_diagram = np.loadtxt(file_path, delimiter=',')
@@ -338,6 +341,9 @@ class DiagramOffline(Diagram):
 
         # Remove the information row
         values = np.delete(compact_diagram, 0, 0)
+
+        if invert_y_axis:
+            values = np.flip(values, axis=0).copy()
 
         # Reconstruct the axes
         x = np.arange(values.shape[1]) * step + x_start
