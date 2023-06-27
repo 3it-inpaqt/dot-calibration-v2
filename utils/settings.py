@@ -120,9 +120,9 @@ class Settings:
     pixel_size: float = 0.001
 
     # The name of the research group who provide the data.
-    # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier'
+    # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier' or 'stefanie_czischek'
     # Should be available in the dataset folder.
-    research_group: str = 'louis_gaudreau'
+    research_group: str = 'stefanie_czischek'
 
     # The percentage of data kept for testing only.
     # If test_diagram is set, this value should be 0.
@@ -164,7 +164,7 @@ class Settings:
     model_type: str = 'FF'
 
     # The number of fully connected hidden layer and their respective number of neurons.
-    hidden_layers_size: Sequence = (10,5)
+    hidden_layers_size: Sequence = (15,)
 
     # The number of convolution layers and their respective properties (for CNN models only).
     conv_layers_kernel: Sequence = (4, 4)
@@ -176,7 +176,7 @@ class Settings:
 
     # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
     # Have to match the number of layers (convolution + linear)
-    batch_norm_layers: Sequence = (False,False)
+    batch_norm_layers: Sequence = (False,)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -417,7 +417,7 @@ class Settings:
             f"Invalid file log level '{self.logger_file_level}'"
 
         # Dataset
-        assert self.research_group in ['louis_gaudreau', 'michel_pioro_ladriere', 'eva_dupont_ferrier'], \
+        assert self.research_group in ['louis_gaudreau', 'michel_pioro_ladriere', 'eva_dupont_ferrier', 'stefanie_czischek'], \
             f'Unknown dataset research group: "{self.research_group}"'
         assert self.patch_size_x > 0, 'Patch size should be higher than 0'
         assert self.patch_size_y > 0, 'Patch size should be higher than 0'
