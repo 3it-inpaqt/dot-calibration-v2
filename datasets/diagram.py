@@ -111,12 +111,14 @@ class Diagram:
         raise NotImplementedError
 
     @abstractmethod
-    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int], normalized: bool = True) \
+            -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
 
         :param coordinate: The coordinate in the diagram (not the voltage)
-        :param patch_size: The size of the patch to extract (in number of pixel)
+        :param patch_size: The size of the patch to extract (in number of pixels)
+        :param normalized: If True, the patch will be normalized between 0 and 1
         :return: The patch.
         """
         raise NotImplementedError

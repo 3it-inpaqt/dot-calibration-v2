@@ -64,12 +64,14 @@ class DiagramOnline(Diagram):
         # Generate random coordinates inside the range
         return randrange(min_x, max_x), randrange(min_y, max_y)
 
-    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int], normalized: bool = True) \
+            -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
 
         :param coordinate: The coordinate in the diagram (not the voltage)
-        :param patch_size: The size of the patch to extract (in number of pixel)
+        :param patch_size: The size of the patch to extract (in number of pixels)
+        :param normalized: If True, the patch will be normalized between 0 and 1
         :return: The patch.
         """
         x_patch, y_patch = patch_size
@@ -109,7 +111,7 @@ class DiagramOnline(Diagram):
         #     self.plot()
 
         # Normalize the measurement with the normalization range used during the training, then return it.
-        return self.normalize(measurement.data)
+        return self.normalize(measurement.data) if normalized else measurement.data
 
     def plot(self, label_extra: Optional[str] = '') -> None:
         values, x_axes, y_axes = self.get_cropped_values()

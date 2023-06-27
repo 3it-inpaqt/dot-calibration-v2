@@ -94,7 +94,7 @@ def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Opt
         mask = np.full_like(pixels, True)
         for scan in scan_history:
             x, y = scan.coordinates
-            mask[y + settings.patch_size_y: y, x:x + settings.patch_size_x] = False
+            mask[y: y + settings.patch_size_y, x:x + settings.patch_size_x] = False
         pixels = np.ma.masked_array(pixels, mask)
 
     # Plot the pixels
@@ -390,13 +390,13 @@ def plot_diagram(x_i: Sequence[float],
         if focus_area is True:
             # Get last scan coordinates and convert them to voltage.
             x_start, x_end, y_start, y_end = scan_history[-1].get_area_coord()
-            focus_area = (x_i[x_start], x_i[x_end - 1], x_i[y_start], x_i[y_end - 1])
+            focus_area = (x_i[x_start], x_i[x_end - 1], y_i[y_start], y_i[y_end - 1])
         _plot_focus_area_ax(focus_area_ax, diagram_ax, pixels, focus_area_title, focus_area, vmin, vmax, axes_matching)
 
     # Plot the scan history visualization
     if scan_history_mode and scan_history and len(scan_history) > 0:
-        _plot_scan_history(diagram_ax, show_focus_area_ax, x_i, y_i, scan_history, scan_history_mode,
-                           scan_history_alpha, pixels is None)
+        _plot_scan_history(diagram_ax, focus_area_ax, x_i, y_i, scan_history, scan_history_mode, scan_history_alpha,
+                           pixels is None)
 
     if final_volt_coord is not None:
         _plot_final_coord(diagram_ax, focus_area_ax, final_volt_coord)
@@ -786,12 +786,12 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
         is_online = isinstance(d, DiagramOnline)
         diagram_boundaries = d.get_cropped_boundaries() if is_online else None
         # Compute min / max here because numpy doesn't like to do this on multi thread (ignore NaN values)
-        vmin = np.nanmin(values)
-        vmax = np.nanmax(values)
-        # Final area where we assume the target regime is
-        margin = settings.patch_size_x * 3
-        final_area_x = d.coord_to_voltage(final_coord[0] - margin, final_coord[0] + margin, clip_in_diagram=True)
-        final_area_y = d.coord_to_voltage(final_coord[1] - margin, final_coord[1] + margin, clip_in_diagram=True)
+        vmin = np.nanmin(values).item()
+        vmax = np.nanmax(values).item()
+        # The final areas where we assume the target regime is
+        margin = settings.patch_size_x * settings.pixel_size * 3
+        final_area_x = final_volt_coord[0] - margin, final_volt_coord[0] + margin
+        final_area_y = final_volt_coord[1] - margin, final_volt_coord[1] + margin
         final_area = final_area_x + final_area_y
         # Animation speed => Time for an image (ms)
         base_fps = 200
@@ -803,34 +803,30 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
         video_frames_ids = list(range(1, len(scan_history), rate_video)) if settings.save_video else []
         frame_ids = list(dict.fromkeys(gif_frames_ids + video_frames_ids))  # Remove duplicate and keep order
 
+        # Base arguments for final images
+        common_kwargs = dict(
+            x_i=x_axes, y_i=y_axes, pixels=values, title=title, scan_history=scan_history, focus_area=final_area,
+            focus_area_title='End area', save_in_buffer=True, text=True, vmin=vmin, vmax=vmax
+        )
+
         with Pool(get_nb_loader_workers()) as pool:
-            # Generate images in parallel for speed. Use partial to set constants arguments.
+            # Generate images in parallel for speed. Use partial to set constant arguments.
+            # The order of the arguments is important because scan_history is sent after the positional args.
             # Main animation frames
             async_result_main = pool.map_async(
-                partial(plot_diagram, x_axes, y_axes, values, None, title,
-                        None, None, True, focus_area=True, focus_area_title='Last patch', save_in_buffer=True,
-                        description=True, show_title=True, fog_of_war=True, fading_history=8,
-                        diagram_boundaries=diagram_boundaries, vmin=vmin, vmax=vmax, show_crosses=show_crosses),
+                partial(plot_diagram, x_axes, y_axes, values, title, True, None, None, focus_area=True,
+                        focus_area_title='Last patch', text=True, scan_history_alpha=8, vmin=vmin, vmax=vmax,
+                        save_in_buffer=True),
                 (scan_history[0:i] for i in frame_ids)
             )
 
             # Final frames
             async_result_end = [
                 # Show diagram with all inferences and fog of war
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
-                                       'scan_history': scan_history, 'focus_area': final_area,
-                                       'focus_area_title': 'End area', 'save_in_buffer': True, 'description': True,
-                                       'show_title': True, 'fog_of_war': True, 'diagram_boundaries': diagram_boundaries,
-                                       'vmin': vmin, 'vmax': vmax}),
+                pool.apply_async(plot_diagram, kwds=common_kwargs | {'fog_of_war': True}),
                 # Show diagram with tuning final coordinate and fog of war
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
-                                       'scan_history': scan_history, 'focus_area': final_area,
-                                       'focus_area_title': 'End area', 'final_coord': final_coord,
-                                       'save_in_buffer': True, 'description': True, 'show_title': True,
-                                       'fog_of_war': True, 'diagram_boundaries': diagram_boundaries, 'vmin': vmin,
-                                       'vmax': vmax})
+                pool.apply_async(plot_diagram, kwds=common_kwargs | {'fog_of_war': True,
+                                                                     'final_volt_coord': final_volt_coord}),
             ]
 
             # If online, we don't have any label to show
@@ -839,29 +835,15 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
             else:
                 end_durations = [base_fps * 15, base_fps * 15, base_fps * 15, base_fps * 30, base_fps * 40]
                 async_result_end += [
-                    # Show full diagram with tuning final coordinate
-                    pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
-                                           'scan_history': scan_history, 'focus_area': final_area,
-                                           'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'description': True, 'show_title': True,
-                                           'diagram_boundaries': diagram_boundaries, 'vmin': vmin, 'vmax': vmax}),
+                    # Show full diagram with tuning final coordinate (no fog of war)
+                    pool.apply_async(plot_diagram, kwds=common_kwargs | {'final_volt_coord': final_volt_coord}),
                     # Show full diagram with tuning final coordinate + line labels
-                    pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
-                                           'scan_history': scan_history, 'focus_area': final_area,
-                                           'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'description': True, 'show_title': True,
-                                           'transition_lines': d.transition_lines,
-                                           'diagram_boundaries': diagram_boundaries, 'vmin': vmin, 'vmax': vmax}),
+                    pool.apply_async(plot_diagram, kwds=common_kwargs | {'final_volt_coord': final_volt_coord,
+                                                                         'transition_lines': d.transition_lines}),
                     # Show full diagram with tuning final coordinate + line & regime labels
-                    pool.apply_async(plot_diagram,
-                                     kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'title': title,
-                                           'scan_history': scan_history, 'focus_area': final_area,
-                                           'focus_area_title': 'End area', 'final_coord': final_coord,
-                                           'save_in_buffer': True, 'description': True, 'show_title': True,
-                                           'transition_lines': d.transition_lines, 'charge_regions': d.charge_areas,
-                                           'diagram_boundaries': diagram_boundaries, 'vmin': vmin, 'vmax': vmax}),
+                    pool.apply_async(plot_diagram, kwds=common_kwargs | {'final_volt_coord': final_volt_coord,
+                                                                         'transition_lines': d.transition_lines,
+                                                                         'charge_regions': d.charge_areas}),
                 ]
 
             # Wait for the processes to finish and get results

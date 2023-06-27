@@ -26,6 +26,9 @@ class DiagramOffline(Diagram):
     # The charge area lines annotations
     charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]
 
+    # The list of measured voltage according to the 2 gates, normalized
+    values_norm: Optional[torch.Tensor]
+
     def __init__(self, file_basename: str, x_axes: Sequence[float], y_axes: Sequence[float], values: torch.Tensor,
                  transition_lines: Optional[List[LineString]],
                  charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]):
@@ -44,6 +47,7 @@ class DiagramOffline(Diagram):
         self.x_axes = x_axes
         self.y_axes = y_axes
         self.values = values
+        self.values_norm = None
         self.transition_lines = transition_lines
         self.charge_areas = charge_areas
 
@@ -55,23 +59,22 @@ class DiagramOffline(Diagram):
         max_x, max_y = self.get_max_patch_coordinates()
         return randrange(max_x), randrange(max_y)
 
-    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int], normalized: bool = True) \
+            -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
 
         :param coordinate: The coordinate in the diagram (not the voltage)
-        :param patch_size: The size of the patch to extract (in number of pixel)
+        :param patch_size: The size of the patch to extract (in number of pixels)
+        :param normalized: If True, the patch will be normalized between 0 and 1
         :return: The patch
         """
         coord_x, coord_y = coordinate
         size_x, size_y = patch_size
 
-        diagram_size_y, _ = self.values.shape
-        end_y = coord_y + size_y
-        end_x = coord_x + size_x
+        values = self.values if not normalized else self.values_norm
 
-        # Invert Y axis because the diagram origin (0,0) is top left
-        return self.values[diagram_size_y - end_y:diagram_size_y - coord_y, coord_x:end_x]
+        return values[coord_y:coord_y + size_y, coord_x:coord_x + size_x]
 
     def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),
                     label_offset: Tuple[int, int] = (0, 0)) -> Generator:
@@ -414,5 +417,5 @@ class DiagramOffline(Diagram):
         min_value, max_value = load_normalization()
 
         for diagram in diagrams:
-            diagram.values -= min_value
-            diagram.values /= max_value - min_value
+            diagram.values_norm = diagram.values - min_value
+            diagram.values_norm /= max_value - min_value
