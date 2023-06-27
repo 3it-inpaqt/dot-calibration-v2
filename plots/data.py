@@ -233,7 +233,14 @@ def _plot_scan_history(diagram_ax, focus_ax, x_i, y_i, scan_history, scan_histor
         rec = patches.Rectangle(linewidth=1, **square_params)
         diagram_ax.add_patch(rec)
 
-        # Show the rectangle label offset for the last scan
+        # If we reached the first scan (reverse order), we add a marker to show the start of the tuning
+        if i == nb_scan - 1:
+            diagram_ax.scatter(x=x_i[x + settings.patch_size_x // 2] - half_p,
+                               y=y_i[y + settings.patch_size_x // 2] - half_p,
+                               color='skyblue', marker='X', s=200, label='Start', alpha=square_params['alpha'],
+                               zorder=0)
+
+        # Show the rectangle label offset for the last scan in focus area
         if focus_ax and i == 0:
             square_params['facecolor'] = 'none'
             square_params['edgecolor'] = color
