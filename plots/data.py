@@ -65,9 +65,9 @@ def _get_layout(show_focus_area_ax, show_text_ax, show_legend_ax):
             x_end_col_1 = 6
             diagram_ax = fig.add_subplot(spec[:y_bottom, :x_end_col_1])
             if show_focus_area_ax:
-                focus_area_ax = fig.add_subplot(spec[:2, x_end_col_1:])
+                focus_area_ax = fig.add_subplot(spec[:3, x_end_col_1:])
             if show_text_ax:
-                text_ax = fig.add_subplot(spec[2 if show_focus_area_ax else 0:y_bottom, x_end_col_1:])
+                text_ax = fig.add_subplot(spec[3 if show_focus_area_ax else 0:y_bottom, x_end_col_1:])
 
         # 1 column layout
         else:
@@ -790,9 +790,11 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
         vmax = np.nanmax(values).item()
         # The final areas where we assume the target regime is
         margin = settings.patch_size_x * settings.pixel_size * 3
-        final_area_x = final_volt_coord[0] - margin, final_volt_coord[0] + margin
-        final_area_y = final_volt_coord[1] - margin, final_volt_coord[1] + margin
-        final_area = final_area_x + final_area_y
+        final_area_start_x = max(final_volt_coord[0] - margin, x_axes[0])
+        final_area_end_x = min(final_volt_coord[0] + margin, x_axes[-1])
+        final_area_start_y = max(final_volt_coord[1] - margin, y_axes[0])
+        final_area_end_y = min(final_volt_coord[1] + margin, y_axes[-1])
+        final_area = (final_area_start_x, final_area_end_x, final_area_start_y, final_area_end_y)
         # Animation speed => Time for an image (ms)
         base_fps = 200
         # Ratio of image to skip for the animation frames (1 means nothing skipped, 4 means 1 keep for 3 skip)

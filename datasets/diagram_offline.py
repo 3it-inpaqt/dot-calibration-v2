@@ -91,7 +91,7 @@ class DiagramOffline(Diagram):
         label_offset_x, label_offset_y = label_offset
         diagram_size_y, diagram_size_x = self.values.shape
 
-        # Extract each patches
+        # Extract each patch
         i = 0
         for patch_y in range(0, diagram_size_y - patch_size_y, patch_size_y - overlap_size_y):
             # Patch coordinates (indexes)
