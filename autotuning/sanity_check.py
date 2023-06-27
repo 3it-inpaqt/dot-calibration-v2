@@ -29,7 +29,7 @@ class SanityCheck(AutotuningProcedure):
         nb_unique_measurements_expected = nb_measurements_expected - nb_double_measurements_expected
 
         # Start from the middle of the diagram
-        self.x, self.y = len(self.diagram.x_axes) // 2, len(self.diagram.y_axes) // 2
+        self.x, self.y = start_x, start_y = len(self.diagram.x_axes) // 2, len(self.diagram.y_axes) // 2
         x_v, y_v = self.diagram.coord_to_voltage(self.x, self.y)
         logger.info(f'Auto-tuning sanity check. Start from ({x_v:.2f}V, {y_v:.2f}V). '
                     f'Expected number of steps: {nb_steps_expected}. '
@@ -60,9 +60,8 @@ class SanityCheck(AutotuningProcedure):
             assert not torch.isnan(self.diagram.values[-1][0]).item(), 'Corner (0, -1) is not measured.'
             assert not torch.isnan(self.diagram.values[0][-1]).item(), 'Corner (-1, 0) is not measured.'
             assert not torch.isnan(self.diagram.values[-1][-1]).item(), 'Corner (-1, -1) is not measured.'
-            # FIXME Do not invert the coordinates
-            # assert not torch.isnan(self.diagram.values[start_y][start_x]).item(), \
-            #     f'Starting point ({start_x}, {start_y}) is not measured.'
+            assert not torch.isnan(self.diagram.values[start_y][start_x]).item(), \
+                f'Starting point ({start_x}, {start_y}) is not measured.'
 
         return self.get_patch_center()
 

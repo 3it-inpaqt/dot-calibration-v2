@@ -33,8 +33,8 @@ class DiagramOnline(Diagram):
         self._norm_min_value, self._norm_max_value = load_normalization()
 
         # Create a virtual axes and discret grid that represent the voltage space to explore.
-        # Where NaN values represent the voltage that have not been measured yet.
-        # The min value is included but not the max value (to match with python standard).
+        # Where NaN values represent the voltage space that has not been measured yet.
+        # The min value is included but not the max value (to match with python standards).
         space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
         self.x_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
         self.y_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
@@ -101,28 +101,25 @@ class DiagramOnline(Diagram):
         self._measurement_history.append(measurement)
         # Send the data matrix to the same device as the values
         measurement.to(self.values.device)
-        # Save the measurement in the grid (invert y-axis because the diagram origin is in the top left corner)
-        diagram_size_y, _ = self.values.shape
-        self.values[diagram_size_y - y_end:diagram_size_y - y_start, x_start: x_end] = measurement.data
+        # Save the measurement in the grid
+        self.values[y_start:y_end, x_start: x_end] = measurement.data
 
         # Plot the diagram with all current measurements
-        # if settings.is_named_run() and (settings.save_images or settings.show_images):
-        #     # TODO move this to the autotuning class
-        #     self.plot()
+        if settings.is_named_run() and (settings.save_images or settings.show_images):
+            self.plot()
 
         # Normalize the measurement with the normalization range used during the training, then return it.
         return self.normalize(measurement.data) if normalized else measurement.data
 
     def plot(self, label_extra: Optional[str] = '') -> None:
-        values, x_axes, y_axes = self.get_cropped_values()
+        values, x_axes, y_axes = self.get_values()
         focus_area = False
         if self._measurement_history and len(self._measurement_history) > 0:
             last_m = self._measurement_history[-1]
-            # FIXME the coordinates doesn't match (y-axis inverted?)
             focus_area = (last_m.x_axes[0], last_m.x_axes[-1], last_m.y_axes[0], last_m.y_axes[-1])
 
-        plot_diagram(x_axes, y_axes, values, f'diagram_{self.name}', title=f'Online diagram {self.name}',
-                     allow_overwrite=True, show_offset=False, focus_area=focus_area)
+        plot_diagram(x_axes, y_axes, values, title=f'Online diagram {self.name}', focus_area_title='Last measurement',
+                     allow_overwrite=True, focus_area=focus_area, file_name=f'diagram_{self.name}')
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """
@@ -175,6 +172,4 @@ class DiagramOnline(Diagram):
         last_col = min(last_col + margin, len(x_axis) - 1)
         last_row = min(last_row + margin, len(y_axis) - 1)
 
-        # y-axis is inverted
-        return x_axis[first_col], x_axis[last_col], y_axis[len(y_axis) - first_row - 1], y_axis[
-            len(y_axis) - last_row - 1]
+        return x_axis[first_col], x_axis[last_col], y_axis[first_row], y_axis[last_row]

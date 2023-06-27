@@ -48,6 +48,7 @@ def check_settings() -> None:
         raise ValueError('The min and max voltage have to be defined before to start an online tuning task '
                          '("min_voltage" and "max_voltage" settings).')
 
+
 if __name__ == '__main__':
     # Prepare the environment
     preparation()

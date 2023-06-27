@@ -35,7 +35,8 @@ class Mock(Connector):
         """
         size_x = round((end_volt_x - start_volt_x) / step_volt_x)
         size_y = round((end_volt_y - start_volt_y) / step_volt_y)
+        # Last point excluded
         return ExperimentalMeasurement(
-            np.linspace(start_volt_x, end_volt_x, size_x),
-            np.linspace(start_volt_y, end_volt_y, size_y),
+            np.linspace(start_volt_x, end_volt_x, size_x, endpoint=False),
+            np.linspace(start_volt_y, end_volt_y, size_y, endpoint=False),
             torch.rand((size_x, size_y)))
