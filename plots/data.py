@@ -377,7 +377,11 @@ def _plot_scan_history(diagram_ax, focus_ax, x_i, y_i, scan_history, scan_histor
 def _plot_text_ax(text_ax, text: str):
     text_ax.text(0.05, 0.95, text, horizontalalignment='left', verticalalignment='top', fontsize=12,
                  fontfamily='monospace', transform=text_ax.transAxes)
-    text_ax.axis('off')
+    # Fancy background
+    text_ax.axes.get_xaxis().set_visible(False)
+    text_ax.axes.get_yaxis().set_visible(False)
+    text_ax.set_facecolor('linen')
+    plt.setp(text_ax.spines.values(), color='bisque')
 
 
 def _plot_final_coord(diagram_ax, focus_area_ax, final_volt_coord: Tuple[float, float]):
