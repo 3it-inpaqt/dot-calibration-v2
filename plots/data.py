@@ -457,7 +457,7 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
         vmin = np.nanmin(values).item()
         vmax = np.nanmax(values).item()
         # The final areas where we assume the target regime is
-        margin = settings.patch_size_x * settings.pixel_size * 3
+        margin = settings.patch_size_x * settings.pixel_size * 2
         final_area_start_x = max(final_volt_coord[0] - margin, diagram_boundaries[0] if is_online else x_axes[0])
         final_area_end_x = min(final_volt_coord[0] + margin, diagram_boundaries[1] if is_online else x_axes[-1])
         final_area_start_y = max(final_volt_coord[1] - margin, diagram_boundaries[2] if is_online else y_axes[0])

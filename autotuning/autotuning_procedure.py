@@ -126,7 +126,8 @@ class AutotuningProcedure:
         is_above_confidence_threshold = self.model.is_above_confident_threshold(prediction, confidence)
         self._scan_history.append(StepHistoryEntry(
             (self.x, self.y), prediction, confidence, ground_truth, soft_truth_larger, soft_truth_smaller,
-            is_above_confidence_threshold, step_description, time_start, time_data_fetched, time_data_processed
+            is_above_confidence_threshold, step_description, time_start, time_data_fetched, time_data_processed,
+            isinstance(self.diagram, DiagramOnline)
         ))
 
         logger.debug(f'Patch {self.get_nb_steps():03} classified as {prediction} with confidence {confidence:.2%}')
@@ -188,7 +189,7 @@ class AutotuningProcedure:
             is_above_confidence_threshold = self.model.is_above_confident_threshold(pred, conf)
             self._scan_history.append(StepHistoryEntry(
                 (x, y), pred, conf, truth, truth_larger, truth_smaller, is_above_confidence_threshold, step_description,
-                time_start, time_data_fetched, time_data_processed
+                time_start, time_data_fetched, time_data_processed, isinstance(self.diagram, DiagramOnline)
             ))
 
         self._batch_pending.clear()  # Empty pending

@@ -90,6 +90,7 @@ class StepHistoryEntry:
     timestamp_start: float  # In seconds
     timestamp_data_fetched: float  # In seconds
     timestamp_data_processed: float  # In seconds
+    is_online: bool
 
     def is_classification_correct(self) -> bool:
         """ :return: True only if model_classification is the same as the ground_truth. """
@@ -118,21 +119,22 @@ class StepHistoryEntry:
         text = ''
         if scan_history:
             nb_scan = len(scan_history)
-            # Local import to avoid circular mess
+            # Local import to avoid circular messes
             from datasets.qdsd import QDSDLines
+            is_online = scan_history[0].is_online
 
             # History statistics
             accuracy = sum(1 for s in scan_history if s.is_classification_correct()) / nb_scan
             nb_line = sum(1 for s in scan_history if s.ground_truth)  # s.ground_truth == True means line
             nb_no_line = sum(1 for s in scan_history if not s.ground_truth)  # s.ground_truth == False means no line
 
-            if nb_line > 0:
+            if nb_line > 0 and not is_online:
                 line_success = sum(
                     1 for s in scan_history if s.ground_truth and s.is_classification_correct()) / nb_line
             else:
                 line_success = None
 
-            if nb_no_line > 0:
+            if nb_no_line > 0 and not is_online:
                 no_line_success = sum(1 for s in scan_history
                                       if not s.ground_truth and s.is_classification_correct()) / nb_no_line
             else:
@@ -157,13 +159,15 @@ class StepHistoryEntry:
                 class_error = 'error'
             last_class = QDSDLines.classes[scan_history[-1].model_classification]
 
-            text += f'Nb step: {nb_scan: >3n} (acc: {accuracy: >4.0%})\n'
+            text += f'Nb step: {nb_scan: >3n}'
+            text += '\n' if is_online else f' (acc: {accuracy:>4.0%})\n'
             text += f'{QDSDLines.classes[True].capitalize(): <7}: {nb_line: >3n}'
             text += '\n' if line_success is None else f' (acc: {line_success:>4.0%})\n'
             text += f'{QDSDLines.classes[False].capitalize(): <7}: {nb_no_line: >3n}'
             text += '\n' if no_line_success is None else f' (acc: {no_line_success:>4.0%})\n\n'
             text += f'Last patch:\n'
-            text += f'  - Pred: {last_class.capitalize(): <7} ({class_error})\n'
+            text += f'  - Pred: {last_class.capitalize(): <7}'
+            text += '\n' if is_online else f' ({class_error})\n'
             text += f'  - Conf: {scan_history[-1].model_confidence: >4.0%}\n'
             text += f'  - Fetch data: {fetch_duration}\n'
             text += f'  - Inference : {inference_duration}\n\n'
