@@ -1,9 +1,6 @@
-from multiprocessing import Pool
 from typing import Tuple
 
 from autotuning.autotuning_procedure import AutotuningProcedure
-from plots.data import plot_diagram
-from utils.misc import get_nb_loader_workers
 from utils.settings import settings
 
 

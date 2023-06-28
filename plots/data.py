@@ -408,6 +408,7 @@ def _plot_legend_ax(legend_ax, diagram_ax, custom_legend, pixel_info: bool = Tru
     for ax_handler, ax_label in chain(zip(*diagram_ax.get_legend_handles_labels()), custom_legend):
         # Remove possible duplicates
         if ax_label not in label_handlers:
+            ax_handler.set_alpha(1)  # Avoid alpha in legend
             label_handlers[ax_label] = ax_handler
 
     if len(label_handlers) == 0:

@@ -23,5 +23,9 @@ class RandomBaseline(AutotuningProcedure):
         # Never plot animation for this procedure.
         pass
 
+    def plot_step_history(self, final_volt_coord: Tuple[float, float], success_tuning: bool) -> None:
+        # Never plot this procedure.
+        pass
+
     def __str__(self):
         return 'Random Baseline'

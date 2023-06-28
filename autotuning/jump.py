@@ -9,8 +9,8 @@ from utils.settings import settings
 
 class Jump(AutotuningProcedure):
     # Exploration limits
-    _max_steps_exploration: int = 1000  # Nb of step
-    _max_steps_search_empty: int = 100  # Nb of step
+    _max_steps_exploration: int = 1000  # Nb of steps
+    _max_steps_search_empty: int = 100  # Nb of steps
     _max_line_explore_right: int = 5  # Nb detected lines
     _max_steps_validate_left_line: int = 250  # Nb steps
     _max_nb_leftmost_checking: int = 6
@@ -236,7 +236,7 @@ class Jump(AutotuningProcedure):
         while new_line_found:
             nb_line_search = 0
             new_line_found = False
-            # Both direction start at the leftmost point
+            # Both directions start at the leftmost point
             up.last_x, up.last_y = start_point
             down.last_x, down.last_y = start_point
             up.is_stuck = down.is_stuck = False  # Unstuck since we are stating at a new location
