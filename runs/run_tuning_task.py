@@ -147,8 +147,8 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
         procedure.plot_step_history(autotuning_result.final_volt_coord, success)
         procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
     elif nb_error_to_plot > 0 and not success and not is_full_scan:
-        procedure.plot_step_history(autotuning_result.final_coord, success)
-        procedure.plot_step_history_animation(autotuning_result.final_coord, success)
+        procedure.plot_step_history(autotuning_result.final_volt_coord, success)
+        procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
         nb_error_to_plot -= 1
 
     return nb_error_to_plot

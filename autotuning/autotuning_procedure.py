@@ -156,6 +156,7 @@ class AutotuningProcedure:
         if len(self._batch_pending) == 0:
             return []
 
+        time_start = perf_counter()
         # Fetch data and ground truths (ground_truth, soft_truth_larger, soft_truth_smaller)
         ground_truths = []
         size_x, size_y = self.patch_size
@@ -168,23 +169,27 @@ class AutotuningProcedure:
             # Oracle use ground truth with full confidence
             predictions = next(zip(*ground_truths))  # Get the ground truth section only (first item of each sublist)
             confidences = [1] * len(ground_truths)
+            time_data_processed = time_data_fetched = perf_counter()
         else:
+            time_data_fetched = perf_counter()
             with torch.no_grad():
                 # Send to the model for inference
                 predictions, confidences = self.model.infer(patches, settings.bayesian_nb_sample_test)
                 # Extract data from GPU and convert to list
                 predictions = predictions.tolist()
                 confidences = confidences.tolist()
+            time_data_processed = perf_counter()
 
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
         for (x, y), pred, conf, (truth, truth_larger, truth_smaller) in \
                 zip(self._batch_pending, predictions, confidences, ground_truths):
-            # FIXME: the step history arguments need to be updated to reflect the function refactoring,
-            #  refer to the method is_transition_line
-            self._scan_history.append(
-                StepHistoryEntry((x, y), pred, conf, truth, truth_larger, truth_smaller, step_description))
+            is_above_confidence_threshold = self.model.is_above_confident_threshold(pred, conf)
+            self._scan_history.append(StepHistoryEntry(
+                (x, y), pred, conf, truth, truth_larger, truth_smaller, is_above_confidence_threshold, step_description,
+                time_start, time_data_fetched, time_data_processed
+            ))
 
         self._batch_pending.clear()  # Empty pending
         return list(zip(predictions, confidences))
@@ -546,7 +551,7 @@ class AutotuningProcedure:
         title = f'Tuning {self}: {self.diagram.name}'
         if not is_online:
             file_name += "_GOOD" if success_tuning else "_FAIL"
-            title = "[GOOD] " if success_tuning else "[FAIL] " + title
+            title = ('[GOOD] ' if success_tuning else '[FAIL] ') + title
 
         # Generate a gif and / or video
         plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_volt_coord)
