@@ -579,10 +579,10 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
                             fontsize='xx-large', fontweight='bold')
         for j, class_data in enumerate(cl):
             axs[i, j].imshow(class_data.reshape(settings.patch_size_x, settings.patch_size_y),
-                             interpolation='nearest', cmap='copper')
+                             interpolation='none', cmap=PIXELS_CMAP, origin='lower')
 
             if show_offset and (settings.label_offset_x != 0 or settings.label_offset_y != 0):
-                # Create a rectangle patch that represent offset
+                # Create a rectangle patch that represents offset
                 rect = patches.Rectangle((settings.label_offset_x - 0.5, settings.label_offset_y - 0.5),
                                          settings.patch_size_x - 2 * settings.label_offset_x,
                                          settings.patch_size_y - 2 * settings.label_offset_y,
@@ -609,7 +609,7 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
     :param file_name: The file name of the plot if saved.
     :param confidences: The list of confidence score for the prediction of each sample. If it's a tuple then we assume
      it's (mean, std, entropy).
-    :param show_offset: If True draw the offset rectangle (ignored if both offset x and y are 0)
+    :param show_offset: If True, draw the offset rectangle (ignored if both offset x and y are 0)
     """
     plot_length = ceil(sqrt(len(samples)))
 
@@ -621,7 +621,8 @@ def plot_samples(samples: List, title: str, file_name: str, confidences: List[Un
 
     for i, s in enumerate(samples):
         ax = axs[i // plot_length, i % plot_length]
-        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='nearest', cmap='copper')
+        ax.imshow(s.reshape(settings.patch_size_x, settings.patch_size_y), interpolation='none', cmap=PIXELS_CMAP,
+                  origin='lower')
 
         if confidences:
             # If it's a tuple we assume it is: mean, std, entropy
