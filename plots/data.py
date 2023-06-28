@@ -21,7 +21,7 @@ from utils.misc import get_nb_loader_workers
 from utils.output import save_gif, save_plot, save_video
 from utils.settings import settings
 
-LINE_COLOR = ['blue', 'cyan', 'yellow']
+LINE_COLOR = ['blue', 'yellow', 'green']
 NO_LINE_COLOR = 'tab:red'
 GOOD_COLOR = 'green'
 ERROR_COLOR = 'tab:red'
@@ -151,7 +151,7 @@ def plot_diagram(x_i, y_i,
                     # Import here because of a loop
                     from datasets.qdsd import QDSDLines
                     plt.plot(line_x, line_y, color=LINE_COLOR[nb],
-                             label=f'Line {QDSDLines.classes[nb + 1]} annotation' if i == 0 else None)
+                             label=f'{QDSDLines.classes[nb + 1]} annotation' if i == 0 else None)
                     legend = True
 
     if scan_history is not None and len(scan_history) > 0:
@@ -185,7 +185,7 @@ def plot_diagram(x_i, y_i,
             else:
                 # Patch color depending on the inferred class
                 if settings.dot_number == 1:
-                    color = LINE_COLOR[0] if line_detected else NO_LINE_COLOR
+                    color = LINE_COLOR[line_detected - 1] if line_detected else NO_LINE_COLOR
                     label = f'Infer {QDSDLines.classes[line_detected]}'
                 else:
                     color = LINE_COLOR[line_detected - 1] if line_detected else NO_LINE_COLOR

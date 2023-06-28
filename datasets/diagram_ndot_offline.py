@@ -3,10 +3,10 @@ import json
 import platform
 import zipfile
 from pathlib import Path
-from typing import List, Tuple
+from typing import Generator, List, Optional, Tuple
 
 import torch
-from shapely.geometry import Point, Polygon
+from shapely.geometry import LineString, Point, Polygon
 
 from classes.data_structures import ChargeRegime
 from datasets.diagram_offline import DiagramOffline
@@ -16,6 +16,10 @@ from utils.settings import settings
 
 class DiagramOfflineNDot(DiagramOffline):
     """ Handle the diagram data and its annotations for Ndots. """
+
+    # The transition lines annotations
+    # A list of each line [line_1: [...], line_2: [...], etc...]
+    transition_lines: Optional[List[List[LineString]]]
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """
@@ -204,3 +208,58 @@ class DiagramOfflineNDot(DiagramOffline):
             logger.error(f'No diagram loaded in "{zip_dir}"')
 
         return diagrams
+
+    def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),
+                    label_offset: Tuple[int, int] = (0, 0)) -> Generator:
+        """
+        Create patches from diagrams sub-area.
+
+        :param patch_size: The size of the desired patches, in number of pixels (x, y)
+        :param overlap: The size of the patches overlapping, in number of pixels (x, y)
+        :param label_offset: The width of the border to ignore during the patch labeling, in number of pixel (x, y)
+        :return: A generator of patches.
+        """
+        patch_size_x, patch_size_y = patch_size
+        overlap_size_x, overlap_size_y = overlap
+        label_offset_x, label_offset_y = label_offset
+        diagram_size_y, diagram_size_x = self.values.shape
+
+        # Extract each patches
+        i = 0
+        for patch_y in range(0, diagram_size_y - patch_size_y, patch_size_y - overlap_size_y):
+            # Patch coordinates (indexes)
+            start_y = patch_y
+            end_y = patch_y + patch_size_y
+            # Patch coordinates (voltage)
+            start_y_v = self.y_axes[start_y + label_offset_y]
+            end_y_v = self.y_axes[end_y - label_offset_y]
+            for patch_x in range(0, diagram_size_x - patch_size_x, patch_size_x - overlap_size_x):
+                i += 1
+                # Patch coordinates (indexes)
+                start_x = patch_x
+                end_x = patch_x + patch_size_x
+                # Patch coordinates (voltage) for label area
+                start_x_v = self.x_axes[start_x + label_offset_x]
+                end_x_v = self.x_axes[end_x - label_offset_x]
+
+                # Create patch shape to find line intersection
+                patch_shape = Polygon([(start_x_v, start_y_v),
+                                       (end_x_v, start_y_v),
+                                       (end_x_v, end_y_v),
+                                       (start_x_v, end_y_v)])
+
+                # Extract patch value
+                # Invert Y axis because the diagram origin (0,0) is top left
+                patch = self.values[diagram_size_y - end_y:diagram_size_y - start_y, start_x:end_x]
+                # Label is True if any line intersect the patch shape
+                labels = []
+                for transition_lines in self.transition_lines:
+                    labels.append(any([line.intersects(patch_shape) for line in transition_lines]))
+
+                # Verification plots
+                # plot_diagram(self.x[start_x:end_x], self.y[start_y:end_y],
+                #              self.values[diagram_size_y-end_y:diagram_size_y-start_y, start_x:end_x],
+                #              self.name + f' - patch {i:n} - line {label} - REAL',
+                #              'nearest', self.x[1] - self.x[0])
+                # self.plot((start_x_v, end_x_v, start_y_v, end_y_v), f' - patch {i:n} - line {label}')
+                yield patch, labels

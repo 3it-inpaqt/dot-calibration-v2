@@ -429,7 +429,8 @@ class Settings:
         assert self.checkpoints_after_updates >= 0, 'The number of updates per checkpoints should be >= 0'
 
         # Autotuning
-        procedures_allow = ('random', 'shift', 'shift_u', 'jump', 'jump_u', 'full', 'jump_ndots', 'sanity_check')
+        procedures_allow = (
+            'random', 'shift', 'shift_u', 'jump', 'jump_u', 'full', 'jump_ndots', 'jump_pdot', 'sanity_check')
         for procedure in self.autotuning_procedures:
             assert isinstance(procedure, str) and procedure.lower() in procedures_allow, \
                 f'Invalid autotuning procedure name {procedure}'

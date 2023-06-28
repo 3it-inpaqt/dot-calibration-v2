@@ -19,9 +19,9 @@ for dot in range(1, settings.dot_number + 1):
     count = 0
     for regime in regimes:
         if count <= 1:
-            ChargeRegime[f'{regime}_electron_{dot}'] = f'{regime}_{dot}'
+            ChargeRegime[f'{regime}_electron_{dot}'] = f'{regime}'
         else:
-            ChargeRegime[f'{regime}_electrons_{dot}'] = f'{regime}_{dot}'
+            ChargeRegime[f'{regime}_electrons_{dot}'] = f'{regime}'
         count += 1
 
 
@@ -130,7 +130,10 @@ class AutotuningResult:
     @property
     def is_success_tuning(self):
         success_list = [ChargeRegime[f'1_electron_{dot}'] for dot in range(1, settings.dot_number + 1)]
-        return self.charge_area == success_list
+        if len(success_list) == 1:
+            return self.charge_area == success_list[0]
+        else:
+            return self.charge_area == success_list
 
     @property
     def success_rate(self):

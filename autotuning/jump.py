@@ -10,7 +10,7 @@ from utils.settings import settings
 class Jump(AutotuningProcedure):
     # Exploration limits
     _max_steps_exploration: int = 1000  # Nb of step
-    _max_steps_search_empty: int = 100  # Nb of step
+    _max_steps_search_empty: int = 200  # Nb of step
     _max_line_explore_right: int = 5  # Nb detected lines
     _max_steps_validate_line: int = 100  # Nb steps
     _max_steps_validate_left_line: int = 100  # Nb steps
@@ -163,6 +163,7 @@ class Jump(AutotuningProcedure):
 
         # Reset to starting point
         self.move_to_coord(start_x, start_y)
+        logger.debug(f'End search line slope')
 
     def _search_empty(self) -> None:
         """

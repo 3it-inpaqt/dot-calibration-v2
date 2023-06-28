@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 from pandas import DataFrame
@@ -8,11 +9,13 @@ from utils.settings import settings
 
 
 def plot_autotuning_results(results, overall) -> None:
-
     # Convert to dataframe to please seaborn
     df = DataFrame(results[1:], columns=results[0])
-    # Compute steps stats
-    avg_steps = df['Steps'].mean()
+    # average step
+    ave_step = np.array([int(i[1]) for i in results[1:]])
+    ave_step = ave_step.mean()
+    ave_line_success = np.array([int(i[2]) for i in results[1:]])
+    ave_line_success = ave_line_success.mean()
     # Remove useless columns
     df = df.loc[:, ['Diagram'] + [str(r) for r in area_legend()]]
     # One row per regime and diagram
@@ -20,8 +23,8 @@ def plot_autotuning_results(results, overall) -> None:
     # Plot
     plot = sns.barplot(x='Number of electrons', y='Quantity', data=df, saturation=.7,
                        palette=['grey', 'tab:red', 'tab:green', 'tab:red', 'tab:red', 'tab:red'])
-    plot.set_title(f'Final dot regime after autotuning.\nAverage steps: {avg_steps:.1f} '
-                   f'({results[1][2]:.1%} line detection success)')
+    plot.set_title(f'Final dot regime after autotuning.\nAverage steps: {ave_step:.1f} '
+                   f'({ave_line_success:.1%} line detection success)')
 
     save_plot(f'autotuning_results')
 
@@ -29,6 +32,13 @@ def plot_autotuning_results(results, overall) -> None:
 def plot_autotuning_results_NDots(results) -> None:
     # Convert to dataframe to please seaborn
     df_log = DataFrame(results[1:], columns=results[0])
+
+    # average step
+    ave_step = np.array([int(i[1]) for i in results[1:]])
+    ave_step = ave_step.mean()
+    ave_line_success = np.array([int(i[2]) for i in results[1:]])
+    ave_line_success = ave_line_success.mean()
+
     df_log = df_log.loc[:, ['Diagram'] + area_legend()]
     # One row per regime and diagram
     df_log = df_log.melt(id_vars=['Diagram'], var_name='Number of electrons', value_name='Quantity')
@@ -37,41 +47,42 @@ def plot_autotuning_results_NDots(results) -> None:
                results[0][6:]]
 
     plot = sns.barplot(x='Number of electrons', y='Quantity', data=df_log, saturation=.7, palette=palette)
-    plot.set_title(f'Final dot regime after autotuning.\nAverage steps: {results[1][1]:.1f} '
-                   f'({results[1][2]:.1%} line detection success)')
+    plot.set_title(f'Final dot regime after autotuning.\nAverage steps: {ave_step:.1f} '
+                   f'({ave_line_success:.1%} line detection success)')
 
     save_plot(f'autotuning_results')
-    ### table ###
 
-    data, legend = decompose_axis(results)
-    columns = legend[1]
-    rows = legend[0]
-    # print('data = ', data, '\ncolumns = ', columns, '\nline = ', rows)
-    plot, ax = plt.subplots(1, 1)
-    ax.set_title(f'Final dot regime after autotuning.\nAverage steps: {results[1][1]} '
-                 f'({results[1][2]:.1%} line detection success), Success: {results[1][5]:.1%}%')
-    ax.axis('tight')
-    ax.axis('off')
-    df = pd.DataFrame(data, columns=columns, index=rows)
-    df = df.astype(int)
-    row_colors = ["grey"] * len(df.index)
-    col_colors = ["grey"] * len(df.columns)
-    cell_width = 1.0 / (len(df.columns) + 1)
-    cell_height = 1.0 / (len(df.index) + 1)
+    for result in results[1:]:
+        ### table ###
+        data, legend = decompose_axis([results[0], result])
+        columns = legend[1]
+        rows = legend[0]
+        # print('data = ', data, '\ncolumns = ', columns, '\nline = ', rows)
+        plot, ax = plt.subplots(1, 1)
+        ax.set_title(f'Final dot regime after autotuning.\nAverage steps: {results[1][1]} '
+                     f'({results[1][2]:.1%} line detection success), Success: {results[1][5]:.1%}%')
+        ax.axis('tight')
+        ax.axis('off')
+        df = pd.DataFrame(data, columns=columns, index=rows)
+        df = df.astype(int)
+        row_colors = ["grey"] * len(df.index)
+        col_colors = ["grey"] * len(df.columns)
+        cell_width = 1.0 / (len(df.columns) + 1)
+        cell_height = 1.0 / (len(df.index) + 1)
 
-    table = ax.table(cellText=df.values,
-                     colLabels=df.columns,
-                     rowLabels=df.index,
-                     rowColours=row_colors,
-                     colColours=col_colors,
-                     loc="center",
-                     cellLoc="center",
-                     cellColours=[[plt.cm.Greys(0.3)] * len(df.columns)] * len(df.index))
-    for key, cell in table.get_celld().items():
-        cell.set_height(cell_height)
-        cell.set_width(cell_width)
+        table = ax.table(cellText=df.values,
+                         colLabels=df.columns,
+                         rowLabels=df.index,
+                         rowColours=row_colors,
+                         colColours=col_colors,
+                         loc="center",
+                         cellLoc="center",
+                         cellColours=[[plt.cm.Greys(0.3)] * len(df.columns)] * len(df.index))
+        for key, cell in table.get_celld().items():
+            cell.set_height(cell_height)
+            cell.set_width(cell_width)
 
-    save_plot(f'autotuning_results-table')
+        save_plot(f'autotuning_results-table_{result[0]}')
 
 def decompose_axis(result):
     data = result[1][6:]

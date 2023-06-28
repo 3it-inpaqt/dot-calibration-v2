@@ -9,6 +9,7 @@ from autotuning.full_scan import FullScan
 from autotuning.jump import Jump
 from autotuning.jump_ndots import JumpNDots
 from autotuning.jump_uncertainty import JumpUncertainty
+from autotuning.parasit_dot import selection_parasitdot_procedure
 from autotuning.random_baseline import RandomBaseline
 from autotuning.sanity_check import SanityCheck
 from autotuning.shift import Shift
@@ -138,6 +139,8 @@ def init_procedure(model: Optional[Classifier], procedure_name: str) -> Autotuni
         return JumpUncertainty(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'jump_ndots':
         return JumpNDots(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+    elif procedure_name == 'jump_pdot':
+        return selection_parasitdot_procedure(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'full':
         return FullScan(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'sanity_check':
@@ -198,7 +201,7 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
     # Definition charge_areas
     ChargeRegime_area = area_legend()
     headers += ['Diagram', 'Steps', 'Model Success'] + ['Good', 'Bad', 'Tuning Success'] + ChargeRegime_area
-    target_regime = '1_1' if settings.dot_number == 1 else str(tuple([1] * settings.dot_number))
+    target_regime = '1' if settings.dot_number == 1 else str(tuple([1] * settings.dot_number))
 
     results_table = [headers]
     # Process counter of each diagram
@@ -218,7 +221,7 @@ def save_show_final_results(autotuning_results: Dict[Tuple[str, str], List[Autot
             model_success = nb_good_inference / nb_steps
         else:
             model_success = 0
-        overall['steps'] += nb_steps / settings.autotuning_nb_iteration
+        overall['steps'] += int(nb_steps / settings.autotuning_nb_iteration)
         overall['good'] += nb_good_inference
         nb_good_regime = regimes[target_regime]
         nb_total = len(tuning_results)
