@@ -489,6 +489,7 @@ class AutotuningProcedure:
         values, x_axes, y_axes = d.get_values()
         is_online = isinstance(d, DiagramOnline)
         transition_lines = None if is_online else d.transition_lines
+        diagram_boundaries = d.get_cropped_boundaries() if is_online else None
 
         file_name = f'tuning_{self}_{self.diagram.name}'
         title = f'Tuning {self}: {self.diagram.name}'
@@ -499,7 +500,7 @@ class AutotuningProcedure:
         # Base arguments for all plots
         common_kwargs = dict(
             x_i=x_axes, y_i=y_axes, title=title, transition_lines=transition_lines, scan_history=self._scan_history,
-            final_volt_coord=final_volt_coord, scale_bar=True
+            final_volt_coord=final_volt_coord, scale_bar=True, diagram_boundaries=diagram_boundaries
         )
 
         # Parallel plotting for speed

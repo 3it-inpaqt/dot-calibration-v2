@@ -114,7 +114,7 @@ class SanityCheck(AutotuningProcedure):
             self.move_to_coord(x=x, y=y)
             self.is_transition_line()
 
-            # We expect to find 2 valid directions at each corner
+            # We expect to find 2 valid directions in each corner
             directions = {
                 'up': Direction(last_x=x, last_y=y, move=self.move_up, check_stuck=self.is_max_up),
                 'right': Direction(last_x=x, last_y=y, move=self.move_right, check_stuck=self.is_max_right),
@@ -128,7 +128,7 @@ class SanityCheck(AutotuningProcedure):
                 # Go back at the corner position
                 self.move_to_coord(direction.last_x, direction.last_y)
 
-                # Since we are at the corner, we expect to skip 2 directions
+                # Since we are in the corner, we expect to skip 2 directions
                 if direction.check_stuck():
                     continue
 
@@ -153,4 +153,4 @@ class SanityCheck(AutotuningProcedure):
         file_name = f'tuning_{self}_{self.diagram.name}'
         title = f'Tuning {self}: {self.diagram.name}'
         # Generate a gif and / or video
-        plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_coord, False)
+        plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_coord)

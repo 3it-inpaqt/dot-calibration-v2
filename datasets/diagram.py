@@ -124,13 +124,10 @@ class Diagram:
         raise NotImplementedError
 
     @abstractmethod
-    def plot(self, label_extra: Optional[str] = '') -> None:
+    def plot(self) -> None:
         """
         Plot the diagram with matplotlib (save and/or show it depending on the settings).
         This method is a shortcut of plots.diagram.plot_diagram.
-
-        :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
-        :param label_extra: Optional extra information for the plot label.
         """
         raise NotImplementedError
 

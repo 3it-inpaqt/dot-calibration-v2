@@ -1,6 +1,6 @@
 from math import prod
 from random import randrange
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -111,7 +111,10 @@ class DiagramOnline(Diagram):
         # Normalize the measurement with the normalization range used during the training, then return it.
         return self.normalize(measurement.data) if normalized else measurement.data
 
-    def plot(self, label_extra: Optional[str] = '') -> None:
+    def plot(self) -> None:
+        """
+        Plot or update the last image of the diagram.
+        """
         values, x_axes, y_axes = self.get_values()
         focus_area = False
         if self._measurement_history and len(self._measurement_history) > 0:
@@ -119,7 +122,8 @@ class DiagramOnline(Diagram):
             focus_area = (last_m.x_axes[0], last_m.x_axes[-1], last_m.y_axes[0], last_m.y_axes[-1])
 
         plot_diagram(x_axes, y_axes, values, title=f'Online diagram {self.name}', focus_area_title='Last measurement',
-                     allow_overwrite=True, focus_area=focus_area, file_name=f'diagram_{self.name}')
+                     allow_overwrite=True, focus_area=focus_area, file_name=f'diagram_{self.name}',
+                     diagram_boundaries=self.get_cropped_boundaries())
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """

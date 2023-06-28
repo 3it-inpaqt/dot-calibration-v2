@@ -78,10 +78,17 @@ def _get_layout(show_focus_area_ax, show_text_ax, show_legend_ax):
 
 def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Optional[Tensor], title: Optional[str],
                      scan_history: List["StepHistoryEntry"], fog_of_war: bool, scale_bar: bool, vmin: float,
-                     vmax: float, axes_matching: List[float]) -> None:
+                     vmax: float, axes_matching: List[float],
+                     diagram_boundaries: Optional[Tuple[float, float, float, float]]) -> None:
     # Subplot title
     if title:
         ax.set_title(title)
+
+    # If defined, set boundaries for the diagram axis
+    if diagram_boundaries:
+        x_start_v, x_end_v, y_start_v, y_end_v = diagram_boundaries
+        ax.set_xlim(x_start_v, x_end_v)
+        ax.set_ylim(y_start_v, y_end_v)
 
     # If no pixels provided, plot a blank image to allow other information on the same format
     if pixels is None:
@@ -255,11 +262,13 @@ def _plot_text_ax(text_ax, text: str):
 
 def _plot_final_coord(diagram_ax, focus_area_ax, final_volt_coord: Tuple[float, float]):
     last_x, last_y = final_volt_coord
+    half_p = settings.pixel_size / 2
     for ax, cross_size, lw in ((diagram_ax, 200, 2), (focus_area_ax, 600, 4)):
         if ax:
             # Make white borders using a slightly bigger marker under it
-            ax.scatter(x=last_x, y=last_y, color='w', marker='x', s=cross_size * 1.1, linewidths=lw * 1.5, zorder=9998)
-            ax.scatter(x=last_x, y=last_y, color='fuchsia', marker='x', s=cross_size, label='End',
+            ax.scatter(x=last_x - half_p, y=last_y - half_p, color='w', marker='x', s=cross_size * 1.1,
+                       linewidths=lw * 1.5, zorder=9998)
+            ax.scatter(x=last_x - half_p, y=last_y - half_p, color='fuchsia', marker='x', s=cross_size, label='End',
                        linewidths=lw, zorder=9999)
 
 
@@ -320,6 +329,7 @@ def plot_diagram(x_i: Sequence[float],
                  legend: Optional[bool] = True,
                  vmin: float = None,
                  vmax: float = None,
+                 diagram_boundaries: Optional[Tuple[float, float, float, float]] = None,
                  file_name: str = None,
                  allow_overwrite: bool = False,
                  save_in_buffer: bool = False
@@ -366,6 +376,7 @@ def plot_diagram(x_i: Sequence[float],
     :param legend: If True, add a legend in a subplot at the bottom of the figure.
     :param vmin: If set, define the minimal value of the colorscale of the diagram's pixels.
     :param vmax: If set, define the maximal value of the colorscale of the diagram's pixels.
+    :param diagram_boundaries: If set, define the limits of the main diagram (x_start, x_end, y_start, y_end).
     :param file_name: The name of the output file (without the extension).
     :param allow_overwrite: If True, allow overwriting existing output files.
      If False, add a number to the file name to avoid overwriting.
@@ -386,7 +397,7 @@ def plot_diagram(x_i: Sequence[float],
 
     # Build the main diagram subplot
     _plot_diagram_ax(diagram_ax, x_i, y_i, pixels, title, scan_history, fog_of_war, scale_bar, vmin, vmax,
-                     axes_matching)
+                     axes_matching, diagram_boundaries)
 
     # Show labels if provided
     if charge_regions or transition_lines:
@@ -775,16 +786,15 @@ def plot_diagram_old(x_i, y_i,
 
 
 def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_history: List["StepHistoryEntry"],
-                                final_volt_coord: Tuple[float, float], show_crosses: bool = True) -> None:
+                                final_volt_coord: Tuple[float, float]) -> None:
     """
     Plot an animation of the tuning procedure.
 
     :param d: The diagram to plot.
-    :param image_name: The name of the image, used for plot title and file name
-    :param scan_history: The tuning steps history (see StepHistoryEntry dataclass)
+    :param title: The title of the main plot.
+    :param image_name: The name of the image, used for plot title and file name.
+    :param scan_history: The tuning steps history (see StepHistoryEntry dataclass).
     :param final_volt_coord: The final tuning coordinates as volt.
-    :param show_crosses: If True, show the starting and ending crosses on the diagram during the step by step animation.
-        They are shown anyway during the final steps.
     """
 
     if settings.is_named_run() and (settings.save_gif or settings.save_video):
@@ -797,10 +807,10 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
         vmax = np.nanmax(values).item()
         # The final areas where we assume the target regime is
         margin = settings.patch_size_x * settings.pixel_size * 3
-        final_area_start_x = max(final_volt_coord[0] - margin, x_axes[0])
-        final_area_end_x = min(final_volt_coord[0] + margin, x_axes[-1])
-        final_area_start_y = max(final_volt_coord[1] - margin, y_axes[0])
-        final_area_end_y = min(final_volt_coord[1] + margin, y_axes[-1])
+        final_area_start_x = max(final_volt_coord[0] - margin, diagram_boundaries[0] if is_online else x_axes[0])
+        final_area_end_x = min(final_volt_coord[0] + margin, diagram_boundaries[1] if is_online else x_axes[-1])
+        final_area_start_y = max(final_volt_coord[1] - margin, diagram_boundaries[2] if is_online else y_axes[0])
+        final_area_end_y = min(final_volt_coord[1] + margin, diagram_boundaries[3] if is_online else y_axes[-1])
         final_area = (final_area_start_x, final_area_end_x, final_area_start_y, final_area_end_y)
         # Animation speed => Time for an image (ms)
         base_fps = 200
@@ -815,7 +825,8 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
         # Base arguments for final images
         common_kwargs = dict(
             x_i=x_axes, y_i=y_axes, pixels=values, title=title, scan_history=scan_history, focus_area=final_area,
-            focus_area_title='End area', save_in_buffer=True, text=True, vmin=vmin, vmax=vmax
+            focus_area_title='End area', save_in_buffer=True, text=True, vmin=vmin, vmax=vmax,
+            diagram_boundaries=diagram_boundaries
         )
 
         with Pool(get_nb_loader_workers()) as pool:
@@ -825,7 +836,7 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
             async_result_main = pool.map_async(
                 partial(plot_diagram, x_axes, y_axes, values, title, True, None, None, focus_area=True,
                         focus_area_title='Last patch', text=True, scan_history_alpha=8, vmin=vmin, vmax=vmax,
-                        save_in_buffer=True),
+                        save_in_buffer=True, diagram_boundaries=diagram_boundaries),
                 (scan_history[0:i] for i in frame_ids)
             )
 

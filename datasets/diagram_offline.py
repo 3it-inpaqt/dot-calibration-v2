@@ -176,14 +176,12 @@ class DiagramOffline(Diagram):
                                (end_x_v, end_y_v),
                                (start_x_v, end_y_v)])
 
-        # Label is True if any line intersect the patch shape
+        # Label is True if any line intersects the patch shape
         return any([line.intersects(patch_shape) for line in self.transition_lines])
 
-    def plot(self, label_extra: Optional[str] = '') -> None:
+    def plot(self) -> None:
         """
-        Plot the diagram with matplotlib (save and/or show it depending on the settings).
-
-        :param label_extra: Optional extra information for the plot label.
+        Plot the current diagram with matplotlib (save and/or show it depending on the settings).
         """
         # Vanilla plot, no labels
         plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}', transition_lines=None,
