@@ -26,6 +26,6 @@ class FullScan(AutotuningProcedure):
         self.is_transition_line_batch()  # Final group inference
         return 0, 0
 
-    def plot_step_history_animation(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
+    def plot_step_history_animation(self, final_coord: Tuple[float, float], success_tuning: bool) -> None:
         # Never plot animation for this procedure.
         pass

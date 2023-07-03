@@ -87,12 +87,16 @@ class Settings:
     # The file will be at the root of run directory, under then name: "final_network.pt"
     save_network: bool = True
 
-    # If True the diagrams will be plotted when they are loaded.
+    # If True, the diagrams will be plotted when they are loaded.
     # Always skipped if patches are loaded from cache.
     plot_diagrams: bool = True
 
-    # If True the image are saved in a format adapted to latex format (vectorial and no title).
+    # If True, images are saved in a format adapted to latex format (vectorial and no title).
     image_latex_format: bool = False
+
+    # The number of results to plot for each procedure.
+    nb_plot_tuning_fail: int = 5
+    nb_plot_tuning_success: int = 2
 
     # ==================================================================================================================
     # ==================================================== Dataset =====================================================
