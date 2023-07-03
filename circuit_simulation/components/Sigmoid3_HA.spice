@@ -1,0 +1,38 @@
+************************************************************************
+* auCdl Netlist:
+* 
+* Library Name:  RNN_Chip
+* Top Cell Name: RNN_Sigmoid3_HA
+* View Name:     schematic
+* Netlisted on:  Jul  3 13:33:46 2023
+************************************************************************
+
+*.BIPOLAR
+*.RESI = 2000 
+*.RESVAL
+*.CAPVAL
+*.DIOPERI
+*.DIOAREA
+*.EQUATION
+*.LDD
+*.SCALE METER
+*.MEGA
+*.PARAM
+
+
+
+************************************************************************
+* Library Name: RNN_Chip
+* Cell Name:    RNN_Sigmoid3_HA
+* View Name:    schematic
+************************************************************************
+
+.SUBCKT RNN_Sigmoid3_HA VDD VSS Vb Vn Vout Vp
+*.PININFO VDD:B VSS:B Vb:B Vn:B Vout:B Vp:B
+MM12 Vout net08 VSS VSS nch_mac l=180.0n w=4u m=1
+MM11 net08 net08 VSS VSS nch_mac l=180.0n w=4u m=1
+MM2 net08 Vp net011 VDD pch_mac l=1u w=8u m=1
+MM1 Vout Vn net011 VDD pch_mac l=1u w=8u m=1
+MM0 net011 Vb VDD VDD pch_mac l=360.0n w=9u m=1
+.ENDS
+

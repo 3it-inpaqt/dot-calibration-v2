@@ -43,8 +43,8 @@ class FeedForward(ClassifierNN):
                     layer.append(nn.BatchNorm1d(layer_sizes[i + 1]))
                 # Activation function
                 if settings.simulate_circuit:
-                    layer.append(nn.Hardtanh(min_val=0, max_val=1))
-                    # layer.append(nn.ReLU())
+                    # layer.append(nn.Hardtanh(min_val=0, max_val=1))
+                    layer.append(nn.ReLU())
                 else:
                     # layer.append(nn.ReLU())
                     layer.append(nn.Sigmoid())

@@ -7,6 +7,7 @@ import time
 
 from classes.classifier_nn import ClassifierNN
 from circuit_simulation.xyce_simulation import run_circuit_simulation
+from circuit_simulation.generate_netlist import NetlistGenerator
 from utils.logger import logger
 from plots.model_performance import plot_confusion_matrix, plot_analog_vs_digital_before_threshold, \
     plot_analog_before_threshold_hist
@@ -41,6 +42,8 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
     outputs_table = []
     start_time = time.perf_counter()
 
+    netlist_generator = NetlistGenerator(model)
+
     with ProgressBar(hard_limit, task_name='Inferences on circuit simulation', auto_display=True) as progress_bar:
         for i, (input_values, label) in enumerate(test_loader):
 
@@ -49,10 +52,10 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
 
             if nb_process > 1:
                 # Save arguments list to run on the multiprocess pool later
-                job_args.append((model, input_values, label, i==0))
+                job_args.append((model, input_values, label, netlist_generator, i==0))
             else:
                 # Single thread mode, so just run it now
-                outputs_table.append(inference_job(model, input_values, label, i==0))
+                outputs_table.append(inference_job(model, input_values, label, netlist_generator, i==0))
                 progress_bar.incr()
 
         # Start multi-thread pool
@@ -91,7 +94,7 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
     save_inferences(outputs_table)
 
 
-def inference_job(model: ClassifierNN, inputs: torch.tensor, label: torch.tensor, is_first_run: bool):
+def inference_job(model: ClassifierNN, inputs: torch.tensor, label: torch.tensor, netlist_generator: NetlistGenerator, is_first_run: bool):
     """
     Run an independent inference job.
 
@@ -107,7 +110,7 @@ def inference_job(model: ClassifierNN, inputs: torch.tensor, label: torch.tensor
     inputs = torch.flatten(inputs).tolist()
 
     # Run the inference on the simulated circuit
-    sim_results, sim_output_before_thr, sim_output = run_circuit_simulation(model, inputs, is_first_run)
+    sim_results, sim_output_before_thr, sim_output = run_circuit_simulation(netlist_generator, inputs, is_first_run)
 
     return {
         'input': inputs,

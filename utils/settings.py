@@ -349,7 +349,12 @@ class Settings:
     xyce_r_max = 15000
 
     # The read standard deviation of the memristor resistance (% [0,1])
+    # Should be around 0.2%
     xyce_memristor_read_std = 0.0
+
+    # The write standard deviation of the memristor resistance (% [0,1])
+    # Should be around 0.8%
+    xyce_memristor_write_std = 0.008
 
     # The pulse amplitude for the input encoding (V)
     xyce_pulse_amplitude = 0.2

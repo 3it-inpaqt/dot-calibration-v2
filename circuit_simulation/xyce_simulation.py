@@ -12,11 +12,11 @@ import pandas as pd
 from classes.classifier_nn import ClassifierNN
 from utils.settings import settings
 from utils.output import save_netlist, save_xyce_output, save_xyce_results
-from circuit_simulation.generate_netlist import generate_netlist_from_model
+from circuit_simulation.generate_netlist import NetlistGenerator
 from plots.simulation_output import plot_simulation_state_evolution
 
 
-def run_circuit_simulation(model: ClassifierNN, inputs: List, is_first_run: bool):
+def run_circuit_simulation(netlist_generator: NetlistGenerator, inputs: List, is_first_run: bool):
     """
     Generate a netlist according to the model size and parameters, then run the circuit simulation with Xyce as a
     subprocess.
@@ -33,7 +33,7 @@ def run_circuit_simulation(model: ClassifierNN, inputs: List, is_first_run: bool
          The binary output value before threshold.
     """
     # Generate netlist for circuit simulation
-    netlist, nb_layers = generate_netlist_from_model(model, inputs, is_first_run)
+    netlist, nb_layers = netlist_generator.generate_netlist_from_model(inputs, is_first_run)
 
     if is_first_run:
         # Save the netlist

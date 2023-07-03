@@ -139,7 +139,10 @@ XUh{{ (layer_nb + 1)|i }}_sum_{{ neuron_num|i }}    sum_h_in_{{ (layer_nb + 1)|i
 * Layer {{ layer_nb|i }}
     {%- for neuron in layers['weight_{}'.format(layer_nb)] %}{% set neuron_num = loop.index %}
 * Neuron {{ neuron_num }}
-XHardTanh_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} HardTanh PARAMS: V_clip={{ tanh_upper_bound }}
+* XHardTanh_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} HardTanh PARAMS: V_clip={{ tanh_upper_bound }}
+XReLU_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} ReLU
+* .INCLUDE "./components/TestSigmoid3.spice"
+* XSigmoid_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} RNN_Sigmoid3_HA
     {%- endfor %}
 {% endfor %}
 
