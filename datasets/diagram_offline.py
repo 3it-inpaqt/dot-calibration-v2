@@ -1,10 +1,9 @@
 import gzip
 import json
-import platform
 import zipfile
 from pathlib import Path
 from random import randrange
-from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -25,11 +24,14 @@ class DiagramOffline(Diagram):
     transition_lines: Optional[List[LineString]]
 
     # The charge area lines annotations
-    charge_areas: Optional[List[Tuple[type(ChargeRegime), Polygon]]]
+    charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]
+
+    # The list of measured voltage according to the 2 gates, normalized
+    values_norm: Optional[torch.Tensor]
 
     def __init__(self, file_basename: str, x_axes: Sequence[float], y_axes: Sequence[float], values: torch.Tensor,
                  transition_lines: Optional[List[LineString]],
-                 charge_areas: Optional[List[Tuple[type(ChargeRegime), Polygon]]]):
+                 charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]):
         """
         Creat an instance of DiagramOffline based on a diagram file.
 
@@ -45,6 +47,7 @@ class DiagramOffline(Diagram):
         self.x_axes = x_axes
         self.y_axes = y_axes
         self.values = values
+        self.values_norm = None
         self.transition_lines = transition_lines
         self.charge_areas = charge_areas
 
@@ -56,23 +59,22 @@ class DiagramOffline(Diagram):
         max_x, max_y = self.get_max_patch_coordinates()
         return randrange(max_x), randrange(max_y)
 
-    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int], normalized: bool = True) \
+            -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
 
         :param coordinate: The coordinate in the diagram (not the voltage)
-        :param patch_size: The size of the patch to extract (in number of pixel)
+        :param patch_size: The size of the patch to extract (in number of pixels)
+        :param normalized: If True, the patch will be normalized between 0 and 1
         :return: The patch
         """
         coord_x, coord_y = coordinate
         size_x, size_y = patch_size
 
-        diagram_size_y, _ = self.values.shape
-        end_y = coord_y + size_y
-        end_x = coord_x + size_x
+        values = self.values if not normalized else self.values_norm
 
-        # Invert Y axis because the diagram origin (0,0) is top left
-        return self.values[diagram_size_y - end_y:diagram_size_y - coord_y, coord_x:end_x]
+        return values[coord_y:coord_y + size_y, coord_x:coord_x + size_x]
 
     def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),
                     label_offset: Tuple[int, int] = (0, 0)) -> Generator:
@@ -89,7 +91,7 @@ class DiagramOffline(Diagram):
         label_offset_x, label_offset_y = label_offset
         diagram_size_y, diagram_size_x = self.values.shape
 
-        # Extract each patches
+        # Extract each patch
         i = 0
         for patch_y in range(0, diagram_size_y - patch_size_y, patch_size_y - overlap_size_y):
             # Patch coordinates (indexes)
@@ -114,14 +116,13 @@ class DiagramOffline(Diagram):
                                        (start_x_v, end_y_v)])
 
                 # Extract patch value
-                # Invert Y axis because the diagram origin (0,0) is top left
-                patch = self.values[diagram_size_y - end_y:diagram_size_y - start_y, start_x:end_x]
-                # Label is True if any line intersect the patch shape
+                patch = self.values[start_y:end_y, start_x:end_x]
+                # Label is True if any line intersects the patch shape
                 label = any([line.intersects(patch_shape) for line in self.transition_lines])
 
                 # Verification plots
                 # plot_diagram(self.x[start_x:end_x], self.y[start_y:end_y],
-                #              self.values[diagram_size_y-end_y:diagram_size_y-start_y, start_x:end_x],
+                #              self.values[start_y:end_y, start_x:end_x],
                 #              self.name + f' - patch {i:n} - line {label} - REAL',
                 #              'nearest', self.x[1] - self.x[0])
                 # self.plot((start_x_v, end_x_v, start_y_v, end_y_v), f' - patch {i:n} - line {label}')
@@ -175,20 +176,26 @@ class DiagramOffline(Diagram):
                                (end_x_v, end_y_v),
                                (start_x_v, end_y_v)])
 
-        # Label is True if any line intersect the patch shape
+        # Label is True if any line intersects the patch shape
         return any([line.intersects(patch_shape) for line in self.transition_lines])
 
-    def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
+    def plot(self) -> None:
         """
-        Plot the diagram with matplotlib (save and/or show it depending on the settings).
-        This method is a shortcut of plots.diagram.plot_diagram.
-
-        :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
-        :param label_extra: Optional extra information for the plot label.
+        Plot the current diagram with matplotlib (save and/or show it depending on the settings).
         """
-        plot_diagram(self.x_axes, self.y_axes, self.values, self.name + label_extra, 'nearest',
-                     settings.pixel_size, transition_lines=self.transition_lines, charge_regions=self.charge_areas,
-                     focus_area=focus_area, show_offset=False, scale_bar=True)
+        # Vanilla plot, no labels
+        plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}', transition_lines=None,
+                     charge_regions=None, scale_bar=True, file_name=f'diagram_{self.name}', allow_overwrite=True)
+        if self.transition_lines:
+            # With labels lines
+            plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}',
+                         transition_lines=self.transition_lines, charge_regions=None, scale_bar=True,
+                         file_name=f'diagram_{self.name}_lines', allow_overwrite=True)
+        if self.charge_areas:
+            # With labels lines and areas
+            plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}',
+                         transition_lines=self.transition_lines, charge_regions=self.charge_areas, scale_bar=True,
+                         file_name=f'diagram_{self.name}_area', allow_overwrite=True)
 
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'
@@ -210,18 +217,22 @@ class DiagramOffline(Diagram):
         :param single_dot: If True, only the single dot diagram will be loaded, if False only the double dot
         :param diagrams_path: The path to the zip file containing all stability diagrams data.
         :param labels_path: The path to the json file containing line and charge area labels.
-        :param load_lines: If True the line labels should be loaded.
-        :param load_areas: If True the charge area labels should be loaded.
-        :param white_list: If defined, only diagrams with base name include in this list will be loaded (no extension).
-        :return: A list of Diagram objects.
+        :param load_lines: If True, the line labels should be loaded.
+        :param load_areas: If True, the charge area labels should be loaded.
+        :param white_list: If defined, only diagrams with base name included in this list will be loaded (no extension).
+        :return: A list of offline Diagram objects.
         """
 
-        # Open the json file that contains annotations for every diagrams
+        # Open the json file that contains annotations for every diagram
+        labels = dict()
         with open(labels_path, 'r') as annotations_file:
-            labels_json = json.load(annotations_file)
+            # It is a ndjson format, so each line should be a json object
+            for json_row in annotations_file:
+                label_data = json.loads(json_row)
+                diagram_id = label_data['data_row']['external_id']
+                labels[diagram_id] = label_data
 
-        logger.debug(f'{len(labels_json)} labeled diagrams found')
-        labels = {obj['External ID']: obj for obj in labels_json}
+        logger.debug(f'{len(labels)} labeled diagrams found')
 
         # Open the zip file and iterate over all csv files
         # in_zip_path should use "/" separator, no matter the current OS
@@ -244,26 +255,37 @@ class DiagramOffline(Diagram):
                 continue
 
             if f'{file_basename}.png' not in labels:
+                # In case we don't found a row for this diagram
                 logger.debug(f'No label found for {file_basename}')
                 nb_no_label += 1
                 continue
 
-            # Windows needs the 'b' option
-            open_options = 'rb' if platform.system() == 'Windows' else 'r'
-            with diagram_name.open(open_options) as diagram_file:
+            # Filter labels for this diagram and this project
+            try:
+                current_labels = next(
+                    filter(lambda l: l['name'].upper() == 'QDSD', labels[f'{file_basename}.png']['projects'].values())
+                )['labels'][0]['annotations']
+            except StopIteration:
+                # In case, we found a row for this diagram, but no label
+                logger.debug(f'No label found for {file_basename}')
+                nb_no_label += 1
+                continue
+
+            # After python 3.9, it is necessary to specify binary mode for zip open
+            with diagram_name.open(mode='rb') as diagram_file:
                 # Load values from CSV file
                 x, y, values = DiagramOffline._load_interpolated_csv(gzip.open(diagram_file))
 
-                current_labels = labels[f'{file_basename}.png']['Label']
-                label_pixel_size = float(next(filter(lambda l: l['title'] == 'pixel_size_volt',
-                                                     current_labels['classifications']))['answer'])
+                # Extract pixel size used for labeling this diagram (in volt)
+                label_pixel_size = float(next(filter(lambda l: l['name'] == 'pixel_size_volt',
+                                                     current_labels['classifications']))['text_answer']['content'])
                 transition_lines = None
                 charge_area = None
 
                 if load_lines:
                     # Load transition line annotations
                     transition_lines = DiagramOffline._load_lines_annotations(
-                        filter(lambda l: l['title'] == 'line_1', current_labels['objects']), x, y,
+                        filter(lambda l: 'line' in l['name'], current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
 
@@ -276,7 +298,7 @@ class DiagramOffline(Diagram):
                     # TODO adapt for double dot (load N_electron_2 too)
                     # Load charge area annotations
                     charge_area = DiagramOffline._load_charge_annotations(
-                        filter(lambda l: l['title'] != 'line_1', current_labels['objects']), x, y,
+                        filter(lambda l: 'electron' in l['name'], current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
 
@@ -302,11 +324,14 @@ class DiagramOffline(Diagram):
         return diagrams
 
     @staticmethod
-    def _load_interpolated_csv(file_path: Union[IO, str, Path]) -> Tuple:
+    def _load_interpolated_csv(file_path: IO | str | Path | gzip.GzipFile, invert_y_axis: bool = True) -> Tuple:
         """
         Load the stability diagrams from CSV file.
 
         :param file_path: The path to the CSV file or the byte stream.
+        :param invert_y_axis: If True, the y-axis will be inverted. This is necessary when the diagram is saved as an
+         image, because the standard origin is the top left corner for images, while the origin of matrix is usually the
+         bottom left.
         :return: The stability diagram data as a tuple: x, y, values
         """
         compact_diagram = np.loadtxt(file_path, delimiter=',')
@@ -315,6 +340,9 @@ class DiagramOffline(Diagram):
 
         # Remove the information row
         values = np.delete(compact_diagram, 0, 0)
+
+        if invert_y_axis:
+            values = np.flip(values, axis=0).copy()
 
         # Reconstruct the axes
         x = np.arange(values.shape[1]) * step + x_start
@@ -348,7 +376,7 @@ class DiagramOffline(Diagram):
 
     @staticmethod
     def _load_charge_annotations(charge_areas: Iterable, x, y, pixel_size: float, snap: int = 1) \
-            -> List[Tuple[type(ChargeRegime), Polygon]]:
+            -> List[Tuple[ChargeRegime, Polygon]]:
         """
         Load regions annotation for an image.
 
@@ -368,7 +396,8 @@ class DiagramOffline(Diagram):
                                                    True)
 
             area_obj = Polygon(zip(area_x, area_y))
-            processed_areas.append((ChargeRegime[area['title']], area_obj))
+            processed_areas.append((ChargeRegime(area['name']), area_obj))
+
         return processed_areas
 
     @staticmethod
@@ -384,5 +413,5 @@ class DiagramOffline(Diagram):
         min_value, max_value = load_normalization()
 
         for diagram in diagrams:
-            diagram.values -= min_value
-            diagram.values /= max_value - min_value
+            diagram.values_norm = diagram.values - min_value
+            diagram.values_norm /= max_value - min_value

@@ -97,6 +97,11 @@ class PyHegel(Connector):
         out_file = get_new_measurement_out_file_path(f'{self._nb_measurement:03}_'
                                                      f'{start_volt_x:.4f}V_{start_volt_y:.4f}V')
 
+        # Internally pyHegel use np.linespace which include the last point.
+        # So we manually exclude the last point for compatibility with the other part of the code.
+        end_volt_x -= step_volt_x
+        end_volt_y -= step_volt_y
+
         # Send the command to pyHegel, block the process until it's done.
         self._send_command(
             f"sweep_multi([G1,G2], "

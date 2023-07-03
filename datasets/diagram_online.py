@@ -1,6 +1,6 @@
 from math import prod
 from random import randrange
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -33,10 +33,11 @@ class DiagramOnline(Diagram):
         self._norm_min_value, self._norm_max_value = load_normalization()
 
         # Create a virtual axes and discret grid that represent the voltage space to explore.
-        # Where NaN values represent the voltage that have not been measured yet.
+        # Where NaN values represent the voltage space that has not been measured yet.
+        # The min value is included but not the max value (to match with python standards).
         space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
-        self.x_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
-        self.y_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
+        self.x_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
+        self.y_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
         self.values = torch.full((space_size, space_size), torch.nan)
 
     def get_random_starting_point(self) -> Tuple[int, int]:
@@ -63,12 +64,14 @@ class DiagramOnline(Diagram):
         # Generate random coordinates inside the range
         return randrange(min_x, max_x), randrange(min_y, max_y)
 
-    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int], normalized: bool = True) \
+            -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
 
         :param coordinate: The coordinate in the diagram (not the voltage)
-        :param patch_size: The size of the patch to extract (in number of pixel)
+        :param patch_size: The size of the patch to extract (in number of pixels)
+        :param normalized: If True, the patch will be normalized between 0 and 1
         :return: The patch.
         """
         x_patch, y_patch = patch_size
@@ -82,8 +85,8 @@ class DiagramOnline(Diagram):
 
         # Request a new measurement to the connector
         logger.debug(f'Requesting measurement ({prod(patch_size):,d} points) to the {self._connector} connector: '
-                     f'|X|{x_start}->{x_end}| ({x_start_v:.3f}V->{x_end_v:.3f}V) '
-                     f'|Y|{y_start}->{y_end}| ({y_start_v:.3f}V->{y_end_v:.3f}V)')
+                     f'|X|{x_start}->{x_end}| ({x_start_v:.4f}V->{x_end_v:.4f}V) '
+                     f'|Y|{y_start}->{y_end}| ({y_start_v:.4f}V->{y_end_v:.4f}V)')
         measurement = self._connector.measurement(x_start_v, x_end_v, settings.pixel_size,
                                                   y_start_v, y_end_v, settings.pixel_size)
 
@@ -98,21 +101,29 @@ class DiagramOnline(Diagram):
         self._measurement_history.append(measurement)
         # Send the data matrix to the same device as the values
         measurement.to(self.values.device)
-        # Save the measurement in the grid (invert y-axis because the diagram origin is in the top left corner)
-        diagram_size_y, _ = self.values.shape
-        self.values[diagram_size_y - y_end:diagram_size_y - y_start, x_start: x_end] = measurement.data
+        # Save the measurement in the grid
+        self.values[y_start:y_end, x_start: x_end] = measurement.data
 
         # Plot the diagram with all current measurements
         if settings.is_named_run() and (settings.save_images or settings.show_images):
             self.plot()
 
         # Normalize the measurement with the normalization range used during the training, then return it.
-        return self.normalize(measurement.data)
+        return self.normalize(measurement.data) if normalized else measurement.data
 
-    def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
-        values, x_axes, y_axes = self.get_cropped_values()
-        plot_diagram(x_axes, y_axes, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
-                     focus_area=focus_area, allow_overwrite=True)
+    def plot(self) -> None:
+        """
+        Plot or update the last image of the diagram.
+        """
+        values, x_axes, y_axes = self.get_values()
+        focus_area = False
+        if self._measurement_history and len(self._measurement_history) > 0:
+            last_m = self._measurement_history[-1]
+            focus_area = (last_m.x_axes[0], last_m.x_axes[-1], last_m.y_axes[0], last_m.y_axes[-1])
+
+        plot_diagram(x_axes, y_axes, values, title=f'Online diagram {self.name}', focus_area_title='Last measurement',
+                     allow_overwrite=True, focus_area=focus_area, file_name=f'diagram_{self.name}',
+                     diagram_boundaries=self.get_cropped_boundaries())
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """
@@ -137,11 +148,11 @@ class DiagramOnline(Diagram):
         measurement /= self._norm_max_value - self._norm_min_value
         return measurement
 
-    def get_cropped_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
+    def get_cropped_boundaries(self) -> Tuple[float, float, float, float]:
         """
-        Get the values of the diagram, cropped to the measured area.
+        Get the coordinates of the diagram that crop to the measured area.
 
-        :return: The values as a tensor, the list of x-axis values, the list of y-axis values.
+        :return: Voltages of the cropped boundaries as: x_start, x_end, y_start, y_end.
         """
         values, x_axis, y_axis = self.get_values()
         # Crop the nan values from the image (not measured area)
@@ -162,7 +173,7 @@ class DiagramOnline(Diagram):
         margin = settings.patch_size_x
         first_col = max(0, first_col - margin)
         first_row = max(0, first_row - margin)
-        last_col = min(last_col + margin, len(x_axis))
-        last_row = min(last_row + margin, len(y_axis))
+        last_col = min(last_col + margin, len(x_axis) - 1)
+        last_row = min(last_row + margin, len(y_axis) - 1)
 
-        return values[first_row:last_row, first_col:last_col], x_axis[first_col:last_col], y_axis[first_row:last_row]
+        return x_axis[first_col], x_axis[last_col], y_axis[first_row], y_axis[last_row]

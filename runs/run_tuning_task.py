@@ -80,30 +80,8 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
 
                     # Save result and log
                     autotuning_results[(procedure_name, diagram.name)].append(result)
-                    force_save_list_iteration = [2126, 2127, 2128]
-                    force_save_list_charge_area = [
-                        # ['2_1', '0_2'], ['0_1', '2_2'],
-                        # ['2_1', '1_2'], ['1_1', '2_2'],
-                        # ['2_1', '2_2'], ['2_1', '2_2'],
-                        # ['2_1', '3_2'], ['3_1', '2_2'],
-                        # ['2_1', '4+_2'], ['4+_1', '2_2'],
-                        ['3_1', '0_2'], ['0_1', '3_2'],
-                        ['3_1', '1_2'], ['1_1', '3_2'],
-                        ['3_1', '2_2'], ['2_1', '3_2'],
-                        ['3_1', '3_2'], ['3_1', '3_2'],
-                        ['3_1', '4+_2'], ['4+_1', '3_2'],
-                        ['4+_1', '0_2'], ['0_1', '4+_2'],
-                        ['4+_1', '1_2'], ['1_1', '4+_2'],
-                        ['4+_1', '2_2'], ['2_1', '4+_2'],
-                        ['4+_1', '3_2'], ['3_1', '4+_2'],
-                        ['4+_1', '4+_2'], ['4+_1', '4+_2']
-                    ]
-                    if i in force_save_list_iteration or result.charge_area in force_save_list_charge_area:
-                        nb_error_to_plot, nb_good_to_plot \
-                            = save_show_results(result, procedure, True, nb_error_to_plot, nb_good_to_plot)
-                    else:
-                        nb_error_to_plot, nb_good_to_plot \
-                            = save_show_results(result, procedure, False, nb_error_to_plot, nb_good_to_plot)
+                    nb_error_to_plot, nb_good_to_plot \
+                        = save_show_results(result, procedure, False, nb_error_to_plot, nb_good_to_plot)
 
                     progress.incr()
 
@@ -164,24 +142,26 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
     """
 
     success = autotuning_result.is_success_tuning
+    is_full_scan = isinstance(procedure, FullScan)
 
     # Log information
     logger.debug(f'End tuning {procedure.diagram.name} in {autotuning_result.nb_steps} steps '
                  f'({autotuning_result.success_rate:.1%} success). '
-                 f'Final coordinates: {autotuning_result.final_coord} => {autotuning_result.charge_area} e '
+                 f'Final coordinates: {autotuning_result.final_volt_coord} => {autotuning_result.charge_area} e '
                  f'{"[Good]" if success else "[Bad]"}')
 
+    # Plot tuning steps for the first round and some error samples
     # Plot some error and good samples
     if (not success and nb_error_to_plot > 0) or (success and nb_good_to_plot > 0):
-        procedure.plot_step_history(autotuning_result.final_coord, success)
-        procedure.plot_step_history_animation(autotuning_result.final_coord, success)
+        procedure.plot_step_history(autotuning_result.final_volt_coord, success)
+        procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
         if not success:
             nb_error_to_plot -= 1
         else:
             nb_good_to_plot -= 1
-    elif force_save:
-        procedure.plot_step_history(autotuning_result.final_coord, success)
-        procedure.plot_step_history_animation(autotuning_result.final_coord, success)
+    elif force_save or is_full_scan:
+        procedure.plot_step_history(autotuning_result.final_volt_coord, success)
+        procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
 
     return nb_error_to_plot, nb_good_to_plot
 

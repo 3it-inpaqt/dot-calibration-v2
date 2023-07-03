@@ -9,11 +9,10 @@ from utils.settings import settings
 
 class Jump(AutotuningProcedure):
     # Exploration limits
-    _max_steps_exploration: int = 1000  # Nb of step
-    _max_steps_search_empty: int = 200  # Nb of step
+    _max_steps_exploration: int = 1000  # Nb of steps
+    _max_steps_search_empty: int = 100  # Nb of steps
     _max_line_explore_right: int = 5  # Nb detected lines
-    _max_steps_validate_line: int = 100  # Nb steps
-    _max_steps_validate_left_line: int = 100  # Nb steps
+    _max_steps_validate_left_line: int = 250  # Nb steps
     _max_nb_leftmost_checking: int = 6
 
     _nb_line_found: int = 0
@@ -21,9 +20,8 @@ class Jump(AutotuningProcedure):
     _line_slope: float = None
     # List of distance between lines in pixel
     _line_distances: List[int] = None
-    # Coordinate of the leftmost  and bottommost line found so far
+    # Coordinate of the leftmost line found so far
     _leftmost_line_coord: Optional[Tuple[int, int]] = None
-    _bottommost_line_coord: Optional[Tuple[int, int]] = None
 
     def _tune(self) -> Tuple[int, int]:
         # Search first line, if none found return a random position
@@ -239,7 +237,7 @@ class Jump(AutotuningProcedure):
         while new_line_found:
             nb_line_search = 0
             new_line_found = False
-            # Both direction start at the leftmost point
+            # Both directions start at the leftmost point
             up.last_x, up.last_y = start_point
             down.last_x, down.last_y = start_point
             up.is_stuck = down.is_stuck = False  # Unstuck since we are stating at a new location
@@ -260,7 +258,7 @@ class Jump(AutotuningProcedure):
                     # Skip half line distance left
                     self._move_left_perpendicular_to_line(ceil(self._default_step_x * line_step_distance / 2))
 
-                    # Go left for 2x the line distance (total 2x the line distance)
+                    # Go left for 2x the line distance (total 2.5x the line distance)
                     for i in range(ceil(line_step_distance * 2)):
                         nb_steps += 1
                         # If new line found and this is the new leftmost one, start again the checking loop
@@ -342,31 +340,7 @@ class Jump(AutotuningProcedure):
         # Check if the current position is at the left (https://math.stackexchange.com/a/1896651/1053890)
         y_line = m * self.x + b
         y_delta = y_line - self.y
-        return (y_delta > 0 > m) or (y_delta < 0 < m)
-
-    def _is_bottom_relative_to_line(self) -> bool:
-        """
-        Check if the current position is at the bottom of the bottommost line found so far, considering the line angle.
-
-        :return: True if the current position should be considered as the new bottommost point.
-        """
-        x, y = self._bottommost_line_coord
-        # Error margin to avoid unnecessary updates
-        x -= self._default_step_x
-        y -= self._default_step_y
-
-        # Special condition for 0° (horizontal line)  and 90° because tan(90) is undefined
-        if self._line_slope == 0 or self._line_slope == 90:
-            return self.y < y
-
-        # Reconstruct line equation (y = m*x + b)
-        m = tan(radians(-self._line_slope))  # Inverted angle because the setup is wierd
-        b = y - (x * m)
-
-        # Check if the current position is at the left (https://math.stackexchange.com/a/1896651/1053890)
-        y_line = m * self.x + b
-        y_delta = y_line - self.y
-        return y_delta > 0
+        return (y_delta > 0 and m < 0) or (y_delta < 0 and m > 0)
 
     def _move_relative_to_line(self, angle: float, step_size: Optional[int] = None) -> None:
         """
@@ -457,18 +431,6 @@ class Jump(AutotuningProcedure):
 
         return f'{x_volt:.2f}V,{y_volt:.2f}V'
 
-    def _get_bottommost_line_coord_str(self) -> str:
-        """
-        :return: Bottommost coordinates with volt conversion.
-        """
-        if self._bottommost_line_coord is None:
-            return 'None'
-
-        x, y = self._bottommost_line_coord
-        x_volt, y_volt = self.diagram.coord_to_voltage(x, y)
-
-        return f'{x_volt:.2f}V,{y_volt:.2f}V'
-
     def reset_procedure(self):
         super().reset_procedure()
 
@@ -490,5 +452,4 @@ class Jump(AutotuningProcedure):
             self._line_slope = 45  # Prior assumption about line direction
             self._line_distances = [4]  # Prior assumption about distance between lines
 
-        self._bottommost_line_coord = None
         self._leftmost_line_coord = None

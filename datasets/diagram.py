@@ -48,7 +48,7 @@ class Diagram:
 
         :return: The maximum coordinates as (x, y)
         """
-        return len(self.x_axes) - settings.patch_size_x - 1, len(self.y_axes) - settings.patch_size_y - 1
+        return len(self.x_axes) - settings.patch_size_x, len(self.y_axes) - settings.patch_size_y
 
     def voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
         """
@@ -60,17 +60,38 @@ class Diagram:
         """
         return round(((x - self.x_axes[0]) / settings.pixel_size)), round(((y - self.y_axes[0]) / settings.pixel_size))
 
-    def coord_to_voltage(self, x: int, y: int) -> Tuple[float, float]:
+    def coord_to_voltage(self, x: int, y: int, clip_in_diagram: bool = False) -> Tuple[float, float]:
         """
         Convert a coordinate in the diagram to a voltage.
 
         :param x: The coordinate (x axes) to convert.
         :param y: The coordinate (y axes) to convert.
+        :param clip_in_diagram: If True and the coordinates are not in the diagram, the coordinate will be clipped to
+            the closest value in the diagram before to convert them to volt. If True and the coordinates are not in
+            the diagram, the pixel size will be used to convert them to volt.
         :return: The voltage (x, y) in this diagram.
         """
-        x_volt = self.x_axes[0] + x * settings.pixel_size
-        y_volt = self.y_axes[0] + y * settings.pixel_size
-        return x_volt, y_volt
+        if 0 <= x < len(self.x_axes):
+            # If possible use the axes values
+            x_v = self.x_axes[x]
+        elif clip_in_diagram:
+            # If outside the range, clip to the closest value
+            x_v = self.x_axes[0] if x < 0 else self.x_axes[-1]
+        else:
+            # If no clipping, use the pixel size
+            x_v = self.x_axes[0] + x * settings.pixel_size
+
+        if 0 <= y < len(self.y_axes):
+            # If possible use the axes values
+            y_v = self.y_axes[y]
+        elif clip_in_diagram:
+            # If outside the range, clip to the closest value
+            y_v = self.y_axes[0] if y < 0 else self.y_axes[-1]
+        else:
+            # If no clipping, use the pixel size
+            y_v = self.y_axes[0] + y * settings.pixel_size
+
+        return x_v, y_v
 
     def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
         """
@@ -90,24 +111,23 @@ class Diagram:
         raise NotImplementedError
 
     @abstractmethod
-    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int], normalized: bool = True) \
+            -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
 
         :param coordinate: The coordinate in the diagram (not the voltage)
-        :param patch_size: The size of the patch to extract (in number of pixel)
+        :param patch_size: The size of the patch to extract (in number of pixels)
+        :param normalized: If True, the patch will be normalized between 0 and 1
         :return: The patch.
         """
         raise NotImplementedError
 
     @abstractmethod
-    def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
+    def plot(self) -> None:
         """
         Plot the diagram with matplotlib (save and/or show it depending on the settings).
         This method is a shortcut of plots.diagram.plot_diagram.
-
-        :param focus_area: Optional coordinates to restrict the plotting area. A Tuple as (x_min, x_max, y_min, y_max).
-        :param label_extra: Optional extra information for the plot label.
         """
         raise NotImplementedError
 

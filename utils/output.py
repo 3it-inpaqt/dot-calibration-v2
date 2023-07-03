@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, List, Optional, Tuple, Union
 
-import imageio
+import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -176,9 +176,12 @@ def get_save_path(directory: Path, file_name: str, extension: str, allow_overwri
     :return: The file path.
     """
 
+    # Clean the file name
+    file_name = re.sub(r'[\s\\/()_]+', '_', file_name.lower().strip())
+
     save_path = Path(directory, f'{file_name}.{extension}')
 
-    # Check if file exist and rename if we want to avoid overwriting
+    # Check if file exists and renames if we want to avoid overwriting
     if save_path.is_file() and not allow_overwrite:
         for i in range(2, index_limit, 1):
             save_path = Path(directory, f'{file_name} ({i:02d}).{extension}')
@@ -212,27 +215,32 @@ def get_new_measurement_out_file_path(file_name: str) -> Path:
         return Path(file.name)
 
 
-def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: bool = False) \
+def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: bool = False, figure=None) \
         -> Optional[Union[Path, io.BytesIO]]:
     """
     Save a plot image in the directory
 
-    :param file_name: the output png file name (no extension).
-    :param allow_overwrite: If True, overwrite existing file if existing with same name. If False, add a number to the
-    file name to avoid overwriting.
+    :param file_name: The output png file name (no extension).
+    :param allow_overwrite: If True, overwrite existing file if one existing with the same name.
+     If False, add a number to the file name to avoid overwriting.
     :param save_in_buffer: If True, save the image in memory. Do not plot or save it on the disk.
+    :param figure: The matplotlib figure to save. If None, use one currently active.
 
-    :return: The path where the plot is saved, or None if not saved.
+    :return: The image path if it is saved on the disk, the bytes if it is saved in buffer, None if it is not saved.
     """
 
+    # If the figure is not provided, use the one currently active in matplotlib
+    if figure is None:
+        figure = plt.gcf()
+
     # Adjust the padding between and around subplots
-    plt.tight_layout()
+    figure.tight_layout()
 
     # Keep the image in buffer, but no plot and no save it as a file.
     if save_in_buffer:
         buffer = io.BytesIO()
-        plt.savefig(buffer, dpi=200, format='png')
-        plt.close()
+        figure.savefig(buffer, dpi=200, format='png')
+        plt.close(figure)
         buffer.seek(0)
         return buffer
 
@@ -241,11 +249,12 @@ def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: boo
         out_format = 'svg' if settings.image_latex_format else 'png'
         save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, out_format, allow_overwrite)
 
-        plt.savefig(save_path, dpi=200, transparent=settings.image_latex_format)
+        # The tight bbox will remove white space around the image, the image "figsize" won't be respected.
+        figure.savefig(save_path, dpi=200, transparent=settings.image_latex_format, bbox_inches='tight')
         logger.debug(f'Plot saved in {save_path}')
 
     # Plot image or close it
-    plt.show(block=False) if settings.show_images else plt.close()
+    figure.show(block=False) if settings.show_images else plt.close(figure)
 
     return save_path
 
@@ -292,12 +301,14 @@ def save_video(images: List[io.BytesIO], file_name: str, duration: Union[List[in
         save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, 'mp4', allow_overwrite)
 
         smallest_duration = min(duration) if isinstance(duration, Iterable) else duration
-        writer = imageio.get_writer(save_path, fps=1_000 / smallest_duration)
+        # macro_block_size=None is used to avoid a warning, but could lead to incompatibility with some video players
+        writer = imageio.get_writer(save_path, fps=1_000 / smallest_duration, macro_block_size=None)
         for data, d in zip(images, duration):
             current_duration = 0
+            image = imageio.imread(data)
             # Add frames until we reach the targeted duration
             while current_duration < d:
-                writer.append_data(imageio.imread(data))
+                writer.append_data(image)
                 current_duration += smallest_duration
         writer.close()
 
@@ -346,7 +357,7 @@ def save_timers() -> None:
 
     timers_file = Path(OUT_DIR, settings.run_name, OUT_FILES['timers'])
     with open(timers_file, 'w+') as f:
-        # Save with replacing white spaces by '_' in timers name
+        # Save with replacing white-spaces by '_' in timers name
         f.write('# Values in seconds\n')
         yaml.dump({re.sub(r'\s+', '_', n.strip()): v for n, v in Timer.timers.data.items()}, f)
 
