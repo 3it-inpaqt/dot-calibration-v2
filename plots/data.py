@@ -265,6 +265,8 @@ def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, vmin, v
 
 
 def _plot_labels(ax, charge_regions: List[Tuple["ChargeRegime", Polygon]], transition_lines: List[LineString]):
+    from datasets import qdsd
+
     labels_handlers = []
 
     if charge_regions:
@@ -281,10 +283,14 @@ def _plot_labels(ax, charge_regions: List[Tuple["ChargeRegime", Polygon]], trans
                 labels_handlers.append((Text(**params, text='N'), 'Charge regime'))
 
     if transition_lines:
-        for i, line in enumerate(transition_lines):
-            line_x, line_y = line.coords.xy
-            ax.plot(line_x, line_y, color='lime', label='Line annotation')
-
+        for i, lines in enumerate(transition_lines):
+            if settings.dot_number == 1:
+                line_x, line_y = lines.coords.xy
+                ax.plot(line_x, line_y, color='lime', label='Line annotation')
+            else:
+                for nb, line in enumerate(lines):
+                    line_x, line_y = line.coords.xy
+                    ax.plot(line_x, line_y, color=CLASS_COLORS[i + 1], label=f'{qdsd.QDSDLines.classes[i]} annotation')
     return labels_handlers
 
 
@@ -576,9 +582,9 @@ def plot_patch_sample(dataset: Dataset, number_per_class: int, show_offset: bool
         if len(data_per_class[labels]) < number_per_class:
             data_per_class[labels].append(data)
 
-        # Stop of we sampled enough data
-        if all([len(cl) == number_per_class for cl in data_per_class]):
-            break
+            # Stop of we sampled enough data
+            if all([len(cl) == number_per_class for cl in data_per_class]):
+                break
 
     # Create subplots
     fig, axs = plt.subplots(nrows=nb_classes, ncols=number_per_class,

@@ -20,9 +20,9 @@ for dot in range(1, settings.dot_number + 1):
     count = 0
     for regime in regimes:
         if count <= 1:
-            ChargeRegime[f'{regime}_electron_{dot}'] = f'{regime}'
+            ChargeRegime[f'{regime}_electron_{dot}'] = f'{regime}_{dot}'
         else:
-            ChargeRegime[f'{regime}_electrons_{dot}'] = f'{regime}'
+            ChargeRegime[f'{regime}_electrons_{dot}'] = f'{regime}_{dot}'
         count += 1
 
 

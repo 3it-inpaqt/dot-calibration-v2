@@ -1,17 +1,19 @@
 from math import atan2, ceil, pi, radians, tan
+from time import perf_counter
 from typing import List, Optional, Tuple
 
 import torch
 
-from autotuning.jump_uncertainty import JumpUncertainty
+from autotuning.jump import Jump
 from classes.data_structures import BoundaryPolicy, StepHistoryEntry
 from classes.data_structures import Direction, SearchLineSlope
+from datasets.diagram_online import DiagramOnline
 from datasets.qdsd import QDSDLines
 from utils.logger import logger
 from utils.settings import settings
 
 
-class JumpNDots(JumpUncertainty):
+class JumpNDots(Jump):
     """
     Same as Jump but for N Dots
     #TODO Adapt for N class (work for 2 dots for now)
@@ -30,8 +32,11 @@ class JumpNDots(JumpUncertainty):
     # Parameters
     _max_nb_line_leftmost: int = 4
     _max_nb_line_bottommost: int = 4
+    _max_steps_validate_line: int = 100  # Nb steps
     # Class
     _class = QDSDLines.classes
+
+    _bottommost_line_coord = None
 
     def default_slope(self, line_state: int) -> int:
         if line_state == 1:
@@ -55,6 +60,15 @@ class JumpNDots(JumpUncertainty):
             # Prior assumption about distance between lines
             self._line_distances_1 = [3]
             self._line_distances_2 = [6]
+        elif settings.research_group == 'louis_gaudreau':
+            self._line_slope_1 = None
+            self._line_slope_2 = None
+            # Prior assumption about line direction
+            self._line_slope_default_1 = 45
+            self._line_slope_default_2 = 80
+            # Prior assumption about distance between lines
+            self._line_distances_1 = [14]
+            self._line_distances_2 = [12]
         else:
             logger.warning(f'No prior knowledge defined for the dataset: {settings.research_group}')
             self._line_slope_1 = None
@@ -147,13 +161,14 @@ class JumpNDots(JumpUncertainty):
             return self.x < x
 
         # Reconstruct line equation (y = m*x + b)
-        m = tan(radians(-line_slope))  # Inverted angle because the setup is wierd
-        b = y - (x * m)
+        m = radians(-line_slope)  # Inverted angle because the setup is wierd
+        slope = tan(m)
+        b = y - (x * slope)
 
         # Check if the current position is at the left (https://math.stackexchange.com/a/1896651/1053890)
-        y_line = m * self.x + b
+        y_line = slope * self.x + b
         y_delta = y_line - self.y
-        return (y_delta > 0 > m) or (y_delta < 0 < m)
+        return (y_delta > 0 > slope) or (y_delta < 0 < slope)
 
     def _is_bottom_relative_to_line(self) -> bool:
         """
@@ -173,11 +188,12 @@ class JumpNDots(JumpUncertainty):
             return self.y < y
 
         # Reconstruct line equation (y = m*x + b)
-        m = tan(radians(line_slope))
-        b = y - (x * m)
+        m = radians(-line_slope)
+        slope = tan(m)
+        b = y - (x * slope)
 
         # Check if the current position is at the left (https://math.stackexchange.com/a/1896651/1053890)
-        y_line = m * self.x + b
+        y_line = slope * self.x + b
         y_delta = y_line - self.y
         return y_delta > 0
 
@@ -188,6 +204,7 @@ class JumpNDots(JumpUncertainty):
         :return: The line classification (True = line detected) and
          the confidence score (0: low confidence to 1: very high confidence).
         """
+        time_start = perf_counter()
 
         # Check coordinates according to the current policy.
         # They could be changed to fit inside the diagram if necessary
@@ -201,10 +218,13 @@ class JumpNDots(JumpUncertainty):
             # Oracle use ground truth with full confidence
             prediction = ground_truth
             confidence = 1
+            time_data_processed = time_data_fetched = perf_counter()
+            is_above_confidence_threshold = True
         else:
             with torch.no_grad():
                 # Cut the patch area and send it to the model for inference
                 patch = self.diagram.get_patch((self.x, self.y), self.patch_size)
+                time_data_fetched = perf_counter()
                 # Reshape as valid input for the model (batch size, patch x, patch y)
                 size_x, size_y = self.patch_size
                 patch = patch.view((1, size_x, size_y))
@@ -213,16 +233,35 @@ class JumpNDots(JumpUncertainty):
                 # Extract data from pytorch tensor
                 prediction = QDSDLines.class_mapping(prediction)
                 confidence = QDSDLines.conf_mapping(confidence, prediction)
+                time_data_processed = perf_counter()
+
+            is_above_confidence_threshold = self.model.is_above_confident_threshold(prediction, confidence)
+
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
-        self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
-                                                   soft_truth_larger, soft_truth_smaller, step_description))
+        self._scan_history.append(StepHistoryEntry(
+            (self.x, self.y), prediction, confidence, ground_truth, soft_truth_larger, soft_truth_smaller,
+            is_above_confidence_threshold, step_description, time_start, time_data_fetched, time_data_processed,
+            isinstance(self.diagram, DiagramOnline)
+        ))
         x, y = self.diagram.coord_to_voltage(self.x, self.y)
         logger.debug(f'Patch {self.get_nb_steps():03} classified as {QDSDLines.classes[prediction]} with confidence '
                      f'{confidence:.2%} at coord ({x:.2f}, {y:.2f})')
 
         return prediction, confidence
+
+    def _get_bottommost_line_coord_str(self) -> str:
+        """
+        :return: Bottommost coordinates with volt conversion.
+        """
+        if self._bottommost_line_coord is None:
+            return 'None'
+
+        x, y = self._bottommost_line_coord
+        x_volt, y_volt = self.diagram.coord_to_voltage(x, y)
+
+        return f'{x_volt:.2f}V,{y_volt:.2f}V'
 
     ###########################
 
@@ -794,7 +833,8 @@ class JumpNDots(JumpUncertainty):
                                 direction.last_x, direction.last_y = self.x, self.y
                                 self._nb_line_found_1 += 1 if self._previous_line_state == 1 else 0
                                 self._nb_line_found_2 += 1 if self._previous_line_state == 2 else 0
-                                return True
+                                new_line_found = True
+                                break
 
                         self._move_left_perpendicular_to_line()
 
@@ -941,6 +981,8 @@ class JumpNDots(JumpUncertainty):
         Then move to this location.
         """
 
+        time_start = perf_counter()
+
         # If no line found, desperately guess random position as last resort
         if not (self._leftmost_line_coord and self._bottommost_line_coord):
             if not self._leftmost_line_coord:
@@ -963,61 +1005,119 @@ class JumpNDots(JumpUncertainty):
         state, x_b, y_b = self._enforce_boundary(True, x_b, y_b)
 
         # Reconstruct Line 1 equation (y = m*x + b)
-        m1 = tan(radians(-self._line_slope_1))  # Inverted angle because the setup is wierd
-        b1 = y_b - (x_b * m1)
+        m1 = radians(
+            -self._line_slope_1)  # tan(radians(-self._line_slope_1))  # Inverted angle because the setup is wierd
+        slope_1 = tan(m1)
+        b1 = self.diagram.x_axes[y_b] - (self.diagram.x_axes[x_b] * slope_1)
+        print(f'Y : {self.diagram.x_axes[y_b]}, X : {self.diagram.x_axes[x_b]}, B : {b1}')
 
         # Reconstruct Line 2 equation (y = m*x + b)
-        m2 = tan(radians(-self._line_slope_2))  # Inverted angle because the setup is wierd
-        b2 = y_l - (x_l * m2)
+        m2 = radians(
+            -self._line_slope_2)  # tan(radians(-self._line_slope_2))  # Inverted angle because the setup is wierd
+        slope_2 = tan(m2)
+        b2 = self.diagram.x_axes[y_l] - (self.diagram.x_axes[x_l] * slope_2)
+        print(f'Y : {self.diagram.x_axes[y_l]}, X : {self.diagram.x_axes[x_l]}, B : {b2}')
 
-        x = x_l  # int((b2 - b1) / (m1 - m2))
-        y = y_b  # int(m1 * x + b1)
+        x = int((b2 - b1) / (slope_1 - slope_2))
+        y = int(slope_1 * x + b1)
         state, x, y = self._enforce_boundary(True, x, y)
 
         x_volt_l = self.diagram.x_axes[x_l]
         y_volt_b = self.diagram.y_axes[y_b]
         x_volt = self.diagram.x_axes[x]
         y_volt = self.diagram.y_axes[y]
-        logger.debug(f'Stage Final - Intersection point: ({x_volt:.2f}V,{y_volt:.2f}V)')
+        import numpy as np
+        ang1 = m1 * 180 / np.pi
+        ang2 = m2 * 180 / np.pi
+        logger.debug(f'- Stage Final - \nIntersection point: ({x_volt:.2f}V,{y_volt:.2f}V)\n'
+                     f'Leftmost coord: {(x_l, y_l)} ->  {(self.diagram.x_axes[x_l], self.diagram.y_axes[y_l])}\n'
+                     f'Bottommost coord: {(x_b, y_b)} -> {(self.diagram.x_axes[x_b], self.diagram.y_axes[y_b])}\n'
+                     f'Angle Line 1: {m1} ou {ang1 if not ang1 < 0 else ang1 + 360}\n'
+                     f'Angle Line 2: {m2} ou {ang2 if not ang2 < 0 else ang2 + 360}\n'
+                     f'Y1 = {slope_1}.x + {b1}\n'
+                     f'Y2 = {slope_2}.x + {b2}')
 
         self.move_to_coord(x, y)
 
+        # Record Intersection
+        self._step_descr = f'---- Intersection point -------\n' \
+                           f'Coord: ({x_volt:.2f}V,{y_volt:.2f}V)\n' \
+                           f'Leftmost Line: {str(self._get_leftmost_line_coord_str())}\n' \
+                           f'Bottommost Line: {str(self._get_bottommost_line_coord_str())}\n' \
+ \
+        # Record the diagram scanning activity.
+        decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
+        step_description = self._step_name + decr
+
+        if self.is_oracle_enable:
+            # Oracle use ground truth with full confidence
+            prediction = -1
+            confidence = 1
+            time_data_processed = time_data_fetched = perf_counter()
+            is_above_confidence_threshold = True
+        else:
+            prediction = -1
+            confidence = 1
+            is_above_confidence_threshold = self.model.is_above_confident_threshold(True, 1)
+            time_data_fetched = time_data_processed = perf_counter()
+
+        self._scan_history.append(StepHistoryEntry(
+            (self.x, self.y), prediction, confidence, False, False, False,
+            is_above_confidence_threshold, step_description, time_start, time_data_fetched, time_data_processed,
+            isinstance(self.diagram, DiagramOnline)
+        ))
+
         self._previous_line_state = 1
 
-        ratio = 1
+        ratio = 1 / 2
 
         self._move_down_follow_line(
-            ceil(self._default_step_y *
-                 self._get_avg_line_step_distance(line_distances=self._line_distances_2) * (ratio + 0.3))
+            ceil(self._get_avg_line_step_distance(line_distances=self._line_distances_2) * ratio)
         )
 
-        x = self.x
         self.move_to_coord(x, y)
 
         self._previous_line_state = 2
 
         self._move_up_follow_line(
-            ceil(self._default_step_x *
-                 self._get_avg_line_step_distance(line_distances=self._line_distances_1) * ratio)
+            ceil(self._get_avg_line_step_distance(line_distances=self._line_distances_1) * ratio)
         )
 
-        y = self.y
-        self.move_to_coord(x, y)
+        x, y = self.x, self.y
         state, x, y = self._enforce_boundary(True, x, y)
+        self.move_to_coord(x, y)
 
         x = self.diagram.x_axes[x]
         y = self.diagram.y_axes[y]
-        self._step_descr = f'Leftmost Line: {str(self._get_leftmost_line_coord_str())}\n' \
+
+        self._step_descr = f' ---- Final Coord ----\n' \
+                           f'Coord: ({x:.2f}V,{y:.2f}V)\n' \
+                           f'Leftmost Line: {str(self._get_leftmost_line_coord_str())}\n' \
                            f'Bottommost Line: {str(self._get_bottommost_line_coord_str())}\n' \
-                           f'Intersection point: ({x_volt:.2f}V,{y_volt:.2f}V)\n' \
                            f'{tuple([0] * settings.dot_number)} area: ({x_volt_l:.2f}V,{y_volt_b:.2f}V)\n' \
                            f'{tuple([1] * settings.dot_number)} area: ({x:.2f}V,{y:.2f}V)'
 
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
-        self._scan_history.append(StepHistoryEntry((self.x, self.y), True, 1, False, False, False, step_description))
 
+        if self.is_oracle_enable:
+            # Oracle use ground truth with full confidence
+            prediction = True
+            confidence = 1
+            time_data_processed = time_data_fetched = perf_counter()
+            is_above_confidence_threshold = True
+        else:
+            prediction = True
+            confidence = 1
+            is_above_confidence_threshold = self.model.is_above_confident_threshold(True, 1)
+            time_data_fetched = time_data_processed = perf_counter()
+
+        self._scan_history.append(StepHistoryEntry(
+            (self.x, self.y), prediction, confidence, False, False, False,
+            is_above_confidence_threshold, step_description, time_start, time_data_fetched, time_data_processed,
+            isinstance(self.diagram, DiagramOnline)
+        ))
         # Enforce the boundary policy to make sure the final guess is in the diagram area
         self._enforce_boundary_policy(force=True)
 

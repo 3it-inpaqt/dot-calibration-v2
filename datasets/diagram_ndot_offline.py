@@ -133,6 +133,9 @@ class DiagramOfflineNDot(DiagramOffline):
         for diagram_name in zip_dir.iterdir():
             file_basename = Path(str(diagram_name)).stem  # Remove extension
 
+            if file_basename == 'nov14100s':
+                file_basename += '.gz'
+
             if white_list and not (file_basename in white_list):
                 nb_excluded_whitelist += 1
                 list_whitelist.append(file_basename)

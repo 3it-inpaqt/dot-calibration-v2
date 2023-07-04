@@ -3,7 +3,7 @@ import json
 import zipfile
 from pathlib import Path
 from random import randrange
-from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple
+from typing import Generator, IO, Iterable, List, Optional, Sequence, Tuple, Dict
 
 import numpy as np
 import torch
@@ -24,14 +24,14 @@ class DiagramOffline(Diagram):
     transition_lines: Optional[List[LineString]]
 
     # The charge area lines annotations
-    charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]
+    charge_areas: Optional[List[Tuple[Dict, Polygon]]]
 
     # The list of measured voltage according to the 2 gates, normalized
     values_norm: Optional[torch.Tensor]
 
     def __init__(self, file_basename: str, x_axes: Sequence[float], y_axes: Sequence[float], values: torch.Tensor,
                  transition_lines: Optional[List[LineString]],
-                 charge_areas: Optional[List[Tuple[ChargeRegime, Polygon]]]):
+                 charge_areas: Optional[List[Tuple[Dict, Polygon]]]):
         """
         Creat an instance of DiagramOffline based on a diagram file.
 
@@ -376,7 +376,7 @@ class DiagramOffline(Diagram):
 
     @staticmethod
     def _load_charge_annotations(charge_areas: Iterable, x, y, pixel_size: float, snap: int = 1) \
-            -> List[Tuple[ChargeRegime, Polygon]]:
+            -> List[Tuple[Dict, Polygon]]:
         """
         Load regions annotation for an image.
 
@@ -396,7 +396,7 @@ class DiagramOffline(Diagram):
                                                    True)
 
             area_obj = Polygon(zip(area_x, area_y))
-            processed_areas.append((ChargeRegime(area['name']), area_obj))
+            processed_areas.append((ChargeRegime[area['title']], area_obj))
 
         return processed_areas
 
