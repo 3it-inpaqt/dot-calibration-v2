@@ -82,6 +82,18 @@ class Settings:
     # If True and the run have a valid name, save video in the run directory
     save_video: bool = False
 
+    # Record result
+    record_plot: bool = True
+
+    # Record result Image
+    record_image: bool = True
+
+    # Record result Image
+    record_video: bool = True
+
+    # Plot bottommost and leftmost line interpoleted
+    debug_line: bool = False
+
     # If True and the run have a valid name, save the neural network parameters in the run directory at the end of the
     # training. Saved before applying early stopping if enabled.
     # The file will be at the root of run directory, under then name: "final_network.pt"

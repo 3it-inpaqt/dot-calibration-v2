@@ -20,5 +20,15 @@ torch==2.0.0+cu118
 torchvision==0.15.1+cu118
 
 # If there is a problem with the installation of torch 2.0.0+cu118 and torchvision 0.15.1+cu118 ;
-# install manually with this link https://download.pytorch.org/whl/cu118/torch-2.0.0%2Bcu118-cp39-cp39-win_amd64.whl (torch)
-#https://download.pytorch.org/whl/cu118/torchvision-0.15.1%2Bcu118-cp39-cp39-win_amd64.whl (torchvision)
+# Use: python -m pip install [package] -f [link]
+# Example:
+# python -m pip install torch -f https://download.pytorch.org/whl/cu118/torch-2.0.0%2Bcu118-cp39-cp39-win_amd64.whl
+# python -m pip install torchvision -f https://download.pytorch.org/whl/cu118/torchvision-0.15.1%2Bcu118-cp39-cp39-win_amd64.whl
+
+# Link:
+# https://download.pytorch.org/whl/torch_stable.html (for all package)
+# https://download.pytorch.org/whl/cu118/torch-2.0.0%2Bcu118-cp39-cp39-win_amd64.whl (torch)
+# https://download.pytorch.org/whl/cu118/torchvision-0.15.1%2Bcu118-cp39-cp39-win_amd64.whl (torchvision)
+
+# For python 3.10:
+# pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121

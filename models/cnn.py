@@ -15,6 +15,8 @@ class CNN(ClassifierNN):
     Convolutional classifier neural network.
     """
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     def __init__(self, input_shape: Tuple[int, int], class_ratio: float = None):
         """
         Create a new network with convolutional layers, followed by fully connected hidden layers.
@@ -89,6 +91,7 @@ class CNN(ClassifierNN):
         """
         # Add channel dimension
         x = x.unsqueeze(dim=1)
+        x = x.to(self.device)
 
         # Run convolution layers
         for conv in self.conv_layers:

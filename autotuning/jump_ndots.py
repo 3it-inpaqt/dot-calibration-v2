@@ -1,9 +1,10 @@
 from math import atan2, ceil, pi, radians, tan
 from time import perf_counter
 from typing import List, Optional, Tuple
-
+import numpy as np
 import torch
-
+import matplotlib.pyplot as plt
+from pathlib import Path
 from autotuning.jump import Jump
 from classes.data_structures import BoundaryPolicy, StepHistoryEntry
 from classes.data_structures import Direction, SearchLineSlope
@@ -11,6 +12,7 @@ from datasets.diagram_online import DiagramOnline
 from datasets.qdsd import QDSDLines
 from utils.logger import logger
 from utils.settings import settings
+from utils.output import get_save_path, OUT_DIR
 
 
 class JumpNDots(Jump):
@@ -24,6 +26,10 @@ class JumpNDots(Jump):
     # Line angle degree (0 = horizontal | 90 = vertical | 45 = slope -1 | 135 = slope 1)
     _line_slope_1: float = None
     _line_slope_2: float = None
+    _error_1: float = None
+    _error_2: float = None
+    _line_slope_default_1: float = 45
+    _line_slope_default_2: float = 80
     # List of distance between lines in pixel
     _line_distances_1: List[int] = None
     _line_distances_2: List[int] = None
@@ -33,10 +39,14 @@ class JumpNDots(Jump):
     _max_nb_line_leftmost: int = 4
     _max_nb_line_bottommost: int = 4
     _max_steps_validate_line: int = 100  # Nb steps
+    # Parameters for plot
+    _nb_plot_bad: int = settings.nb_error_to_plot
+    _nb_plot_good: int = settings.nb_good_to_plot
     # Class
     _class = QDSDLines.classes
+    _bottommost_line_coord = [None, None]
+    _leftmost_line_coord = [None, None]
 
-    _bottommost_line_coord = None
 
     def default_slope(self, line_state: int) -> int:
         if line_state == 1:
@@ -47,19 +57,22 @@ class JumpNDots(Jump):
     def reset_procedure(self):
         super().reset_procedure()
 
-        self._bottommost_line_coord = None
-        self._leftmost_line_coord = None
+        self._bottommost_line_coord = [None, None]
+        self._leftmost_line_coord = [None, None]
         self._previous_line_state = 0
 
         if settings.research_group == 'eva_dupont_ferrier':
             self._line_slope_1 = None
             self._line_slope_2 = None
             # Prior assumption about line direction
-            self._line_slope_default_1 = 2
-            self._line_slope_default_2 = 92
+            self._line_slope_default_1 = 10
+            self._line_slope_default_2 = 100
             # Prior assumption about distance between lines
-            self._line_distances_1 = [3]
-            self._line_distances_2 = [6]
+            self._line_distances_1 = [10]
+            self._line_distances_2 = [20]
+            # Prior assumption about the estimation slope error
+            self._error_1 = -3
+            self._error_2 = 24
         elif settings.research_group == 'louis_gaudreau':
             self._line_slope_1 = None
             self._line_slope_2 = None
@@ -69,6 +82,10 @@ class JumpNDots(Jump):
             # Prior assumption about distance between lines
             self._line_distances_1 = [14]
             self._line_distances_2 = [12]
+            # Prior assumption about the estimation slope error
+            self._error_1 = 14
+            self._error_2 = 18
+
         else:
             logger.warning(f'No prior knowledge defined for the dataset: {settings.research_group}')
             self._line_slope_1 = None
@@ -79,6 +96,9 @@ class JumpNDots(Jump):
             # Prior assumption about distance between lines
             self._line_distances_1 = [5]
             self._line_distances_2 = [5]
+            # Prior assumption about the estimation slope error
+            self._error_1 = 0
+            self._error_2 = 0
 
     #### Rewrite function ####
 
@@ -136,10 +156,10 @@ class JumpNDots(Jump):
         Check if the current position should be considered the leftmost line or the bottommost line.
         """
         if line_state == 1 \
-                and (self._bottommost_line_coord is None or self._is_bottom_relative_to_line()):
+                and (self._bottommost_line_coord == [None, None] or self._is_bottom_relative_to_line()):
             self._bottommost_line_coord = self.x, self.y
         elif line_state == 2 \
-                and (self._leftmost_line_coord is None or self._is_left_relative_to_line()):
+                and (self._leftmost_line_coord == [None, None] or self._is_left_relative_to_line()):
             self._leftmost_line_coord = self.x, self.y
 
     def _is_left_relative_to_line(self) -> bool:
@@ -247,7 +267,7 @@ class JumpNDots(Jump):
         ))
         x, y = self.diagram.coord_to_voltage(self.x, self.y)
         logger.debug(f'Patch {self.get_nb_steps():03} classified as {QDSDLines.classes[prediction]} with confidence '
-                     f'{confidence:.2%} at coord ({x:.2f}, {y:.2f})')
+                     f'{confidence:.2%} at coord ({x:.2f} V, {y:.2f} V)')
 
         return prediction, confidence
 
@@ -255,13 +275,25 @@ class JumpNDots(Jump):
         """
         :return: Bottommost coordinates with volt conversion.
         """
-        if self._bottommost_line_coord is None:
+        if self._bottommost_line_coord == [None, None]:
             return 'None'
 
         x, y = self._bottommost_line_coord
         x_volt, y_volt = self.diagram.coord_to_voltage(x, y)
 
-        return f'{x_volt:.2f}V,{y_volt:.2f}V'
+        return f'{x_volt:.2e}V,{y_volt:.2e}V'
+
+    def _get_leftmost_line_coord_str(self) -> str:
+        """
+        :return: Leftmost coordinates with volt conversion.
+        """
+        if self._leftmost_line_coord == [None, None]:
+            return 'None'
+
+        x, y = self._leftmost_line_coord
+        x_volt, y_volt = self.diagram.coord_to_voltage(x, y)
+
+        return f'{x_volt:.2e}V,{y_volt:.2e}V'
 
     ###########################
 
@@ -440,10 +472,10 @@ class JumpNDots(Jump):
             while abs(delta) < max_angle_search:
                 self.move_to_coord(start_x, start_y)
                 self._move_relative_to_line(side - start_angle + delta, step_distance)
-                self._step_descr = f'Target line: {self._class[self._previous_line_state]}' \
-                                   f'delta: {delta}°\n' \
-                                   f'init line: {init_line}\n' \
-                                   f'init no line: {init_no_line}'
+                self._step_descr = f'Target line: {self._class[self._previous_line_state]}\n' \
+                                   f'Delta: {delta}°\n' \
+                                   f'Init Line: {init_line}\n' \
+                                   f'Init No Line: {init_no_line}'
 
                 line_state, _ = self.is_transition_line()  # No confidence validation here
                 line_detected = True if line_state == self._previous_line_state else False
@@ -531,26 +563,24 @@ class JumpNDots(Jump):
         max_step = 100
         step = 0
 
-        while line_found and step < max_step:
-            substage += 1
-            step += 1
-            logger.debug(f'Stage 2.{substage} - Find empty area for {self._class[self._previous_line_state]}: '
-                         f'{(1, 0) if self._previous_line_state == 1 else (0, 1)}')
-            self._step_name = f'Stage 2.{substage} - Find empty area for {self._class[self._previous_line_state]}'
-            # Get 0 electron regime for the first line
-            self._get_empty_area(directions=directions)
 
-            # Optional step: make sure we found the leftmost or bottommost line
-            fine_tuning = [settings.validate_bottom_line, settings.validate_left_line][self._previous_line_state - 1]
-            if fine_tuning:
-                substage += 1
-                logger.debug(
-                    f'Stage 2.{substage} - Validate {"leftmost" if self._previous_line_state == 2 else "bottommost"}'
-                    f' line')
-                self._step_name = f'2.1 Validate {"leftmost" if self._previous_line_state == 2 else "bottommost"} line'
-                line_found = self._validate_line(directions=directions)
-            else:
-                line_found = False
+        substage += 1
+        step += 1
+        logger.debug(f'Stage 2.{substage} - Find empty area for {self._class[self._previous_line_state]}: '
+                     f'{(1, 0) if self._previous_line_state == 1 else (0, 1)}')
+        self._step_name = f'Stage 2.{substage} - Find empty area for {self._class[self._previous_line_state]}'
+        # Get 0 electron regime for the first line
+        self._get_empty_area(directions=directions)
+
+        # Optional step: make sure we found the leftmost or bottommost line
+        fine_tuning = [settings.validate_bottom_line, settings.validate_left_line][self._previous_line_state - 1]
+        if fine_tuning:
+            substage += 1
+            logger.debug(
+                f'Stage 2.{substage} - Validate {"leftmost" if self._previous_line_state == 2 else "bottommost"}'
+                f' line')
+            self._step_name = f'2.1 Validate {"leftmost" if self._previous_line_state == 2 else "bottommost"} line'
+            self._validate_line(directions=directions)
 
         # We change the target empty area
         logger.debug(f'Stage 3.1 - Target line change '
@@ -576,25 +606,23 @@ class JumpNDots(Jump):
         substage = 0
         logger.debug(f'Stage 4 - Start research with {self._class[self._previous_line_state]} '
                      f'at a coord ({self._leftmost_line_coord})')
-        while line_found and step < max_step:
-            substage += 1
-            step += 1
-            logger.debug(f'Stage 4.{substage} - Find empty area for {self._class[self._previous_line_state]}: '
-                         f'{(1, 0) if self._previous_line_state == 1 else (0, 1)}')
-            self._step_name = f'Stage 4.{substage} - Find empty area for {self._class[self._previous_line_state]}'
-            # Get 0 electron regime for the second line
-            self._get_empty_area(directions=directions)
+        substage += 1
+        step += 1
+        logger.debug(f'Stage 4.{substage} - Find empty area for {self._class[self._previous_line_state]}: '
+                     f'{(1, 0) if self._previous_line_state == 1 else (0, 1)}')
+        self._step_name = f'Stage 4.{substage} - Find empty area for {self._class[self._previous_line_state]}'
+        # Get 0 electron regime for the second line
+        self._get_empty_area(directions=directions)
 
-            # Optional step: make sure we found the leftmost or bottommost line
-            fine_tuning = [settings.validate_bottom_line, settings.validate_left_line][self._previous_line_state - 1]
-            if fine_tuning:
-                substage += 1
-                logger.debug(
-                    f'Stage 4.{substage} - Validate {"leftmost" if self._previous_line_state == 2 else "bottommost"} line')
-                self._step_name = f'4.{substage} Validate {"leftmost" if self._previous_line_state == 2 else "bottommost"} line'
-                line_found = self._validate_line(directions=directions)
-            else:
-                line_found = False
+        # Optional step: make sure we found the leftmost or bottommost line
+        fine_tuning = [settings.validate_bottom_line, settings.validate_left_line][self._previous_line_state - 1]
+
+        if fine_tuning:
+            substage += 1
+            logger.debug(
+                f'Stage 4.{substage} - Validate {"leftmost" if self._previous_line_state == 2 else "bottommost"} line')
+            self._step_name = f'4.{substage} Validate {"leftmost" if self._previous_line_state == 2 else "bottommost"} line'
+            self._validate_line(directions=directions)
 
         return True
 
@@ -625,8 +653,7 @@ class JumpNDots(Jump):
                 avg_line_distance = self._get_avg_line_step_distance(line_distances)
                 self._step_descr = f'Target line: {self._class[self._previous_line_state]}\n' \
                                    f'Line slope: {str(target_line_slope)}°\n' \
-                                   f'Avg line dist: {avg_line_distance:.1f}\n' \
-                                   f'Nb line found: {nb_line_found}\n' \
+                                   f'Average line distance: {self._convert_pixel_to_volt(avg_line_distance):.2e} V\n' \
                                    f'Leftmost line: {str(self._get_leftmost_line_coord_str())}\n' \
                                    f'Bottommost line: {str(self._get_bottommost_line_coord_str())}'
                 nb_search_steps += 1
@@ -754,12 +781,14 @@ class JumpNDots(Jump):
         logger.debug(f'Finish: slide_around_crosspoint')
         return False
 
-    def _validate_line(self, directions: tuple) -> bool:
+    def _validate_line(self, directions: tuple) -> None:
         """
         Validate that the current leftmost or the bottommost line detected is really the leftmost or the bottommost one.
         Try to find a line left by scanning area at regular interval on the left, where we could find a line.
         If a new line is found that way, do the validation again.
         """
+
+        # Setup parameter
 
         line_distance = self._line_distances_1 if self._previous_line_state == 1 else self._line_distances_2
         line_step_distance = self._get_avg_line_step_distance(line_distances=line_distance) * 2
@@ -767,7 +796,13 @@ class JumpNDots(Jump):
         max_nb_line = [self._max_nb_line_bottommost, self._max_nb_line_leftmost][self._previous_line_state - 1]
         default_step = [self._default_step_y, self._default_step_x][self._previous_line_state - 1]
         default_step_inv = [self._default_step_x, self._default_step_y][self._previous_line_state - 1]
+        max_rep = 4
+
+        # Starting test
+
+        nb_steps = 0
         new_line_found = True
+
         start_point = self._leftmost_line_coord \
             if self._previous_line_state == 2 else self._bottommost_line_coord
 
@@ -777,26 +812,24 @@ class JumpNDots(Jump):
             self._leftmost_line_coord = start_point if self._previous_line_state == 2 else self._leftmost_line_coord
             self._bottommost_line_coord = start_point if self._previous_line_state == 1 else self._bottommost_line_coord
 
-        nb_steps = 0
+        # Unstuck since we are starting at a new location
+        directions[2].is_stuck = directions[3].is_stuck = False
+
         while new_line_found:
-            nb_line = 1
+            nb_line = 0
             new_line_found = False
             # Both direction start at the leftmost/bottommost point
             directions[2].last_x, directions[2].last_y = start_point
             directions[3].last_x, directions[3].last_y = start_point
-            # Unstuck since we are starting at a new location
-            directions[2].is_stuck = directions[3].is_stuck = False
             while not new_line_found and not Direction.all_stuck((directions[2], directions[3])):
                 for direction in (d for d in (directions[2], directions[3]) if not d.is_stuck):
-                    self._step_descr = f'Target line: {self._class[self._previous_line_state]}\n' \
-                                       f'Coord: {(direction.last_x, direction.last_y)}\n' \
-                                       f'Leftmost line: {self._get_leftmost_line_coord_str()}\n' \
-                                       f'Bottommost line: {self._get_bottommost_line_coord_str()}\n' \
-                                       f'Line slope: {line_slope:.0f}°\n' \
-                                       f'Avg line dist: {line_step_distance:.1f}'
+                    # Check if we reached the maximum number of leftmost search for the current line
+                    nb_line += 1
+                    if nb_line > self._max_steps_validate_line:
+                        return
+
                     self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
                     # Step distance relative to the line distance
-
                     direction.move(round(default_step * line_step_distance))
                     # Save current position for next time
                     direction.last_x, direction.last_y = self.x, self.y
@@ -819,21 +852,34 @@ class JumpNDots(Jump):
 
                             self._is_bottommost_or_leftmost_line(line_state=self._previous_line_state)
 
+
                             new_coord = self._bottommost_line_coord \
                                 if self._previous_line_state == 1 else self._leftmost_line_coord
+
                             # If line isn't the leftmost or bottommost: ignore
                             if coord == new_coord:
                                 continue
                             else:
-                                x, y = self.diagram.coord_to_voltage(coord[0], coord[1])
-                                xbis, ybis = self.diagram.coord_to_voltage(self.x, self.y)
-                                logger.debug(
-                                    f'Previous {"leftmost" if self._previous_line_state == 2 else "bottommost"} '
-                                    f'line: ({x:.2f}, {y:.2f}), After verification: ({xbis:.2f}, {ybis:.2f})')
                                 direction.last_x, direction.last_y = self.x, self.y
                                 self._nb_line_found_1 += 1 if self._previous_line_state == 1 else 0
                                 self._nb_line_found_2 += 1 if self._previous_line_state == 2 else 0
                                 new_line_found = True
+                                start_point = new_coord
+                                self._step_descr = f'Target line: {self._class[self._previous_line_state]}\n' \
+                                                   f'Coord: {(self.diagram.x_axes[direction.last_x], self.diagram.y_axes[direction.last_y])}\n' \
+                                                   f'Leftmost line: {self._get_leftmost_line_coord_str()}\n' \
+                                                   f'Bottommost line: {self._get_bottommost_line_coord_str()}\n' \
+                                                   f'Line slope: {line_slope:.0f}°\n' \
+                                                   f'Avg line dist: {self._convert_pixel_to_volt(line_step_distance):.2e} V'
+
+                                # Debug
+                                x, y = self.diagram.coord_to_voltage(coord[0], coord[1])
+
+                                xbis, ybis = self.diagram.coord_to_voltage(self.x, self.y)
+                                logger.debug(
+                                    f'Previous {"leftmost" if self._previous_line_state == 2 else "bottommost"} '
+                                    f'line: ({x:.2f}, {y:.2f}), After verification: ({xbis:.2f}, {ybis:.2f})')
+
                                 break
 
                         self._move_left_perpendicular_to_line()
@@ -842,14 +888,12 @@ class JumpNDots(Jump):
                             # Nothing else to see here
                             break
 
-                    if nb_steps > self._max_steps_validate_line:
+                    if nb_steps > max_nb_line:
                         # Hard break to avoid infinite search in case of bad slope detection (>90°)
                         return False
 
-                    nb_line += 1
-                    # Check the number of repetition needed to find a line on the left or on the right
-                    if nb_line > max_nb_line:
-                        return False
+                    if new_line_found:
+                        break
         return False
 
     def _find_other_line(self) -> bool:
@@ -863,7 +907,7 @@ class JumpNDots(Jump):
         start_coord = [self._leftmost_line_coord, self._bottommost_line_coord][self._previous_line_state - 1]
 
         # We already find the other line
-        if start_coord:
+        if not start_coord == [None, None]:
             start_x, start_y = start_coord
             self.move_to_coord(start_x, start_y)
             self._previous_line_state = [2, 1][self._previous_line_state - 1]
@@ -899,9 +943,9 @@ class JumpNDots(Jump):
             # Move and search line in every not stuck directions
             for direction in (d for d in directions if not d.is_stuck):
                 nb_exploration_steps += 1
-                self._step_descr = f'Init line: {self._class[self._previous_line_state]}' \
-                                   f'Target line: {self._class[target_line]}' \
-                                   f'Leftmost line: {self._get_leftmost_line_coord_str()}' \
+                self._step_descr = f'Init line: {self._class[self._previous_line_state]}\n' \
+                                   f'Target line: {self._class[target_line]}\n' \
+                                   f'Leftmost line: {self._get_leftmost_line_coord_str()}\n' \
                                    f'Bottommost line: {self._get_bottommost_line_coord_str()}'
 
                 self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
@@ -999,52 +1043,69 @@ class JumpNDots(Jump):
             return
 
         # Search 1e area
+
+        # Leftmost coord
         x_l, y_l = self._leftmost_line_coord
         state, x_l, y_l = self._enforce_boundary(True, x_l, y_l)
+        x_l_volt, y_l_volt = self.diagram.x_axes[x_l], self.diagram.y_axes[y_l]
+
+        # Bottommost coord
         x_b, y_b = self._bottommost_line_coord
         state, x_b, y_b = self._enforce_boundary(True, x_b, y_b)
+        x_b_volt, y_b_volt = self.diagram.x_axes[x_b], self.diagram.y_axes[y_b]
 
-        # Reconstruct Line 1 equation (y = m*x + b)
-        m1 = radians(
-            -self._line_slope_1)  # tan(radians(-self._line_slope_1))  # Inverted angle because the setup is wierd
-        slope_1 = tan(m1)
-        b1 = self.diagram.x_axes[y_b] - (self.diagram.x_axes[x_b] * slope_1)
-        print(f'Y : {self.diagram.x_axes[y_b]}, X : {self.diagram.x_axes[x_b]}, B : {b1}')
+        errror_1 = self._error_1
+        errror_2 = self._error_2
+        offset_1 = 0
+        offset_2 = 0
 
-        # Reconstruct Line 2 equation (y = m*x + b)
-        m2 = radians(
-            -self._line_slope_2)  # tan(radians(-self._line_slope_2))  # Inverted angle because the setup is wierd
-        slope_2 = tan(m2)
-        b2 = self.diagram.x_axes[y_l] - (self.diagram.x_axes[x_l] * slope_2)
-        print(f'Y : {self.diagram.x_axes[y_l]}, X : {self.diagram.x_axes[x_l]}, B : {b2}')
+        # Reconstruct Line 1 equation (y = a * x + b) ou (y = tan(angle) * x)
+        m1 = radians(-self._line_slope_1 + errror_1)
+        if m1 == 90:
+            slope_1 = 0
+        else:
+            slope_1 = tan(m1)
+        b1 = y_b_volt - (x_b_volt * slope_1) + offset_1
 
-        x = int((b2 - b1) / (slope_1 - slope_2))
-        y = int(slope_1 * x + b1)
-        state, x, y = self._enforce_boundary(True, x, y)
-
-        x_volt_l = self.diagram.x_axes[x_l]
-        y_volt_b = self.diagram.y_axes[y_b]
-        x_volt = self.diagram.x_axes[x]
-        y_volt = self.diagram.y_axes[y]
-        import numpy as np
+        # Reconstruct Line 2 equation  (y = a * x + b) ou (y = tan(angle) * x)
+        m2 = radians(-self._line_slope_2 + errror_2)
+        if m2 == 90:
+            slope_2 = 0
+        else:
+            slope_2 = tan(m2)
+        b2 = y_l_volt - (x_l_volt * slope_2) + offset_2
         ang1 = m1 * 180 / np.pi
         ang2 = m2 * 180 / np.pi
-        logger.debug(f'- Stage Final - \nIntersection point: ({x_volt:.2f}V,{y_volt:.2f}V)\n'
-                     f'Leftmost coord: {(x_l, y_l)} ->  {(self.diagram.x_axes[x_l], self.diagram.y_axes[y_l])}\n'
-                     f'Bottommost coord: {(x_b, y_b)} -> {(self.diagram.x_axes[x_b], self.diagram.y_axes[y_b])}\n'
-                     f'Angle Line 1: {m1} ou {ang1 if not ang1 < 0 else ang1 + 360}\n'
-                     f'Angle Line 2: {m2} ou {ang2 if not ang2 < 0 else ang2 + 360}\n'
+
+        # Case line parallele
+        if slope_1 == slope_2:
+            x_volt = x_l
+            y_volt = y_b
+        else:
+            x_volt = (b2 - b1) / (slope_1 - slope_2)
+            y_volt = slope_1 * x_volt + b1
+
+        # Comment x, y
+        x, y = self.diagram.voltage_to_coord(x_volt, y_volt)
+        state, x_intersec, y_intersec = self._enforce_boundary(True, x, y)
+
+        logger.debug(f'- Stage Final - \n'
+                     f'Intersection point: {x_volt:.2f} V, {y_volt:.2f} V\n'
+                     f'Leftmost coord: {str(self._get_leftmost_line_coord_str())}\n'
+                     f'Bottommost coord: {str(self._get_bottommost_line_coord_str())}\n'
+                     f'Angle Line 1: {m1} ou {ang1}\n'
+                     f'Angle Line 2: {m2} ou {ang2}\n'
                      f'Y1 = {slope_1}.x + {b1}\n'
                      f'Y2 = {slope_2}.x + {b2}')
 
-        self.move_to_coord(x, y)
+        self.move_to_coord(x_intersec, y_intersec)
 
         # Record Intersection
         self._step_descr = f'---- Intersection point -------\n' \
-                           f'Coord: ({x_volt:.2f}V,{y_volt:.2f}V)\n' \
-                           f'Leftmost Line: {str(self._get_leftmost_line_coord_str())}\n' \
-                           f'Bottommost Line: {str(self._get_bottommost_line_coord_str())}\n' \
- \
+                           f'Coord: {x_volt:.2f}V,{y_volt:.2f}V\n' \
+                           f'Leftmost coord: {x_l_volt, y_l_volt}\n' \
+                           f'Bottommost coord: {x_b_volt, y_b_volt}'
+
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
@@ -1069,33 +1130,29 @@ class JumpNDots(Jump):
 
         self._previous_line_state = 1
 
-        ratio = 1 / 2
+        ratio = 3 / 6
 
         self._move_down_follow_line(
-            ceil(self._get_avg_line_step_distance(line_distances=self._line_distances_2) * ratio)
+            ceil(self._default_step_x * self._get_avg_line_step_distance(line_distances=self._line_distances_2) * ratio)
         )
-
-        self.move_to_coord(x, y)
 
         self._previous_line_state = 2
 
         self._move_up_follow_line(
-            ceil(self._get_avg_line_step_distance(line_distances=self._line_distances_1) * ratio)
+            ceil(self._default_step_x * self._get_avg_line_step_distance(line_distances=self._line_distances_1) * ratio)
         )
 
         x, y = self.x, self.y
         state, x, y = self._enforce_boundary(True, x, y)
-        self.move_to_coord(x, y)
 
         x = self.diagram.x_axes[x]
         y = self.diagram.y_axes[y]
 
         self._step_descr = f' ---- Final Coord ----\n' \
-                           f'Coord: ({x:.2f}V,{y:.2f}V)\n' \
+                           f'Coord: {x:.2f} V,{y:.2f} V\n' \
                            f'Leftmost Line: {str(self._get_leftmost_line_coord_str())}\n' \
                            f'Bottommost Line: {str(self._get_bottommost_line_coord_str())}\n' \
-                           f'{tuple([0] * settings.dot_number)} area: ({x_volt_l:.2f}V,{y_volt_b:.2f}V)\n' \
-                           f'{tuple([1] * settings.dot_number)} area: ({x:.2f}V,{y:.2f}V)'
+                           f'Intersection point: {x_volt:.2f} V, {y_volt:.2f} V'
 
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
@@ -1121,6 +1178,29 @@ class JumpNDots(Jump):
         # Enforce the boundary policy to make sure the final guess is in the diagram area
         self._enforce_boundary_policy(force=True)
 
+        if settings.debug_line:
+
+            result = self.diagram.get_charge(self.x, self.y) == ['1_1', '1_2']
+
+            if result and self._nb_plot_good > 0:
+                result = 'Success'
+                self._nb_plot_good -= 1
+            elif not result and self._nb_plot_bad > 0:
+                result = 'Fail'
+                self._nb_plot_bad -= 1
+            else:
+                return
+
+            l1 = [slope_1, b1]
+            l2 = [slope_2, b2]
+            l_point_volt = [x_l_volt, y_l_volt]
+            b_point_volt = [x_b_volt, y_b_volt]
+            intersection_point = [x_intersec, y_intersec]
+            final_point = [self.x, self.y]
+
+            self._plot_intersection(result=result, l1=l1, l2=l2, l_point_volt=l_point_volt, b_point_volt=b_point_volt,
+                                    i_point=intersection_point, f_point=final_point)
+
         return
 
     def _enforce_boundary(self, force: bool = False, x: float = None, y: float = None) -> [bool, float, float]:
@@ -1137,6 +1217,7 @@ class JumpNDots(Jump):
         if force or self.boundary_policy is BoundaryPolicy.HARD:
             max_x, max_y = self.diagram.get_max_patch_coordinates()
 
+            # print(f'Boundary: {(max_x, max_y)}\nCoord: {(x, y)}')
             match_policy = True
             if x < 0:
                 x = 0
@@ -1154,3 +1235,59 @@ class JumpNDots(Jump):
             return match_policy, x, y
 
         raise ValueError(f'Unknown or invalid policy "{self.boundary_policy}" for diagram "{self.diagram}"')
+
+    def _convert_pixel_to_volt(self, pixel: float = None) -> float:
+        return pixel * settings.pixel_size
+
+    def _plot_intersection(self, result: str = None, l1: list = [None, None], l2: list = [None, None],
+                           l_point_volt: list = [None, None], b_point_volt: list = [None, None],
+                           i_point: list = [None, None], f_point: list = [None, None]) -> None:
+
+        logger.debug(f'Plot Intersection point for a {result}')
+
+        # Parameter of Line
+
+        slope_1, b1 = l1
+        slope_2, b2 = l2
+        x_b_volt, y_b_volt = b_point_volt
+        x_l_volt, y_l_volt = l_point_volt
+        x_intersec, y_intersec = self.diagram.coord_to_voltage(i_point[0], i_point[1])
+        x_final, y_final = self.diagram.coord_to_voltage(f_point[0], f_point[1])
+
+        # Save Path
+
+
+        number = settings.nb_good_to_plot - self._nb_plot_good if result == 'Success' else \
+                        settings.nb_error_to_plot - self._nb_plot_bad
+        name = f'Intersection_{self.diagram.name}_{result}_{number}'
+        save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), name, 'png', False)
+
+        values, x_axes_volt, y_axes_volt = self.diagram.get_values()
+        line_volt = []
+
+        for i_volt in x_axes_volt:
+            j1_volt = slope_1 * i_volt + b1
+            j2_volt = slope_2 * i_volt + b2
+            line_volt.append([j1_volt, j2_volt])
+
+        line_volt = np.array(line_volt)
+
+        plt.figure(name, figsize=(12.8, 9.6), dpi=200)
+        extent = [x_axes_volt[0], x_axes_volt[-1],
+                  y_axes_volt[0], y_axes_volt[-1]]
+        plt.imshow(values, cmap='copper', extent=extent, origin='lower')
+        cbar = plt.colorbar()
+        cbar.set_label('$I_{QPC}$ (A)', rotation=90)
+        plt.plot(x_axes_volt, line_volt[:, 0], label=f'Line bottommost: {slope_1:.2f}.x + {b1:.2f}', color='blue')
+        plt.scatter(x_b_volt, y_b_volt, label='Bottommost point', color='blue')
+        plt.plot(x_axes_volt, line_volt[:, 1], label=f'Line leftmost: {slope_2:.2f}.x + {b2:.2f}', color='orange')
+        plt.scatter(x_l_volt, y_l_volt, label='Leftmost point', color='orange')
+        plt.scatter(x_intersec, y_intersec, label='Intersection point', color='purple', marker='x', s=100)
+        plt.scatter(x_final, y_final, label='Final coord', color='red', marker='x', s=100)
+        plt.xlabel('Gate 1 (Volt)')
+        plt.ylabel('Gate 2 (Volt)')
+        plt.legend()
+        plt.xlim(x_axes_volt[0], x_axes_volt[-1])  # x goes from -7 to 0
+        plt.ylim(y_axes_volt[0], y_axes_volt[-1])  # y goes from -7 to 2
+        # The tight bbox will remove white space around the image, the image "figsize" won't be respected.
+        plt.savefig(save_path, dpi=200)

@@ -80,8 +80,9 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
 
                     # Save result and log
                     autotuning_results[(procedure_name, diagram.name)].append(result)
-                    nb_error_to_plot, nb_good_to_plot \
-                        = save_show_results(result, procedure, False, nb_error_to_plot, nb_good_to_plot)
+                    if settings.record_plot:
+                        nb_error_to_plot, nb_good_to_plot \
+                            = save_show_results(result, procedure, False, nb_error_to_plot, nb_good_to_plot)
 
                     progress.incr()
 
@@ -153,15 +154,19 @@ def save_show_results(autotuning_result: AutotuningResult, procedure: Autotuning
     # Plot tuning steps for the first round and some error samples
     # Plot some error and good samples
     if (not success and nb_error_to_plot > 0) or (success and nb_good_to_plot > 0):
-        procedure.plot_step_history(autotuning_result.final_volt_coord, success)
-        procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
+        if settings.record_image:
+            procedure.plot_step_history(autotuning_result.final_volt_coord, success)
+        if settings.record_video:
+            procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
         if not success:
             nb_error_to_plot -= 1
         else:
             nb_good_to_plot -= 1
     elif force_save or is_full_scan:
-        procedure.plot_step_history(autotuning_result.final_volt_coord, success)
-        procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
+        if settings.record_image:
+            procedure.plot_step_history(autotuning_result.final_volt_coord, success)
+        if settings.record_video:
+            procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
 
     return nb_error_to_plot, nb_good_to_plot
 
