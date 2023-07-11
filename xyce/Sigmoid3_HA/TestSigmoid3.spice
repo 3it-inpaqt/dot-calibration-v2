@@ -1,15 +1,12 @@
-*.GLOBAL gnd!
+*
+XX1 in out rnn_sigmoid3_ha
+V1 in 0 PWL(0 -2 10u 2)
 
-V1 VDD VSS 1.8
-V0 VSS 0 0
-V4 Vb 0 1.2
-R0 out VSS 50k
-V2 Vp 0 PWL(0 -0.5 400u -0.5 800u 1 1.2m 1)
-V5 Vn 0 0
-XI4 VDD VSS Vb Vn out Vp RNN_Sigmoid3_HA
-
-.include "C:\Users\assh2802\OneDrive - USherbrooke\circuits\XYCE\netlist\models\180nm_bulk.txt"
-.include "C:\Users\assh2802\OneDrive - USherbrooke\circuits\XYCE\simulations\ActivationFunction\Sigmoid3_HA\Sigmoid3_HA.spice"
-.op
-.tran 0 1.2m uic
-.print tran format=csv file=Test_RNN_Sigmoid3_HA_xyce.csv v(Vp) v(out)
+.print tran format=raw file=plot/Test_RNN_Sigmoid3_HA_xyce.raw v(*)
+.tran 0 10u 10n
+.include "..\models\180nm_bulk.txt"
+.include "Sigmoid3_HA.spice"
+.backanno
+.end
+nno
+.end

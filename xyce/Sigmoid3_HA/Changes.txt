@@ -1,0 +1,5 @@
+1- Only 1-input (Vp) and 1-output (Vout)
+2- You can use testPlot_me.py to compare against the digital sigmoid 
+3- To test:
+	a- xyce ./TestSigmoid3.spice
+	b- python ./testPlot_me.py 
