@@ -1,4 +1,3 @@
-from math import prod
 from random import randrange
 from typing import List, Tuple
 
@@ -79,37 +78,50 @@ class DiagramOnline(Diagram):
         x_end = x_start + x_patch
         y_end = y_start + y_patch
 
-        # Convert the coordinate to voltage
-        x_start_v, y_start_v = self.coord_to_voltage(x_start, y_start)
-        x_end_v, y_end_v = self.coord_to_voltage(x_end, y_end)
+        if settings.use_cached_measurement:
+            # Try to optimize the patch measurement by using cached data
+            measurements_coords = self._split_patch_in_unmeasured_rectangles((x_start, x_end, y_start, y_end))
+            if len(measurements_coords) == 0:
+                logger.debug(f'Using only cached data for the current patch, no new measurement required')
+            elif len(measurements_coords) == 1 and (x_start, x_end, y_start, y_end) == measurements_coords[0]:
+                logger.debug(f'No cached data found for the current patch, requesting full patch measurement')
+            else:
+                logger.debug(f'Partial cached data found for the current patch, requesting {len(measurements_coords)} '
+                             f'measurement(s)')
+        else:
+            # Request a full patch measurement
+            measurements_coords = [(x_start, x_end, y_start, y_end)]
 
-        # Request a new measurement to the connector
-        logger.debug(f'Requesting measurement ({prod(patch_size):,d} points) to the {self._connector} connector: '
-                     f'|X|{x_start}->{x_end}| ({x_start_v:.4f}V->{x_end_v:.4f}V) '
-                     f'|Y|{y_start}->{y_end}| ({y_start_v:.4f}V->{y_end_v:.4f}V)')
-        measurement = self._connector.measurement(x_start_v, x_end_v, settings.pixel_size,
-                                                  y_start_v, y_end_v, settings.pixel_size)
+        # Request the measurements to the connector (it could be 0, 1 or multiple measurements)
+        for sub_x_start, sub_x_end, sub_y_start, sub_y_end in measurements_coords:
+            # Convert the coordinate to voltage
+            x_start_v, y_start_v = self.coord_to_voltage(sub_x_start, sub_y_start)
+            x_end_v, y_end_v = self.coord_to_voltage(sub_x_end, sub_y_end)
+            # Request a new measurement to the connector
+            nb_points = (sub_x_end - sub_x_start) * (sub_y_end - sub_y_start)
+            logger.debug(f'Requesting measurement ({nb_points:,d} points) to the {self._connector} connector: '
+                         f'|X|{sub_x_start}->{sub_x_end}| ({x_start_v:.4f}V->{x_end_v:.4f}V) '
+                         f'|Y|{sub_y_start}->{sub_y_end}| ({y_start_v:.4f}V->{y_end_v:.4f}V)')
+            measurement = self._connector.measurement(x_start_v, x_end_v, settings.pixel_size,
+                                                      y_start_v, y_end_v, settings.pixel_size)
 
-        # Validate the measurement size
-        if tuple(measurement.data.shape) != patch_size:
-            raise ValueError(f'Unexpected measurement size: {tuple(measurement.data.shape)} while {patch_size} has'
-                             f' been requested.')
-
-        # Flip y-axis because we save the diagram values with origin is in the top left corner
-        measurement.data = measurement.data.flip(0)
-        # Save the measurement in the history to keep track of it
-        self._measurement_history.append(measurement)
-        # Send the data matrix to the same device as the values
-        measurement.to(self.values.device)
-        # Save the measurement in the grid
-        self.values[y_start:y_end, x_start: x_end] = measurement.data
+            # Save the measurement in the history to keep track of it
+            self._measurement_history.append(measurement)
+            # Send the data matrix to the same device as the values
+            measurement.to(self.values.device)
+            # Save the measurement in the grid
+            self.values[sub_y_start:sub_y_end, sub_x_start: sub_x_end] = measurement.data
 
         # Plot the diagram with all current measurements
         if settings.is_named_run() and (settings.save_images or settings.show_images):
             self.plot()
 
+        patch_data = self.values[y_start:y_end, x_start: x_end]
+        if patch_data.isnan().any():
+            raise ValueError(f'The patch ({x_start}, {y_start}) to ({x_end}, {y_end}) contains NaN values.')
+
         # Normalize the measurement with the normalization range used during the training, then return it.
-        return self.normalize(measurement.data) if normalized else measurement.data
+        return self.normalize(patch_data) if normalized else patch_data
 
     def plot(self) -> None:
         """
@@ -177,3 +189,50 @@ class DiagramOnline(Diagram):
         last_row = min(last_row + margin, len(y_axis) - 1)
 
         return x_axis[first_col], x_axis[last_col], y_axis[first_row], y_axis[last_row]
+
+    def _split_patch_in_unmeasured_rectangles(self, patch_coords) -> List[Tuple[int, int, int, int]]:
+        """
+        Split a patch in multiple rectangles of unmeasured diagram area.
+
+        :param patch_coords: The coordinates of the patch to measure.
+        :return: The list of rectangles as: x_start, x_end, y_start, y_end.
+        """
+        # Get a mask of scanned values
+        x_start, x_end, y_start, y_end = patch_coords
+        scanned = self.values[y_start:y_end, x_start: x_end].isnan().logical_not()
+
+        # All values have been scanned, return an empty list
+        if scanned.all():
+            return []
+
+        # No cached data for this patch, return one rectangle that covers the whole patch
+        if scanned.logical_not().all():
+            return [(x_start, x_end, y_start, y_end)]
+
+        # Patch partially scanned, split it in multiple rectangles that cover the unscanned areas
+        to_scan_rectangles = []
+        while not torch.all(scanned):
+            # Get the first index where not scanned (False)
+            # Indexes relative to the current patch
+            first_y, first_x = tuple(scanned.logical_not().int().nonzero()[0].tolist())
+
+            # Search for the last consecutive x index where not scanned
+            last_x = first_x + 1
+            for x in range(first_x + 1, len(scanned[first_y])):
+                if scanned[first_y, x]:
+                    break
+                last_x = x + 1
+
+            # Search for the last consecutive y index where everything is not scanned in the current x range
+            last_y = first_y + 1
+            for y in range(first_y + 1, len(scanned)):
+                if scanned[y, first_x:last_x].any():
+                    break
+                last_y = y + 1
+
+            # Set current rectangle as scanned
+            scanned[first_y:last_y, first_x:last_x] = True
+            # Add the rectangle to the list
+            to_scan_rectangles.append((first_x + x_start, last_x + x_start, first_y + y_start, last_y + y_start))
+
+        return to_scan_rectangles

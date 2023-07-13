@@ -317,7 +317,7 @@ class Settings:
     # Possible values: 'mock', 'py_hegel'
     connector_name: str = 'mock'
 
-    # The level of automation of the connector.
+    # The automation level of the connector.
     # 'auto': the connector will automatically send the command to the measurement device.
     # 'semi-auto': the connector will show the command to the user before to send it to the measurement device.
     # 'manual': the connector will only show the command to the user, and will not send it to the measurement device.
@@ -331,6 +331,11 @@ class Settings:
     # The voltage range in which we can choose a random starting point, for each gate.
     start_range_voltage_x: Sequence = (float('nan'), float('nan'))
     start_range_voltage_y: Sequence = (float('nan'), float('nan'))
+
+    # Use cache from previous measurements to speed up the tuning.
+    # If False, the connector will always request a new measurement.
+    # If True, the connector will use previous data when it is possible.
+    use_cached_measurement: bool = True
 
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """

@@ -193,11 +193,11 @@ class PyHegel(Connector):
         values = torch.tensor(data[:, 2] / amplification, dtype=torch.float)
 
         # Reshape the values to match the x and y axes
-        values = values.reshape(len(x), len(y))
+        values = values.reshape(len(y), len(x))
 
         logger.debug(f'Raw measurement data parsed, {len(x)}×{len(y)} points with amplification: {amplification}')
 
-        return x, y, values.rot90()  # Rotate 90° because the origin is top left, and we want it bottom left
+        return x, y, values
 
     def _create_stdout_consumer_thread(self):
 
