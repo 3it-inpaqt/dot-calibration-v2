@@ -49,4 +49,4 @@ class Mock(Connector):
         return ExperimentalMeasurement(
             np.linspace(start_volt_x, end_volt_x, size_x, endpoint=False),
             np.linspace(start_volt_y, end_volt_y, size_y, endpoint=False),
-            torch.rand((size_y, size_x)))
+            torch.rand((size_y, size_x)), None)

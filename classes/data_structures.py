@@ -256,6 +256,7 @@ class ExperimentalMeasurement:
     x_axes: Sequence[float]
     y_axes: Sequence[float]
     data: torch.Tensor
+    note: Optional[str] = None
 
     def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
            copy: bool = False):

@@ -77,6 +77,8 @@ class DiagramOnline(Diagram):
         x_start, y_start = coordinate
         x_end = x_start + x_patch
         y_end = y_start + y_patch
+        x_start_v, y_start_v = self.coord_to_voltage(x_start, y_start)
+        x_end_v, y_end_v = self.coord_to_voltage(x_end, y_end)
 
         if settings.use_cached_measurement:
             # Try to optimize the patch measurement by using cached data
@@ -93,17 +95,23 @@ class DiagramOnline(Diagram):
             measurements_coords = [(x_start, x_end, y_start, y_end)]
 
         # Request the measurements to the connector (it could be 0, 1 or multiple measurements)
-        for sub_x_start, sub_x_end, sub_y_start, sub_y_end in measurements_coords:
+        for i, (sub_x_start, sub_x_end, sub_y_start, sub_y_end) in enumerate(measurements_coords, start=1):
             # Convert the coordinate to voltage
-            x_start_v, y_start_v = self.coord_to_voltage(sub_x_start, sub_y_start)
-            x_end_v, y_end_v = self.coord_to_voltage(sub_x_end, sub_y_end)
+            sub_x_start_v, sub_y_start_v = self.coord_to_voltage(sub_x_start, sub_y_start)
+            sub_x_end_v, sub_y_end_v = self.coord_to_voltage(sub_x_end, sub_y_end)
             # Request a new measurement to the connector
             nb_points = (sub_x_end - sub_x_start) * (sub_y_end - sub_y_start)
             logger.debug(f'Requesting measurement ({nb_points:,d} points) to the {self._connector} connector: '
-                         f'|X|{sub_x_start}->{sub_x_end}| ({x_start_v:.4f}V->{x_end_v:.4f}V) '
-                         f'|Y|{sub_y_start}->{sub_y_end}| ({y_start_v:.4f}V->{y_end_v:.4f}V)')
-            measurement = self._connector.measurement(x_start_v, x_end_v, settings.pixel_size,
-                                                      y_start_v, y_end_v, settings.pixel_size)
+                         f'|X|{sub_x_start}->{sub_x_end}| ({sub_x_start_v:.4f}V->{sub_x_end_v:.4f}V) '
+                         f'|Y|{sub_y_start}->{sub_y_end}| ({sub_y_start_v:.4f}V->{sub_y_end_v:.4f}V)')
+            measurement = self._connector.measurement(sub_x_start_v, sub_x_end_v, settings.pixel_size,
+                                                      sub_y_start_v, sub_y_end_v, settings.pixel_size)
+            measurement.note = f'Patch:' \
+                               f'\n  -|X|{x_start}->{x_end}| ({x_start_v:.4f}V->{x_end_v:.4f}V)' \
+                               f'\n  -|Y|{y_start}->{y_end}| ({y_start_v:.4f}V->{y_end_v:.4f}V)' \
+                               f'\n\nSub-section: {i}/{len(measurements_coords)}' \
+                               f'\n  -|X|{sub_x_start}->{sub_x_end}| ({sub_x_start_v:.4f}V->{sub_x_end_v:.4f}V)' \
+                               f'\n  -|Y|{sub_y_start}->{sub_y_end}| ({sub_y_start_v:.4f}V->{sub_y_end_v:.4f}V)'
 
             # Save the measurement in the history to keep track of it
             self._measurement_history.append(measurement)
@@ -112,16 +120,16 @@ class DiagramOnline(Diagram):
             # Save the measurement in the grid
             self.values[sub_y_start:sub_y_end, sub_x_start: sub_x_end] = measurement.data
 
-        # Plot the diagram with all current measurements
-        if settings.is_named_run() and (settings.save_images or settings.show_images):
-            self.plot()
+            # Plot the diagram with all current measurements
+            if settings.is_named_run() and (settings.save_images or settings.show_images):
+                self.plot()
 
         patch_data = self.values[y_start:y_end, x_start: x_end]
         if patch_data.isnan().any():
             raise ValueError(f'The patch ({x_start}, {y_start}) to ({x_end}, {y_end}) contains NaN values.')
 
         # Normalize the measurement with the normalization range used during the training, then return it.
-        return self.normalize(patch_data) if normalized else patch_data
+        return self.normalize(patch_data.clone()) if normalized else patch_data
 
     def plot(self) -> None:
         """
@@ -129,13 +137,15 @@ class DiagramOnline(Diagram):
         """
         values, x_axes, y_axes = self.get_values()
         focus_area = False
+        text = None
         if self._measurement_history and len(self._measurement_history) > 0:
             last_m = self._measurement_history[-1]
             focus_area = (last_m.x_axes[0], last_m.x_axes[-1], last_m.y_axes[0], last_m.y_axes[-1])
+            text = last_m.note
 
         plot_diagram(x_axes, y_axes, values, title=f'Online diagram {self.name}', focus_area_title='Last measurement',
                      allow_overwrite=True, focus_area=focus_area, file_name=f'diagram_{self.name}',
-                     diagram_boundaries=self.get_cropped_boundaries())
+                     diagram_boundaries=self.get_cropped_boundaries(), text=text)
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """

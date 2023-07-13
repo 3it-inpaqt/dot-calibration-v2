@@ -121,7 +121,7 @@ class PyHegel(Connector):
         with open(out_file) as f:
             x, y, values = PyHegel._load_raw_points(f, self._amplification)
 
-        return ExperimentalMeasurement(x, y, values)
+        return ExperimentalMeasurement(x, y, values, None)
 
     def _send_command(self, command: str, max_wait_time: float = 10) -> None:
         """
