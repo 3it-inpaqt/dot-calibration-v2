@@ -214,19 +214,25 @@ class Settings:
     nb_train_update: int = 10_000
 
     # Save the best network state during the training based on the test main metric.
-    # Then load it when the training is complet.
-    # The file will be at the root of run directory, under then name: "best_network.pt"
+    # Then load it when the training is complete.
+    # The file will be at the root of run directory, under the name: "best_network.pt"
     # Required checkpoints_per_epoch > 0 and checkpoint_validation = True
     early_stopping: bool = True
 
-    # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
-    # Negative threshold means automatic value selection using tau.
-    confidence_threshold: float = -1.0
+    # Threshold to interpret the model uncertainty. Under this limit, we consider that we don't know the answer.
+    confidence_threshold: float = 0.8
 
-    # Relative importance of model error compare to model uncertainty for automatic confidence threshold tuning.
-    # Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
+    # Define the methode used to calibrate the confidence threshold.
+    # If not fixed, the model confidence will be calibrated using the validation set (or train if no validation set).
+    # - fixed: The confidence threshold is fixed to the value defined in confidence_threshold
+    # - error_rate: Defining a virtual confidence threshold to match the expected error of from confidence_threshold
+    # - dynamic: The confidence threshold is dynamically adjusted using dynamic_threshold_tau
+    calibrate_confidence_method: str = 'error_rate'
+
+    # Relative importance of model error, compared to model uncertainty for automatic confidence threshold tuning.
+    # The confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
     # Used only if the confidence threshold is not defined (<0)
-    auto_confidence_threshold_tau: float = 0.2
+    dynamic_threshold_tau: float = 0.2
 
     # The metric to use for the uncertainty calibration.
     # Possible values: ECE, aECE, SCE, aSCE.
@@ -416,6 +422,7 @@ class Settings:
         assert self.main_calibration_metric.lower() in ['ece', 'aece', 'sce', 'asce'], \
             f'Unknown calibration metric "{self.main_calibration_metric}"'
         assert self.calibration_nb_bins > 2, 'At least 2 bins required for calibration'
+        assert self.calibrate_confidence_method in ['fixed', 'error_rate', 'dynamic']
 
         # Checkpoints
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints per epoch should be >= 0'
