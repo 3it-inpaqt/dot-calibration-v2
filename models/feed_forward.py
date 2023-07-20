@@ -1,5 +1,5 @@
 import math
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Optional, Sequence
 
 import torch
 import torch.nn as nn
@@ -14,21 +14,27 @@ class FeedForward(ClassifierNN):
     Simple fully connected feed forward classifier neural network.
     """
 
-    def __init__(self, input_shape: Tuple[int, int], class_ratio: float = None):
+    def __init__(self, input_shape: Tuple[int, int], class_ratio: float = None,
+                 network_option: Optional[Sequence] = ()):
         """
         Create a new network with fully connected hidden layers.
         The number hidden layers is based on the settings.
 
         :param input_shape: The dimension of one item of the dataset used for the training
         :param class_ratio: The class ratio for: no_line / line
+        :param network_option: Optional, for slope estimation network, load parameter for this network
         """
         super().__init__()
 
         # Number of neurons per layer
         # eg: input_size, hidden size 1, hidden size 2, ..., nb_classes
         layer_sizes = [math.prod(input_shape)]
-        layer_sizes.extend(settings.hidden_layers_size)
+        layer_sizes.extend(settings.hidden_layers_size if not network_option else network_option[0])
         layer_sizes.append(1)
+
+        # If slope network
+        batch_norm_layers = settings.batch_norm_layers if not network_option else network_option[4]
+        dropout = settings.dropout if not network_option else network_option[5]
 
         # Create fully connected linear layers
         self.fc_layers = nn.ModuleList()
@@ -39,12 +45,12 @@ class FeedForward(ClassifierNN):
             # If this is not the output layer
             if i != len(layer_sizes) - 2:
                 # Batch normalisation
-                if settings.batch_norm_layers[i]:
+                if batch_norm_layers[i]:
                     layer.append(nn.BatchNorm1d(layer_sizes[i + 1]))
                 # Activation function
                 layer.append(nn.ReLU())
                 # Dropout
-                if settings.dropout > 0:
+                if dropout > 0:
                     layer.append(nn.Dropout(settings.dropout))
 
             self.fc_layers.append(layer)

@@ -92,7 +92,13 @@ class Settings:
     record_video: bool = True
 
     # Plot bottommost and leftmost line interpoleted
-    debug_line: bool = False
+    intersection_plot: bool = False
+
+    # Plot stat on the autotuning
+    stat_angle_plot: bool = False
+
+    # Plot patch verification for the slope estimation
+    patch_verif_plot: bool = False
 
     # If True and the run have a valid name, save the neural network parameters in the run directory at the end of the
     # training. Saved before applying early stopping if enabled.
@@ -196,6 +202,31 @@ class Settings:
     # Have to match the number of layers (convolution + linear)
     batch_norm_layers: Sequence = (False, False, False, False)
 
+    # =================== Slope Network =================== #
+    # Model train by william
+    william_FF: bool = False
+    # The type of model to use (could be a neural network).
+    # Have to be in the implemented list: FF, BFF, CNN, BCNN.
+    slope_model_type: str = 'FF'
+
+    # Number of spiral to confirm the angle of a line
+    nb_spiral: int = 1
+
+    # The number of fully connected hidden layer and their respective number of neurons.
+    slope_hidden_layers_size: Sequence = (24, 6, 3)
+
+    # The number of convolution layers and their respective properties (for CNN models only).
+    slope_conv_layers_kernel: Sequence = (4, 4, 4)
+    slope_conv_layers_channel: Sequence = (12, 24)
+
+    # Define if there is a max pooling layer after each convolution layer (True = max pooling)
+    # Have to match the convolution layers size
+    slope_max_pooling_layers: Sequence = (False, False)
+
+    # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
+    # Have to match the number of layers (convolution + linear)
+    slope_batch_norm_layers: Sequence = (False, False, False, False)
+
     # ==================================================================================================================
     # ==================================================== Training ====================================================
     # ==================================================================================================================
@@ -215,6 +246,11 @@ class Settings:
     # If a network model doesn't have a dropout layer this setting will have no effect.
     # 0 skip dropout layers
     dropout: int = 0.4
+
+    # Dropout rate for every dropout layers defined in the slope networks.
+    # If a network model doesn't have a dropout layer this setting will have no effect.
+    # 0 skip dropout layers
+    slope_dropout: int = 0
 
     # The size of the mini-batch for the training and testing.
     batch_size: int = 512
@@ -313,7 +349,20 @@ class Settings:
     # If True the Jump_NDots algorithm will validate the bottommost line at different Y-position
     # to avoid mistake in the case of fading lines.
     validate_bottom_line: bool = True
-    # If True the algorithm will check if the line is a parasit dot or not
+
+    # If True, the algorithm use the network instead of the arc circle to estimation the slope of the line
+    slope_network: bool = False
+
+    # If True the line slope regression model cheat by using the diagram labels (no neural network loaded).
+    # Used for baselines.
+    slope_estimation_use_oracle: bool = False
+
+    # If a valid path to a file containing neural network parameters is set, they will be loaded in the current neural
+    # network for the slope estimation.
+    slope_network_cache_path: str = ''
+    slope_normalization_values_path: str = ''
+
+    # If True, the algorithm check if the line is a parasit dot or not
     parasit_dot_procedure: bool = False
 
     # If the oracle is enabled, these numbers corrupt its precision.
@@ -332,6 +381,8 @@ class Settings:
     nb_error_to_plot: int = 5
     nb_good_to_plot: int = 2
 
+    # Plot the patch of the estimated angle (for debug)
+    verif_patch: bool = False
 
     # ==================================================================================================================
     # ==================================================== Connector ===================================================
@@ -442,13 +493,10 @@ class Settings:
 
         # Autotuning
         procedures_allow = (
-            'random', 'shift', 'shift_u', 'jump', 'jump_u', 'full', 'jump_ndots', 'jump_pdot', 'sanity_check')
+            'random', 'shift', 'shift_u', 'jump', 'jump_u', 'full', 'jump_pdot', 'sanity_check')
         for procedure in self.autotuning_procedures:
             assert isinstance(procedure, str) and procedure.lower() in procedures_allow, \
                 f'Invalid autotuning procedure name {procedure}'
-            if procedure == 'jump_ndots':
-                assert self.dot_number != 1, f'The autotuning procedure {procedure} ' \
-                                             f'for Ndot cannot be used with only one dot.'
 
         assert self.autotuning_nb_iteration >= 1, 'At least 1 autotuning iteration required'
 

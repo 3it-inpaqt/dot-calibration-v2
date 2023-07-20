@@ -73,7 +73,7 @@ class ClassificationMetrics(ClassMetrics):
 @dataclass(frozen=True)
 class StepHistoryEntry:
     coordinates: Tuple[int, int]
-    model_classification: bool  # True = Line / False = No line
+    model_classification: int  # True = Line / False = No line
     model_confidence: float
     ground_truth: bool
     soft_truth_larger: bool  # Ground truth if the active area was larger (smaller offset)

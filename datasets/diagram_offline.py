@@ -71,7 +71,6 @@ class DiagramOffline(Diagram):
         """
         coord_x, coord_y = coordinate
         size_x, size_y = patch_size
-
         values = self.values if not normalized else self.values_norm
 
         return values[coord_y:coord_y + size_y, coord_x:coord_x + size_x]

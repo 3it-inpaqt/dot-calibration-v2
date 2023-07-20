@@ -1,6 +1,6 @@
-from typing import Any, List, Tuple
-
 import math
+from typing import Any, List, Tuple, Optional, Sequence
+
 import torch
 import torch.nn as nn
 from torch import optim
@@ -17,7 +17,8 @@ class CNN(ClassifierNN):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def __init__(self, input_shape: Tuple[int, int], class_ratio: float = None):
+    def __init__(self, input_shape: Tuple[int, int], class_ratio: float = None,
+                 network_option: Optional[Sequence] = ()):
         """
         Create a new network with convolutional layers, followed by fully connected hidden layers.
         The number hidden layers is based on the settings.
@@ -30,11 +31,17 @@ class CNN(ClassifierNN):
         self.conv_layers = nn.ModuleList()
         last_nb_channel = 1
 
+        conv_layers_channel = settings.conv_layers_channel if not network_option else network_option[1]
+        conv_layers_kernel = settings.conv_layers_kernel if not network_option else network_option[2]
+        max_pooling_layers = settings.max_pooling_layers if not network_option else network_option[3]
+        batch_norm_layers = settings.batch_norm_layers if not network_option else network_option[4]
+        dropout = settings.dropout if not network_option else network_option[5]
+
+        option = zip(conv_layers_channel, conv_layers_kernel,
+                     max_pooling_layers, batch_norm_layers[:len(settings.conv_layers_kernel)])
+
         # Create convolution layers
-        for channel, kernel, max_pool, batch_norm in zip(settings.conv_layers_channel,
-                                                         settings.conv_layers_kernel,
-                                                         settings.max_pooling_layers,
-                                                         settings.batch_norm_layers[:len(settings.conv_layers_kernel)]):
+        for channel, kernel, max_pool, batch_norm in option:
             layer = nn.Sequential()
             # Convolution
             layer.append(nn.Conv2d(in_channels=last_nb_channel, out_channels=channel, kernel_size=(kernel, kernel)))
@@ -47,7 +54,7 @@ class CNN(ClassifierNN):
             if max_pool:
                 layer.append(nn.MaxPool2d(kernel_size=(2, 2)))
             # Dropout
-            if settings.dropout > 0:
+            if dropout > 0:
                 layer.append(nn.Dropout(settings.dropout))
 
             self.conv_layers.append(layer)
@@ -56,7 +63,7 @@ class CNN(ClassifierNN):
         # Number of neurons per layer
         # eg: input_size, hidden size 1, hidden size 2, ..., nb_classes
         fc_layer_sizes = [math.prod(calc_out_conv_layers(input_shape, self.conv_layers))]
-        fc_layer_sizes.extend(settings.hidden_layers_size)
+        fc_layer_sizes.extend(settings.hidden_layers_size if network_option else network_option[0])
         fc_layer_sizes.append(settings.dot_number)
 
         # Create fully connected linear layers
@@ -68,7 +75,7 @@ class CNN(ClassifierNN):
             # If this is not the output layer
             if i != len(fc_layer_sizes) - 2:
                 # Batch normalisation
-                if settings.batch_norm_layers[len(settings.conv_layers_channel) + i]:
+                if batch_norm_layers[len(conv_layers_channel) + i]:
                     layer.append(nn.BatchNorm1d(fc_layer_sizes[i + 1]))
                 # Activation function
                 layer.append(nn.ReLU())

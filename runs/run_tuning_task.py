@@ -6,8 +6,7 @@ from tabulate import tabulate
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from autotuning.full_scan import FullScan
-from autotuning.jump import Jump
-from autotuning.jump_ndots import JumpNDots
+from autotuning.jump_ndots import Jump_selector
 from autotuning.jump_uncertainty import JumpUncertainty
 from autotuning.parasit_dot import selection_parasitdot_procedure
 from autotuning.random_baseline import RandomBaseline
@@ -113,11 +112,9 @@ def init_procedure(model: Optional[Classifier], procedure_name: str) -> Autotuni
     elif procedure_name == 'shift_u':
         return ShiftUncertainty(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'jump':
-        return Jump(model, patch_size, label_offsets, settings.autotuning_use_oracle)
+        return Jump_selector(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'jump_u':
         return JumpUncertainty(model, patch_size, label_offsets, settings.autotuning_use_oracle)
-    elif procedure_name == 'jump_ndots':
-        return JumpNDots(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'jump_pdot':
         return selection_parasitdot_procedure(model, patch_size, label_offsets, settings.autotuning_use_oracle)
     elif procedure_name == 'full':
