@@ -1,0 +1,6 @@
+*
+.subckt sourcefollower Vin Vout
+XU1 Vin Vout N001 0 Vout level1 Avol=1Meg GBW=100Meg Vos=0 En=0 Enk=0 In=0 Ink=0 Rin=500Meg
+V1 N001 0 1.8
+.ends sourcefollower
+
