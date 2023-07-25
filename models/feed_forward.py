@@ -24,6 +24,10 @@ class FeedForward(ClassifierNN):
         """
         super().__init__()
 
+        # If hardware_aware_training is True, param_temp_cache is used to store replaced params temporarily
+        self.param_temp_cache = []
+        self.mask_temp_cache = []
+
         # Number of neurons per layer
         # eg: input_size, hidden size 1, hidden size 2, ..., nb_classes
         layer_sizes = [math.prod(input_shape)]
@@ -45,9 +49,10 @@ class FeedForward(ClassifierNN):
                 if settings.simulate_circuit:
                     # layer.append(nn.Hardtanh(min_val=0, max_val=1))
                     layer.append(nn.ReLU())
+                    # layer.append(nn.Sigmoid())
                 else:
-                    # layer.append(nn.ReLU())
-                    layer.append(nn.Sigmoid())
+                    layer.append(nn.ReLU())
+                    # layer.append(nn.Sigmoid())
                 # Dropout
                 if settings.dropout > 0:
                     layer.append(nn.Dropout(settings.dropout))
@@ -55,7 +60,7 @@ class FeedForward(ClassifierNN):
             self.fc_layers.append(layer)
 
         # Binary Cross Entropy including sigmoid layer
-        self._criterion = nn.BCEWithLogitsLoss()
+        self._criterion = nn.BCEWithLogitsLoss(reduction='none')
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
     def forward(self, x: Any) -> Any:
@@ -89,11 +94,34 @@ class FeedForward(ClassifierNN):
         # Zero the parameter gradients
         self._optimizer.zero_grad()
 
+        # force weights to 0, parameters_clipping or - parameters_clipping to simulate memristors that are blocked
+        if settings.hardware_aware_training:
+            self.force_weights()
+
         # Forward + Backward + Optimize
         outputs = self(inputs)
         loss = self._criterion(outputs, labels.float())
+        if settings.penalize_near_zero_pred:
+            outputs = self(inputs)
+            negatives = outputs < 0.2
+            positives = outputs > -0.2
+            mask = negatives * positives
+            ones = torch.ones_like(mask)
+            loss_multiplicator = ones + 100 * mask
+            loss = loss * loss_multiplicator
+        loss = torch.mean(loss)
         loss.backward()
         self._optimizer.step()
+
+        # If weights were forced to some values, reset the old values before the next training step
+        if settings.hardware_aware_training:
+            with torch.no_grad():
+                for i, param in enumerate(self.parameters()):
+                    param.data = param.data * ~self.mask_temp_cache[i] + self.param_temp_cache[i]
+
+            self.param_temp_cache = []
+            self.mask_temp_cache = []
+
         # If the parameters_clipping is set, clip every parameter of the model
         if settings.parameters_clipping is not None and settings.parameters_clipping > 0:
             with torch.no_grad():
@@ -101,6 +129,69 @@ class FeedForward(ClassifierNN):
                     param.clamp_(-settings.parameters_clipping, settings.parameters_clipping)
 
         return loss.item()
+
+    def force_weights(self):
+        """
+        Forces the weights to some values to simulate memristors that are blocked
+        :return: None
+        """
+        with torch.no_grad():
+            for param in self.parameters():
+                # if a memristor has probability p of being blocked and the value of a weight is encoded in two
+                # memristors, then the probability that the value of a weight doesn't get modified by a blocked
+                # memristor is (1-p)(1-p).
+                memristor_blocked_prob = settings.ratio_failure_LRS + settings.ratio_failure_HRS
+                weight_affected_prob = 1 - (1 - memristor_blocked_prob) ** 2
+                weight_affected_mask = torch.rand_like(param) < weight_affected_prob
+
+                mask_generator = torch.rand_like(param)
+                both_memristors_affected_mask = mask_generator < (memristor_blocked_prob ** 2) / weight_affected_prob
+                pos_memristors_affected_mask = mask_generator > 1 - memristor_blocked_prob * \
+                                               (1 - memristor_blocked_prob) / weight_affected_prob
+                neg_memristors_affected_mask = torch.bitwise_not(torch.bitwise_or(both_memristors_affected_mask,
+                                                                                  pos_memristors_affected_mask))
+
+                both_memristors_affected_mask = torch.bitwise_and(both_memristors_affected_mask, weight_affected_mask)
+                pos_memristors_affected_mask = torch.bitwise_and(pos_memristors_affected_mask, weight_affected_mask)
+                neg_memristors_affected_mask = torch.bitwise_and(neg_memristors_affected_mask, weight_affected_mask)
+
+                lrs_prob = settings.ratio_failure_LRS / memristor_blocked_prob
+                hrs_prob = 1 - lrs_prob
+                lrs_lrs_prob = lrs_prob ** 2
+                lrs_hrs_prob = lrs_prob * hrs_prob
+                hrs_lrs_prob = hrs_prob * lrs_prob
+                hrs_hrs_prob = hrs_prob ** 2
+                mask_generator = torch.rand_like(param)
+                lrs_lrs_mask = mask_generator < lrs_lrs_prob
+                lrs_hrs_mask = torch.bitwise_and(mask_generator > lrs_lrs_prob,
+                                                 mask_generator < lrs_lrs_prob + lrs_hrs_prob)
+                hrs_lrs_mask = torch.bitwise_and(mask_generator > lrs_lrs_prob + lrs_hrs_prob,
+                                                 mask_generator < lrs_lrs_prob + lrs_hrs_prob + hrs_lrs_prob)
+                hrs_hrs_mask = mask_generator > 1 - hrs_hrs_prob
+                both_memristors_lrs_lrs_mask = torch.bitwise_and(lrs_lrs_mask, both_memristors_affected_mask)
+                both_memristors_lrs_hrs_mask = torch.bitwise_and(lrs_hrs_mask, both_memristors_affected_mask)
+                both_memristors_hrs_lrs_mask = torch.bitwise_and(hrs_lrs_mask, both_memristors_affected_mask)
+                both_memristors_hrs_hrs_mask = torch.bitwise_and(hrs_hrs_mask, both_memristors_affected_mask)
+
+                mask_generator = torch.rand_like(param)
+                lrs_mask = mask_generator < lrs_prob
+                hrs_mask = torch.bitwise_not(lrs_mask)
+                pos_memristors_lrs_mask = torch.bitwise_and(pos_memristors_affected_mask, lrs_mask)
+                pos_memristors_hrs_mask = torch.bitwise_and(pos_memristors_affected_mask, hrs_mask)
+                neg_memristors_lrs_mask = torch.bitwise_and(neg_memristors_affected_mask, lrs_mask)
+                neg_memristors_hrs_mask = torch.bitwise_and(neg_memristors_affected_mask, hrs_mask)
+
+                self.mask_temp_cache.append(weight_affected_mask)
+                self.param_temp_cache.append(param.data * weight_affected_mask)
+
+                param.data[both_memristors_lrs_lrs_mask] = 0.0
+                param.data[both_memristors_lrs_hrs_mask] = settings.parameters_clipping
+                param.data[both_memristors_hrs_lrs_mask] = -settings.parameters_clipping
+                param.data[both_memristors_hrs_hrs_mask] = 0.0
+                param.data[pos_memristors_lrs_mask] = param.data[pos_memristors_lrs_mask] + settings.parameters_clipping
+                param.data[torch.bitwise_and(pos_memristors_hrs_mask, param > 0)] = 0.0
+                param.data[neg_memristors_lrs_mask] = param.data[neg_memristors_lrs_mask] - settings.parameters_clipping
+                param.data[torch.bitwise_and(neg_memristors_hrs_mask, param < 0)] = 0.0
 
     def infer(self, inputs, nb_sample=0) -> (List[bool], List[float]):
         """

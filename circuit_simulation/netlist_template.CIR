@@ -46,6 +46,7 @@
 * Import custom sub-circuits
 .INCLUDE "./components/activations.sub"
 .INCLUDE "./components/lumped_line.sub"
+.INCLUDE "./components/Sigmoid3_HA.spice"
 
 * Define diode model
 .MODEL D_BAV74_1 D( IS=2.073F N=1 BV=50 IBV=100N RS=1.336 
@@ -141,8 +142,7 @@ XUh{{ (layer_nb + 1)|i }}_sum_{{ neuron_num|i }}    sum_h_in_{{ (layer_nb + 1)|i
 * Neuron {{ neuron_num }}
 * XHardTanh_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} HardTanh PARAMS: V_clip={{ tanh_upper_bound }}
 XReLU_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} ReLU
-* .INCLUDE "./components/TestSigmoid3.spice"
-* XSigmoid_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} RNN_Sigmoid3_HA
+*XSigmoid_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} sum_h_out_{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} hidden_activ_out_h{{ (layer_nb + 1)|i }}_{{ neuron_num|i }} RNN_Sigmoid3_HA
     {%- endfor %}
 {% endfor %}
 

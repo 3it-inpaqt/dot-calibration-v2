@@ -87,6 +87,10 @@ class DiagramOffline(Diagram):
         label_offset_x, label_offset_y = label_offset
         diagram_size_y, diagram_size_x = self.values.shape
 
+        # If EWMA is used we need 3 more pixels on the left
+        if settings.use_ewma:
+            patch_size_x = patch_size_x + 3
+
         # Extract each patches
         i = 0
         for patch_y in range(0, diagram_size_y - patch_size_y, patch_size_y - overlap_size_y):
@@ -101,8 +105,9 @@ class DiagramOffline(Diagram):
                 # Patch coordinates (indexes)
                 start_x = patch_x
                 end_x = patch_x + patch_size_x
-                # Patch coordinates (voltage) for label area
-                start_x_v = self.x_axes[start_x + label_offset_x]
+                # Patch coordinates (voltage) for label area. If EWMA is used, the 3 pixels on the left are not used for
+                # classification
+                start_x_v = self.x_axes[start_x + label_offset_x + settings.use_ewma * 3]
                 end_x_v = self.x_axes[end_x - label_offset_x]
 
                 # Create patch shape to find line intersection

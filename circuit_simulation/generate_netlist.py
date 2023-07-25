@@ -81,12 +81,28 @@ class NetlistGenerator:
             r_plus = r_max
             r_minus = r_max
 
-        if settings.xyce_memristor_write_std == 0:
-            return r_plus, r_minus
-        else:
+        if settings.xyce_memristor_write_std != 0:
             r_plus = random.normalvariate(r_plus, r_plus * settings.xyce_memristor_write_std)
             r_minus = random.normalvariate(r_minus, r_minus * settings.xyce_memristor_write_std)
-            return r_plus, r_minus
+
+        memristor_blocked_prob = settings.ratio_failure_HRS + settings.ratio_failure_LRS
+        if memristor_blocked_prob > 0:
+            r_plus_blocked = random.random() < memristor_blocked_prob
+            r_minus_blocked = random.random() < memristor_blocked_prob
+
+            if r_plus_blocked:
+                if random.random() < settings.ratio_failure_LRS / memristor_blocked_prob:
+                    r_plus = r_min
+                else:
+                    r_plus = r_max
+
+            if r_minus_blocked:
+                if random.random() < settings.ratio_failure_LRS / memristor_blocked_prob:
+                    r_minus = r_min
+                else:
+                    r_minus = r_max
+
+        return r_plus, r_minus
 
     def compute_gain_matching(self, parameters_max_value: float) -> (float, float):
         """

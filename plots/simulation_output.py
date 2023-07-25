@@ -25,7 +25,7 @@ NODE_MAP = {
     'TIA_H_OUT_': SimOut('tab:olive', 'Line sum', '-', 'Neuron', polarized=True),
     'HIDDEN_ACTIV_OUT_H': SimOut('tab:purple', 'Activation out', '-', 'Neuron'),
     'SUM_H': SimOut('tab:pink', 'Activation input', '--', 'Neuron'),
-    'SUM_H_OUT_': SimOut('tab:orange', 'Threshold in', '--', 'Neuron'),
+    'SUM_H_OUT_': SimOut('tab:orange', 'Activation in', '--', 'Neuron'),
 }
 
 

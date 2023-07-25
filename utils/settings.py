@@ -155,6 +155,15 @@ class Settings:
     # Used to test uncertainty.
     test_noise: float = 0.0
 
+    # Whether an exponentially weighted moving average (EWMA) method should be used to preprocess the patches.
+    use_ewma = False
+
+    # This is the r parameter in the following equation : Z_i = (1 - r) * Z_(i-1) + r * X_i
+    ewma_parameter = 0.15
+
+    # This is the k used in the EWMA method when we look if a value is outside this range: mean +/- k * sigma
+    ewma_threshold = 3
+
     # ==================================================================================================================
     # ===================================================== Model ======================================================
     # ==================================================================================================================
@@ -164,7 +173,7 @@ class Settings:
     model_type: str = 'FF'
 
     # The number of fully connected hidden layer and their respective number of neurons.
-    hidden_layers_size: Sequence = (15,)
+    hidden_layers_size: Sequence = (5,)
 
     # The number of convolution layers and their respective properties (for CNN models only).
     conv_layers_kernel: Sequence = (4, 4)
@@ -196,7 +205,7 @@ class Settings:
     # Dropout rate for every dropout layers defined in networks.
     # If a network model doesn't have a dropout layer this setting will have no effect.
     # 0 skip dropout layers
-    dropout: int = 0.4
+    dropout: int = 0.0
 
     # The size of the mini-batch for the training and testing.
     batch_size: int = 512
@@ -243,6 +252,9 @@ class Settings:
 
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
+
+    # Penalize the network if the output neuron makes a prediction that is near 0 before the sigmoid.
+    penalize_near_zero_pred = False
 
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================
@@ -339,6 +351,10 @@ class Settings:
     # [-parameters_clipping, parameters_clipping] after each training batch.
     parameters_clipping = 2
 
+    # If set to True, the training will take into account that memristors may be blocked with
+    # xyce_memristor_blocked_prob
+    hardware_aware_training = False
+
     # The simulation step size for transient analysis (s)
     xyce_step_size = 2e-10
 
@@ -355,6 +371,13 @@ class Settings:
     # The write standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.8%
     xyce_memristor_write_std = 0.008
+
+    # The probability that a memristor will be blocked to r_max when we try to write a value to it (% [0,1])
+    ratio_failure_HRS = 0.04
+
+    # The probability that a memristor will be blocked to r_min when we try to write a value to it (% [0,1])
+    # ratio_failure_HRS + ratio_failure_LRS should be around 10%
+    ratio_failure_LRS = 0.06
 
     # The pulse amplitude for the input encoding (V)
     xyce_pulse_amplitude = 0.2
