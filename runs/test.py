@@ -19,8 +19,7 @@ from utils.timer import SectionTimer
 
 
 def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, test_name: str = '', final: bool = False,
-         limit: int = 0, confidence_per_case: List[List[List]] = None,
-         compute_calibration: bool = True) -> TestMetrics:
+         limit: int = 0, confidence_per_case: List[List[List]] = None, compute_calibration: bool = True) -> TestMetrics:
     """
     Start testing the network on a dataset.
 
@@ -28,9 +27,9 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     :param test_dataset: The testing dataset.
     :param device: The device used to store the network and datasets (it can influence the behaviour of the testing)
     :param test_name: Name of this test for logging and timers.
-    :param final: If true this is the final test, will show in log info and save results in file.
+    :param final: If True, this is the final test, will show in log info and save results in file.
     :param limit: Limit of item from the dataset to evaluate during this testing (0 to run process the whole dataset).
-    :param confidence_per_case: If set the confidence results will be saved in this list.
+    :param confidence_per_case: If set, the confidence results will be saved in this list.
     :return: The different classification and calibration metrics.
     """
 

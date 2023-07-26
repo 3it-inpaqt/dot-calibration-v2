@@ -293,25 +293,34 @@ def plot_confidence(confidence_per_case: List[List[List[float]]], unknown_thresh
 
 
 def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sample_size: int,
-                                     dataset_role: str) -> None:
+                                     dataset_role: str, calibration_method: str) -> None:
     """
     Plot the evolution of performance score depending on the confidence threshold.
 
     :param thresholds: The thresholds tested
-    :param scores_history: The score for each threshold and each classes
+    :param scores_history: The score for each threshold, and each classes
     :param sample_size: The size of the dataset used to compute the scores
     :param dataset_role: The role (train, valid or test) of the dataset used to compute the scores
+    :param calibration_method: The calibration method used to compute the scores
     """
     scores_history = list(zip(*scores_history))  # Group by class
 
     for i in range(len(scores_history)):
         plt.plot(thresholds, scores_history[i], label=QDSDLines.classes[i])
 
-    plt.ylabel('Score (lower is better)')
+    match calibration_method:
+        case 'error_rate':
+            score_label = 'Error rate'
+        case 'dynamic':
+            score_label = 'Score (lower is better)'
+        case _:
+            score_label = 'Score'
+
+    plt.ylabel(score_label)
     plt.xlabel('Confidence threshold')
     plt.gca().xaxis.set_major_formatter(mtick.PercentFormatter(xmax=1))
     plt.legend()
-    plt.title(f'Evolution of performance score\ndepending on the confidence threshold\n'
+    plt.title(f'Calibration of the confidence threshold\n'
               f'{sample_size} samples from {dataset_role} dataset')
 
     save_plot(f'threshold_tuning_{dataset_role}')

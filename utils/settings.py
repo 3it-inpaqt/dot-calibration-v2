@@ -101,11 +101,11 @@ class Settings:
     # If true the data will be loaded from cache if possible.
     use_data_cache: bool = False
 
-    # The size of a diagram patch send to the network input (number of pixel)
+    # The size of a diagram patch send to the network input (number of pixels)
     patch_size_x: int = 18
     patch_size_y: int = 18
 
-    # The patch overlapping (number of pixel)
+    # The patch overlapping (number of pixels)
     patch_overlap_x: int = 10
     patch_overlap_y: int = 10
 
