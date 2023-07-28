@@ -14,7 +14,7 @@
 * NLMIN, NLMAX:  lower and upper bound for the desired number of nonlinear iterations
 * DELMAX: The maximum time step-size used
 * This additional line allows to fix convergence problem but increases the simulation time
-.OPTIONS TIMEINT ERROPTION=1 METHOD=GEAR NLMIN=3 NLMAX=8 DELMAX=1.0e-10
+*.OPTIONS TIMEINT ERROPTION=1 METHOD=GEAR NLMIN=3 NLMAX=8 DELMAX=1.0e-10
 
 {% if read_std > 0 -%}
 * Options of variability study

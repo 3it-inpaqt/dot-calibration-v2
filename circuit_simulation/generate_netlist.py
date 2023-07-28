@@ -31,12 +31,12 @@ class NetlistGenerator:
                     neuron_weights = []
                     for weight in neuron_params:
                         neuron_weights.append(
-                            self.convert_param_to_resistances(weight, settings.xyce_r_min, settings.xyce_r_max))
+                            self.convert_param_to_resistances(weight, settings.sim_r_min, settings.sim_r_max))
                     self.layers['weight_' + str(self.nb_layers)].append(neuron_weights)  # Add neuron to the list
                 # Bias conversion
                 elif 'bias' in layer_name:
                     self.layers['bias_' + str(self.nb_layers - 1)].append(
-                        self.convert_param_to_resistances(neuron_params, settings.xyce_r_min, settings.xyce_r_max))
+                        self.convert_param_to_resistances(neuron_params, settings.sim_r_min, settings.sim_r_max))
 
             if 'weight' in layer_name:
                 self.nb_layers += 1
@@ -45,12 +45,12 @@ class NetlistGenerator:
         self.gain_tia, self.gain_sum = self.compute_gain_matching(parameters_max)
 
         # Total simulation duration
-        self.simulation_duration = settings.xyce_init_latency + settings.xyce_pulse_width \
-                              + settings.xyce_layer_latency * self.nb_layers
+        self.simulation_duration = settings.sim_init_latency + settings.sim_pulse_width \
+                                   + settings.sim_layer_latency * self.nb_layers
 
         # Compute the clipping voltage for the Hard Tanh
         # Logical value hardcoded to 1 for now
-        self.tanh_upper_bound = 1 * settings.xyce_pulse_amplitude - 0.6
+        self.tanh_upper_bound = 1 * settings.sim_pulse_amplitude - 0.6
 
         # Plot a histogram of the resistances
         plot_resistance_distribution(self.layers,
@@ -81,9 +81,9 @@ class NetlistGenerator:
             r_plus = r_max
             r_minus = r_max
 
-        if settings.xyce_memristor_write_std != 0:
-            r_plus = random.normalvariate(r_plus, r_plus * settings.xyce_memristor_write_std)
-            r_minus = random.normalvariate(r_minus, r_minus * settings.xyce_memristor_write_std)
+        if settings.sim_memristor_write_std != 0:
+            r_plus = random.normalvariate(r_plus, r_plus * settings.sim_memristor_write_std)
+            r_minus = random.normalvariate(r_minus, r_minus * settings.sim_memristor_write_std)
 
         memristor_blocked_prob = settings.ratio_failure_HRS + settings.ratio_failure_LRS
         if memristor_blocked_prob > 0:
@@ -115,8 +115,8 @@ class NetlistGenerator:
             The two gains for the TIA and the differential amplifier (A_tia, A_diff) in Ohm.
         """
         # Computing the conductance associated with a logical 1
-        g_log_1 = (1 / settings.xyce_r_min + (parameters_max_value - 1) * 1 / settings.xyce_r_max) / parameters_max_value
-        total_gain = 1 / (g_log_1 - 1 / settings.xyce_r_max)
+        g_log_1 = (1 / settings.sim_r_min + (parameters_max_value - 1) * 1 / settings.sim_r_max) / parameters_max_value
+        total_gain = 1 / (g_log_1 - 1 / settings.sim_r_max)
         if total_gain == 7500:
             a_tia, a_diff = 2500, 780  # Set the optimal gain configuration for the OPA684/MAX4223 OpAmps
         else:
@@ -144,22 +144,22 @@ class NetlistGenerator:
             A list of pulse train. Each pulse train is defined by a list of pair (simulation time (s), voltage (V))
             Dimension: Input size (D) × Nb tension change × 2 (simulation time (s), voltage (V))
         """
-        if settings.xyce_pulse_fall_delay + settings.xyce_pulse_rise_delay >= settings.xyce_pulse_width:
+        if settings.sim_pulse_fall_delay + settings.sim_pulse_rise_delay >= settings.sim_pulse_width:
             raise ValueError('The sum of pulse delays is longer than the pulse width.')
 
         pulses = []
         for input_value in inputs:
-            time = offset + settings.xyce_init_latency
+            time = offset + settings.sim_init_latency
             pulse = [(0, 0)]  # Start at 0V
             pulse.extend(
                 [
                     # Start pulse
                     (time, 0),
-                    (time + settings.xyce_pulse_rise_delay, input_value * settings.xyce_pulse_amplitude),
+                    (time + settings.sim_pulse_rise_delay, input_value * settings.sim_pulse_amplitude),
                     # End pulse
-                    (time + settings.xyce_pulse_width - settings.xyce_pulse_fall_delay,
-                     input_value * settings.xyce_pulse_amplitude),
-                    (time + settings.xyce_pulse_width, 0)
+                    (time + settings.sim_pulse_width - settings.sim_pulse_fall_delay,
+                     input_value * settings.sim_pulse_amplitude),
+                    (time + settings.sim_pulse_width, 0)
                 ])
 
             pulses.append(pulse)
@@ -187,7 +187,7 @@ class NetlistGenerator:
         bias_pulses = {}
         for i in range(self.nb_layers):
             if self.layers['bias_' + str(i)] is not None:
-                bias_pulses['bias_' + str(i)] = self.convert_inputs_to_pulses([1], offset=i * settings.xyce_layer_latency)[0]
+                bias_pulses['bias_' + str(i)] = self.convert_inputs_to_pulses([1], offset=i * settings.sim_layer_latency)[0]
 
         # xyce_matrix_mul(layers, inputs_pulses, bias_pulses['bias_0'])
 
@@ -206,10 +206,10 @@ class NetlistGenerator:
             pulses_sequences=inputs_pulses,
             bias_pulses=bias_pulses,
             tanh_upper_bound=self.tanh_upper_bound,
-            step_size=settings.xyce_step_size,
+            step_size=settings.sim_step_size,
             simulation_duration=self.simulation_duration,
-            read_std=settings.xyce_memristor_read_std,
-            var_sample_size=settings.xyce_var_sample_size,
+            read_std=settings.sim_memristor_read_std,
+            var_sample_size=settings.sim_var_sample_size,
             gain_tia=self.gain_tia,
             gain_sum=self.gain_sum
         )

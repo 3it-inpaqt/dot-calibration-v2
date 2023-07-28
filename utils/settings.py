@@ -175,6 +175,9 @@ class Settings:
     # The number of fully connected hidden layer and their respective number of neurons.
     hidden_layers_size: Sequence = (5,)
 
+    # Whether there should be a bias in the hidden layer or not (currently only implemented in FF and CNN)
+    bias_in_hidden_layer = True
+
     # The number of convolution layers and their respective properties (for CNN models only).
     conv_layers_kernel: Sequence = (4, 4)
     conv_layers_channel: Sequence = (12, 24)
@@ -344,8 +347,14 @@ class Settings:
     # ============================================= Circuit Simulation =================================================
     # ==================================================================================================================
 
-    # Whether the inference of the ML model should be simulated on Xyce or not.
+    # Whether the inference of the ML model should be simulated on a circuit or not.
     simulate_circuit = True
+
+    # If simulate_circuit is True, then should the simulation be done with Xyce? Should be False if use_ltspice is True.
+    use_xyce = False
+
+    # If simulate_circuit is True, then should the simulation be done with LTspice? Should be False if use_xyce is True.
+    use_ltspice = True
 
     # If set and greater than 0, the model's parameters will be clipped between
     # [-parameters_clipping, parameters_clipping] after each training batch.
@@ -356,59 +365,62 @@ class Settings:
     hardware_aware_training = False
 
     # The simulation step size for transient analysis (s)
-    xyce_step_size = 2e-10
+    sim_step_size = 2e-10
 
     # The minimal resistance value that we consider for memristor programming (ohm)
-    xyce_r_min = 5000
+    sim_r_min = 5000
 
     # The maximal resistance value that we consider for memristor programming (ohm)
-    xyce_r_max = 15000
+    sim_r_max = 15000
 
     # The read standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.2%
-    xyce_memristor_read_std = 0.0
+    sim_memristor_read_std = 0.0
 
     # The write standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.8%
-    xyce_memristor_write_std = 0.008
+    sim_memristor_write_std = 0.008
 
     # The probability that a memristor will be blocked to r_max when we try to write a value to it (% [0,1])
-    ratio_failure_HRS = 0.04
+    ratio_failure_HRS = 0.05
 
     # The probability that a memristor will be blocked to r_min when we try to write a value to it (% [0,1])
     # ratio_failure_HRS + ratio_failure_LRS should be around 10%
-    ratio_failure_LRS = 0.06
+    ratio_failure_LRS = 0.05
 
     # The pulse amplitude for the input encoding (V)
-    xyce_pulse_amplitude = 0.2
+    sim_pulse_amplitude = 0.2
 
     # The pulse duration for the input encoding (s)
-    xyce_pulse_width = 4e-7
+    sim_pulse_width = 4e-7
 
     # The resting time after a pulse (s)
-    xyce_resting_time = 5e-8
+    sim_resting_time = 5e-8
 
     # Pulse delay from 0V to pulse_amplitude (s)
-    xyce_pulse_rise_delay = 1e-9
+    sim_pulse_rise_delay = 1e-9
 
     # Pulse delay from pulse_amplitude to 0V (s)
-    xyce_pulse_fall_delay = 1e-9
+    sim_pulse_fall_delay = 1e-9
 
     # Simulation initial latency before to start the first pulse (s)
-    xyce_init_latency = 1e-9
+    sim_init_latency = 1e-9
 
     # The number of sample for the variability study. This setting have no effect if memristor_read_std is 0.
-    xyce_var_sample_size = 10
+    sim_var_sample_size = 10
 
     # The estimated delay between the input and the output of the sigmoid analog bloc. Used to synchronise the pulse
     # between layers.
-    xyce_layer_latency = 1e-8
+    sim_layer_latency = 1e-8
 
     # Maximum number of test inferences to run on Xyce (0 means the whole test set)
-    xyce_max_test_inference = 1000
+    sim_max_test_inference = 1
 
     # Number of parallel process to run (0 means the number of cpu cores)
-    xyce_nb_process = 1
+    sim_nb_process = 1
+
+    # File path of the LTspice program installed on the system
+    ltspice_executable_path = 'C:\Program Files\ADI\LTspice\LTspice.exe'
 
 
     def is_named_run(self) -> bool:
@@ -511,6 +523,14 @@ class Settings:
             'The first value of the range voltage should be lower or equal to the second'
         assert self.interaction_mode.lower().strip() in ('auto', 'semi-auto', 'manual'), \
             f'Invalid connector interaction mode: {self.interaction_mode}'
+
+        # Circuit Simulation
+        if self.simulate_circuit:
+            assert self.use_xyce or self.use_ltspice, \
+                'Specify if Xyce or LTspice should be used to run the circuit simulation'
+            assert (self.use_xyce and self.use_ltspice) == False, \
+                'Specify if Xyce or LTspice should be used to run the circuit simulation, but you can\'t choose both ' \
+                'at the same time'
 
     def __init__(self):
         """

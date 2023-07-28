@@ -16,7 +16,7 @@ from circuit_simulation.generate_netlist import NetlistGenerator
 from plots.simulation_output import plot_simulation_state_evolution
 
 
-def run_circuit_simulation(netlist_generator: NetlistGenerator, inputs: List, is_first_run: bool):
+def run_xyce_simulation(netlist_generator: NetlistGenerator, inputs: List, is_first_run: bool):
     """
     Generate a netlist according to the model size and parameters, then run the circuit simulation with Xyce as a
     subprocess.
@@ -52,7 +52,6 @@ def run_circuit_simulation(netlist_generator: NetlistGenerator, inputs: List, is
     try:
         process = subprocess.run(bash_command, cwd='./circuit_simulation', shell=True, check=True, capture_output=True,
                                  encoding='utf-8')
-
         if is_first_run:
             save_xyce_output(process.stdout)
 
@@ -95,6 +94,117 @@ def run_circuit_simulation(netlist_generator: NetlistGenerator, inputs: List, is
     return sim_results, model_output_before_threshold, model_output
 
 
+def run_ltspice_simulation(netlist_generator: NetlistGenerator, inputs: List, is_first_run: bool):
+    """
+    Generate a netlist according to the model size and parameters, then run the circuit simulation with LTspice as a
+    subprocess.
+
+    Args:
+        model: The model to convert as a physical circuit
+        inputs: List of inputs on which we want to do inference (e.g. if we have a 18x18 patch then the list contains
+                324 elements)
+
+    Returns:
+        A pandas dataframe that represent the measurements defined in the simulation. One column for each
+         variable defined in the line ".PRINT" of the netlist.
+         The normalised output value before threshold.
+         The binary output value before threshold.
+    """
+    # Generate netlist for circuit simulation
+    netlist, nb_layers = netlist_generator.generate_netlist_from_model(inputs, is_first_run)
+
+    if is_first_run:
+        # Save the netlist in the output directory
+        save_netlist(netlist)
+    # Save the netlist in the circuit simulation directory
+    save_path = Path('./circuit_simulation', 'netlist.CIR')
+    with open(save_path, 'w') as f:
+        f.write(netlist)
+
+    runcmd = f'{settings.ltspice_executable_path} -b -ascii netlist.CIR'
+    logging.debug(f'Run command: "{runcmd}"')
+
+    try:
+        subprocess.run(runcmd, cwd='./circuit_simulation', check=True, capture_output=True,
+                                 encoding='utf-8')
+        sim_results = parse_raw_file(".\\circuit_simulation\\netlist")
+        if is_first_run:
+            save_xyce_results(sim_results)
+
+        # Detect output pulses
+        model_output_before_threshold, model_output = detect_model_output(sim_results, nb_layers)
+
+    except subprocess.CalledProcessError as e:
+        # If LTspice process fail, the output is printed and the whole program is stopped by an error.
+        print(e.output)
+        raise e
+
+    # Create some plots to visualise the results
+    if is_first_run:
+        plot_simulation_state_evolution(sim_results, nb_layers)
+
+    return sim_results, model_output_before_threshold, model_output
+
+
+def parse_raw_file(file_path):
+    """
+    Parse the raw data file created by LTspice and create a pandas DataFrame from it.
+
+    The function reads the raw data file, extracts the header information, variable names,
+    and data values, and returns a pandas DataFrame with the extracted data.
+
+    Parameters:
+        file_path (str): The path to the raw data file (without the '.raw' extension).
+
+    Returns:
+        pandas.DataFrame: A DataFrame containing the parsed data from the raw file.
+                          The columns are named after the extracted variable names, and
+                          the rows represent the data points for each variable.
+
+    Raises:
+        IOError: If the specified raw data file is not found.
+    """
+    reading_header = True
+    reading_variables = False
+    data = []
+    variables = []
+    data_line = []
+    try:
+        f = open(file_path + '.raw', 'r')
+        for line_num, line in enumerate(f):
+
+            if reading_header:
+                if line_num == 4:
+                    number_of_vars = int(line.split(' ')[-1])
+                if line_num == 5:
+                    number_of_points = int(line.split(' ')[-1])
+                if line[:10] == 'Variables:':
+                    reading_header = False
+                    reading_variables = True
+                    continue
+            elif reading_variables:
+                if line[:7] == 'Values:':
+                    reading_variables = False
+                    header_length = line_num + 1
+                    continue
+                else:
+                    variable_name = line.split('\t')[-2]
+                    variables.append(variable_name.upper())
+            else:
+                data_line_num = (line_num - header_length) % number_of_vars
+                data_line.append(line.split('\t')[-1].split('\n')[0])
+                if data_line_num == number_of_vars - 1:
+                    data.append(data_line)
+                    data_line = []
+
+        f.close()
+    except IOError:
+        print('File not found: ' + file_path + '.raw')
+
+    sim_results = pd.DataFrame(data=data, columns=variables)
+    return sim_results.applymap(float)
+
+
 def detect_model_output(sim_results: pd.DataFrame, nb_layers: int) -> (float, int):
     """
     Detect the model output before and after the threshold, according to the pulse shape measured during Xyce simulation
@@ -114,11 +224,11 @@ def detect_model_output(sim_results: pd.DataFrame, nb_layers: int) -> (float, in
     output_threshold = sim_results[f'V(HIDDEN_ACTIV_OUT_H{nb_layers:03}_001)']
     t = sim_results['TIME']
 
-    t_min_v_out = nb_layers * settings.xyce_layer_latency + settings.xyce_init_latency + settings.xyce_pulse_rise_delay
+    t_min_v_out = nb_layers * settings.sim_layer_latency + settings.sim_init_latency + settings.sim_pulse_rise_delay
     # Make sure that we let the chance to the current to stabilize (that's why we add 8e-8)
     t_min_v_out = t_min_v_out + 8e-8
     # Make sure we don't overshoot the time window width (that's why we subtract 1.2e-7)
-    window_width = settings.xyce_pulse_width - settings.xyce_pulse_rise_delay - settings.xyce_pulse_fall_delay - 1.2e-7
+    window_width = settings.sim_pulse_width - settings.sim_pulse_rise_delay - settings.sim_pulse_fall_delay - 1.2e-7
     t_max_v_out = t_min_v_out + window_width
     i_min = np.where(t > t_min_v_out)[0][0]
     i_max = np.where(t > t_max_v_out)[0][0]

@@ -6,7 +6,7 @@ import multiprocessing
 import time
 
 from classes.classifier_nn import ClassifierNN
-from circuit_simulation.xyce_simulation import run_circuit_simulation
+from circuit_simulation.simulators import run_xyce_simulation, run_ltspice_simulation
 from circuit_simulation.generate_netlist import NetlistGenerator
 from utils.logger import logger
 from plots.model_performance import plot_confusion_matrix, plot_analog_vs_digital_before_threshold, \
@@ -30,13 +30,13 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
     test_loader = DataLoader(test_dataset)
 
     # Limit the number of simulation (0 means the whole test set)
-    hard_limit = settings.xyce_max_test_inference if settings.xyce_max_test_inference > 0 else len(test_loader)
+    hard_limit = settings.sim_max_test_inference if settings.sim_max_test_inference > 0 else len(test_loader)
 
     # Define the number of parallel process to run (0 means the number of cpu cores)
-    nb_process = settings.xyce_nb_process if settings.xyce_nb_process > 0 else multiprocessing.cpu_count()
+    nb_process = settings.sim_nb_process if settings.sim_nb_process > 0 else multiprocessing.cpu_count()
     nb_process = min(nb_process, hard_limit)
 
-    logger.info(f'Start {hard_limit} Xyce simulations ' +
+    logger.info(f'Start {hard_limit} circuit simulations ' +
                  ('' if nb_process == 1 else f'({nb_process} parallel processes) ') + '...')
     job_args = []
     outputs_table = []
@@ -66,7 +66,7 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
                 outputs_table = pool.starmap(inference_job, job_args)
 
     sim_run_time = time.perf_counter() - start_time
-    logger.info(f'Xyce simulations completed in {duration_to_str(sim_run_time)} '
+    logger.info(f'Simulations completed in {duration_to_str(sim_run_time)} '
                  f'({duration_to_str(sim_run_time / hard_limit)} / sim)')
 
     outputs_table = DataFrame(outputs_table)
@@ -110,13 +110,16 @@ def inference_job(model: ClassifierNN, inputs: torch.tensor, label: torch.tensor
     inputs = torch.flatten(inputs).tolist()
 
     # Run the inference on the simulated circuit
-    sim_results, sim_output_before_thr, sim_output = run_circuit_simulation(netlist_generator, inputs, is_first_run)
+    if settings.use_xyce:
+        sim_results, sim_output_before_thr, sim_output = run_xyce_simulation(netlist_generator, inputs, is_first_run)
+    else:
+        sim_results, sim_output_before_thr, sim_output = run_ltspice_simulation(netlist_generator, inputs, is_first_run)
 
     return {
         'input': inputs,
         'label': label.int().item(),
         'analog_before_th': sim_output_before_thr,
-        'analog_logic_before_th': sim_output_before_thr / settings.xyce_pulse_amplitude,
+        'analog_logic_before_th': sim_output_before_thr / settings.sim_pulse_amplitude,
         'analog_output': sim_output,
         'digital_before_th': digital_output_before_thr.item(),
         'digital_output': digital_output.item()
