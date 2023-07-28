@@ -179,6 +179,9 @@ class Settings:
     # List of the diagram that have to be excluded
     black_list: Sequence = ()
 
+    # Only the diagram inside this list can be take into account
+    white_list: Sequence = ()
+
     # ==================================================================================================================
     # ===================================================== Model ======================================================
     # ==================================================================================================================
@@ -205,6 +208,10 @@ class Settings:
     # =================== Slope Network =================== #
     # Model train by william
     william_FF: bool = False
+
+    # Delta
+    delta: int = 0
+
     # The type of model to use (could be a neural network).
     # Have to be in the implemented list: FF, BFF, CNN, BCNN.
     slope_model_type: str = 'FF'

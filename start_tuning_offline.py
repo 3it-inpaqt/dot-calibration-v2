@@ -42,18 +42,22 @@ def start_tuning_offline_task() -> None:
         nb_rep -= 1
 
 if __name__ == '__main__':
-    # Prepare the environment
-    preparation()
+    for delta in range(21):
+        settings.delta += delta
+        settings.run_name = f'tmp_delta_{delta}'
+        print(settings.delta, settings.run_name)
+        # Prepare the environment
+        preparation()
 
-    # Catch and log every exception during runtime
-    # noinspection PyBroadException
-    try:
-        start_tuning_offline_task()
+        # Catch and log every exception during runtime
+        # noinspection PyBroadException
+        try:
+            start_tuning_offline_task()
 
-    except KeyboardInterrupt:
-        logger.error('Tuning task interrupted by the user.', exc_info=True)
-    except Exception:
-        logger.critical('Tuning task interrupted by an unexpected error.', exc_info=True)
-    finally:
-        # Clean up the environment, ready for a new run
-        clean_up()
+        except KeyboardInterrupt:
+            logger.error('Tuning task interrupted by the user.', exc_info=True)
+        except Exception:
+            logger.critical('Tuning task interrupted by an unexpected error.', exc_info=True)
+        finally:
+            # Clean up the environment, ready for a new run
+            clean_up()

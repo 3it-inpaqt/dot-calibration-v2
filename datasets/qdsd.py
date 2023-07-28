@@ -48,11 +48,16 @@ class QDSDLines(Dataset):
         self.role = role
 
         # Get patches and their labels (using ninja unzip)
-        self._patches, self._patches_labels = zip(*patches)
+        if role.startswith('check_class_'):
+            self._patches = patches[0]
+            self._patches_labels = patches[1]
+            self._patches_labels = torch.Tensor(self._patches_labels).bool()
+        else:
+            self._patches, self._patches_labels = zip(*patches)
 
-        # Convert to torch tensor
-        self._patches = torch.stack(self._patches)
-        self._patches_labels = torch.Tensor(self._patches_labels).bool()
+            # Convert to torch tensor
+            self._patches = torch.stack(self._patches)
+            self._patches_labels = torch.Tensor(self._patches_labels).bool()
 
         self.transform: List[Callable] = transform or []
 
@@ -178,7 +183,7 @@ class QDSDLines(Dataset):
                                                    Path(DATA_DIR, 'interpolated_csv.zip'),
                                                    Path(DATA_DIR, 'labels.json'),
                                                    single_dot,
-                                                   True, False)
+                                                   True, False, white_list=settings.white_list)
             for diagram in diagrams:
                 diagram_patches = diagram.get_patches(patch_size, overlap, label_offset)
                 if not use_test_ratio and diagram.name in test_ratio_or_names:

@@ -55,7 +55,7 @@ class CNN(ClassifierNN):
                 layer.append(nn.MaxPool2d(kernel_size=(2, 2)))
             # Dropout
             if dropout > 0:
-                layer.append(nn.Dropout(settings.dropout))
+                layer.append(nn.Dropout(dropout))
 
             self.conv_layers.append(layer)
             last_nb_channel = channel
@@ -63,7 +63,7 @@ class CNN(ClassifierNN):
         # Number of neurons per layer
         # eg: input_size, hidden size 1, hidden size 2, ..., nb_classes
         fc_layer_sizes = [math.prod(calc_out_conv_layers(input_shape, self.conv_layers))]
-        fc_layer_sizes.extend(settings.hidden_layers_size if network_option else network_option[0])
+        fc_layer_sizes.extend(settings.hidden_layers_size if not network_option else network_option[0])
         fc_layer_sizes.append(settings.dot_number)
 
         # Create fully connected linear layers
@@ -146,7 +146,6 @@ class CNN(ClassifierNN):
         """
         # Use sigmoid to convert the output into probability (during the training it's done inside BCEWithLogitsLoss)
         outputs = torch.sigmoid(self(inputs))
-
         # We assume that a value far from 0 or 1 mean low confidence (e.g. output:0.25 => class 0 with 50% confidence)
         confidences = torch.abs(0.5 - outputs) * 2
         predictions = torch.round(outputs).bool()  # Round to 0 or 1

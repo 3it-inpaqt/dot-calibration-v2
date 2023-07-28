@@ -1,3 +1,4 @@
+import random
 from math import atan2, ceil, pi, radians, tan
 from pathlib import Path
 from time import perf_counter
@@ -1566,8 +1567,8 @@ class JumpNDots_slope(JumpNDots):
             self._line_slope_1 = None
             self._line_slope_2 = None
             # Prior assumption about line direction
-            self._line_slope_default_1 = 149
-            self._line_slope_default_2 = 119
+            self._line_slope_default_1 = 149 + settings.delta * random.choice([-1, 1])
+            self._line_slope_default_2 = 119 + settings.delta * random.choice([-1, 1])
             # Prior assumption about distance between lines
             self._line_distances_1 = [14]
             self._line_distances_2 = [12]

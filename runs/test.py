@@ -1,8 +1,8 @@
+from math import ceil
 from typing import List, Optional
 
 import numpy as np
 import torch
-from math import ceil
 from torch.utils.data import DataLoader, Dataset
 
 from classes.classifier_nn import ClassifierNN
@@ -48,7 +48,7 @@ def test(network: ClassifierNN, test_dataset: Dataset, device: torch.device, tes
     test_loader = DataLoader(test_dataset, batch_size=settings.batch_size, shuffle=True,
                              num_workers=get_nb_loader_workers(device))
     nb_batch = min(len(test_loader), ceil(nb_test_items / settings.batch_size))
-    nb_classes = len(test_dataset.classes)
+    nb_classes = len(QDSDLines.classes)
 
     metrics: Optional[ClassificationMetrics] = None
     # All prediction count
