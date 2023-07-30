@@ -122,7 +122,7 @@ class Settings:
     # The name of the research group who provide the data.
     # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier' or 'stefanie_czischek'
     # Should be available in the dataset folder.
-    research_group: str = 'stefanie_czischek'
+    research_group: str = 'louis_gaudreau'
 
     # The percentage of data kept for testing only.
     # If test_diagram is set, this value should be 0.
@@ -351,10 +351,10 @@ class Settings:
     simulate_circuit = True
 
     # If simulate_circuit is True, then should the simulation be done with Xyce? Should be False if use_ltspice is True.
-    use_xyce = False
+    use_xyce = True
 
     # If simulate_circuit is True, then should the simulation be done with LTspice? Should be False if use_xyce is True.
-    use_ltspice = True
+    use_ltspice = False
 
     # If set and greater than 0, the model's parameters will be clipped between
     # [-parameters_clipping, parameters_clipping] after each training batch.
@@ -365,7 +365,7 @@ class Settings:
     hardware_aware_training = False
 
     # The simulation step size for transient analysis (s)
-    sim_step_size = 2e-10
+    sim_step_size = 3e-10
 
     # The minimal resistance value that we consider for memristor programming (ohm)
     sim_r_min = 5000
@@ -379,20 +379,20 @@ class Settings:
 
     # The write standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.8%
-    sim_memristor_write_std = 0.008
+    sim_memristor_write_std = 0.0
 
     # The probability that a memristor will be blocked to r_max when we try to write a value to it (% [0,1])
-    ratio_failure_HRS = 0.05
+    ratio_failure_HRS = 0.0
 
     # The probability that a memristor will be blocked to r_min when we try to write a value to it (% [0,1])
     # ratio_failure_HRS + ratio_failure_LRS should be around 10%
-    ratio_failure_LRS = 0.05
+    ratio_failure_LRS = 0.0
 
     # The pulse amplitude for the input encoding (V)
     sim_pulse_amplitude = 0.2
 
     # The pulse duration for the input encoding (s)
-    sim_pulse_width = 4e-7
+    sim_pulse_width = 3e-7
 
     # The resting time after a pulse (s)
     sim_resting_time = 5e-8
@@ -413,11 +413,11 @@ class Settings:
     # between layers.
     sim_layer_latency = 1e-8
 
-    # Maximum number of test inferences to run on Xyce (0 means the whole test set)
-    sim_max_test_inference = 1
+    # Maximum number of test inferences to simulate on the circuit (0 means the whole test set)
+    sim_max_test_inference = 1000
 
     # Number of parallel process to run (0 means the number of cpu cores)
-    sim_nb_process = 1
+    sim_nb_process = 2
 
     # File path of the LTspice program installed on the system
     ltspice_executable_path = 'C:\Program Files\ADI\LTspice\LTspice.exe'
