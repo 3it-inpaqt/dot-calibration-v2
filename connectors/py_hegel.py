@@ -52,7 +52,7 @@ class PyHegel(Connector):
         # Wait the end of the initialization
         self._wait_end_of_command(10)
 
-        read_instrument_id = 'USB0::0x2A8D::0x0101::MY57515472::INSTR'
+        read_instrument_id = 'USB0::0x0957::0x0607::MY47015885::0'
         axes_y_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
         axes_x_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
 
