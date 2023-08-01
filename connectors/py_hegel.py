@@ -59,7 +59,7 @@ class PyHegel(Connector):
             # Reading instrument
             f"dmm = instruments.agilent_multi_34410A('{read_instrument_id}')",
             # Gate instruments (same slot for both)
-            f"bilt = instruments.iTest_be2102('{axes_instrument_id}', 9)",
+            f"bilt = instruments.iTest_be214x('{axes_instrument_id}', 9)",
             # X-axes instrument (channel 2)
             "G1 = (bilt, dict(ch=2))",
             # Y-axes instrument (channel 1)
