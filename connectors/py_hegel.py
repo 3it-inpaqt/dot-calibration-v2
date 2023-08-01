@@ -69,6 +69,7 @@ class PyHegel(Connector):
         for command in commands:
             self._send_command(command)
 
+        self._is_connected = True
         logger.info('PyHegel connector ready.')
 
     def _close_connection(self):
