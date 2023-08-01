@@ -61,9 +61,11 @@ class PyHegel(Connector):
             # Gate instruments (same slot for both)
             f"bilt = instruments.iTest_be214x('{axes_instrument_id}', 9)",
             # X-axes instrument (channel 2)
-            "G1 = (bilt, dict(ch=2))",
+            "set(bilt.slope, 0.1, ch=2)",
+            "G1 = (bilt.ramp, dict(ch=2))",
             # Y-axes instrument (channel 1)
-            "G2 = (bilt, dict(ch=1))",
+            "set(bilt.slope, 0.1, ch=1)",
+            "G2 = (bilt.ramp, dict(ch=1))",
         ]
 
         for command in commands:
