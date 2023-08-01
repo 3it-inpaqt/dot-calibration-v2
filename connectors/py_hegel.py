@@ -53,18 +53,17 @@ class PyHegel(Connector):
         self._wait_end_of_command(10)
 
         read_instrument_id = 'USB0::0x0957::0x0607::MY47015885::0'
-        axes_y_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
-        axes_x_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
+        axes_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
 
         commands = [
             # Reading instrument
             f"dmm = instruments.agilent_multi_34410A('{read_instrument_id}')",
-            # X-axes instrument
-            f"bilt3 = instruments.iTest_be2102('{axes_x_instrument_id}', 3)",
-            f"G1 = instruments.RampDevice(bilt3, 0.1)",
-            # Y-axes instrument
-            f"bilt1 = instruments.iTest_be2102('{axes_y_instrument_id}', 1)",
-            f"G2 = instruments.RampDevice(bilt1, 0.1)",
+            # Gate instruments (same slot for both)
+            f"bilt = instruments.iTest_be2102('{axes_instrument_id}', 9)",
+            # X-axes instrument (channel 2)
+            "G1 = (bilt, dict(ch=2))",
+            # Y-axes instrument (channel 1)
+            "G2 = (bilt, dict(ch=1))",
         ]
 
         for command in commands:
