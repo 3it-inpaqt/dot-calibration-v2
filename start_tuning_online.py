@@ -41,12 +41,11 @@ def check_settings() -> None:
     if settings.trained_network_cache_path is None:
         raise ValueError('A pre-trained model has to be defined for the online tuning task '
                          '("trained_network_cache_path" setting).')
-    if 'full' in settings.autotuning_procedures:
-        raise ValueError('The "full" procedure is not compatible with the online tuning task '
-                         '("autotuning_procedures" setting).')
     if isnan(settings.min_voltage) or isnan(settings.max_voltage):
         raise ValueError('The min and max voltage have to be defined before to start an online tuning task '
                          '("min_voltage" and "max_voltage" settings).')
+    if settings.max_voltage - settings.min_voltage > 4:
+        raise ValueError('The voltage range is too large for the online tuning task (>4V).')
 
 
 if __name__ == '__main__':
