@@ -187,8 +187,8 @@ class PyHegel(Connector):
 
         data = np.loadtxt(file, usecols=(0, 1, 2))
 
-        # Sort by x, then by y because the y sweeping can alternate between top and down.
-        data = data[np.lexsort((data[:, 1], data[:, 0]))]
+        # Sort by y, then by x because the y sweeping can alternate between top and down.
+        data = data[np.lexsort((data[:, 0], data[:, 1]))]
 
         x = np.unique(data[:, 0])
         y = np.unique(data[:, 1])
