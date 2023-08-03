@@ -28,8 +28,18 @@ class SanityCheck(AutotuningProcedure):
         # The number of unique measurements expected
         nb_unique_measurements_expected = nb_measurements_expected - nb_double_measurements_expected
 
-        # Start from the middle of the diagram
-        self.x, self.y = start_x, start_y = len(self.diagram.x_axes) // 2, len(self.diagram.y_axes) // 2
+        # Get the voltage range
+        min_x_v, max_x_v = settings.start_range_voltage_x
+        min_y_v, max_y_v = settings.start_range_voltage_y
+
+        # Convert the voltage to coordinates
+        min_x, min_y = self.diagram.voltage_to_coord(min_x_v, min_y_v)
+        max_x, max_y = self.diagram.voltage_to_coord(max_x_v, max_y_v)
+
+        # Start from the middle of the starting area
+        self.x = min_x + ((max_x - min_x) // 2) - (settings.patch_size_x // 2)
+        self.y = min_y + ((max_y - min_y) // 2) - (settings.patch_size_y // 2)
+
         x_v, y_v = self.diagram.coord_to_voltage(self.x, self.y)
         logger.info(f'Auto-tuning sanity check. Start from ({x_v:.2f}V, {y_v:.2f}V). '
                     f'Expected number of steps: {nb_steps_expected}. '

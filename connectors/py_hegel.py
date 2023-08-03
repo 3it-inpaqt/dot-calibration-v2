@@ -115,8 +115,8 @@ class PyHegel(Connector):
             f"progress={logger.getEffectiveLevel() <= logging.DEBUG}, "
             f"graph=False, "
             f"updown=[False,'alternate'])",
-            # Wait the answer for a maximum of 1 sec per point
-            max_wait_time=nb_measurements_x * nb_measurements_y
+            # Wait the answer for a maximum of 1 sec per point + some time for voltage ramp
+            max_wait_time=nb_measurements_x * nb_measurements_y + 120
         )
 
         # Parse the output file
