@@ -10,7 +10,7 @@ from utils.settings import settings
 class Jump(AutotuningProcedure):
     # Exploration limits
     _max_steps_exploration: int = 1000  # Nb of steps
-    _max_steps_search_empty: int = 100  # Nb of steps
+    _max_steps_search_empty: int = 250  # Nb of steps
     _max_line_explore_right: int = 5  # Nb detected lines
     _max_steps_validate_left_line: int = 250  # Nb steps
     _max_nb_leftmost_checking: int = 6
@@ -428,7 +428,7 @@ class Jump(AutotuningProcedure):
 
         elif settings.research_group == 'eva_dupont_ferrier':
             self._line_slope = 10  # Prior assumption about line direction
-            self._line_distances = [3]  # Prior assumption about distance between lines
+            self._line_distances = [5]  # Prior assumption about distance between lines
 
         else:
             logger.warning(f'No prior knowledge defined for the dataset: {settings.research_group}')
