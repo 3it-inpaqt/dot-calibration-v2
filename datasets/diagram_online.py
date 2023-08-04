@@ -144,7 +144,7 @@ class DiagramOnline(Diagram):
             text = last_m.note
 
         plot_diagram(x_axes, y_axes, values, title=f'Online diagram {self.name}', focus_area_title='Last measurement',
-                     allow_overwrite=True, focus_area=focus_area, file_name=f'diagram_{self.name}',
+                     allow_overwrite=True, focus_area=focus_area, file_name=f'diagram_{self.name}', scale_bars=True,
                      diagram_boundaries=self.get_cropped_boundaries(), text=text)
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:

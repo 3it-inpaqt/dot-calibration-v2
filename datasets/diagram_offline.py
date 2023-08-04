@@ -185,16 +185,16 @@ class DiagramOffline(Diagram):
         """
         # Vanilla plot, no labels
         plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}', transition_lines=None,
-                     charge_regions=None, scale_bar=True, file_name=f'diagram_{self.name}', allow_overwrite=True)
+                     charge_regions=None, scale_bars=True, file_name=f'diagram_{self.name}', allow_overwrite=True)
         if self.transition_lines:
             # With labels lines
             plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}',
-                         transition_lines=self.transition_lines, charge_regions=None, scale_bar=True,
+                         transition_lines=self.transition_lines, charge_regions=None, scale_bars=True,
                          file_name=f'diagram_{self.name}_lines', allow_overwrite=True)
         if self.charge_areas:
             # With labels lines and areas
             plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}',
-                         transition_lines=self.transition_lines, charge_regions=self.charge_areas, scale_bar=True,
+                         transition_lines=self.transition_lines, charge_regions=self.charge_areas, scale_bars=True,
                          file_name=f'diagram_{self.name}_area', allow_overwrite=True)
 
     def __str__(self):

@@ -13,6 +13,7 @@ import numpy as np
 import seaborn as sns
 from matplotlib import patches
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.image import AxesImage
 from matplotlib.legend_handler import HandlerBase
 from matplotlib.text import Text
 from shapely.geometry import LineString, Polygon
@@ -58,7 +59,7 @@ def plot_diagram(x_i: Sequence[float],
                  focus_area_title: str = 'Focus area',
                  final_volt_coord: Tuple[float, float] = None,
                  text: Optional[str | bool] = None,
-                 scale_bar: bool = False,
+                 scale_bars: bool = False,
                  legend: Optional[bool] = True,
                  vmin: float = None,
                  vmax: float = None,
@@ -104,8 +105,8 @@ def plot_diagram(x_i: Sequence[float],
         - If None, no text subplot.
         - If True, the text is automatically created to describe the step history.
         - If str, the text is the given string.
-    :param scale_bar: If True, add a scale bar to the right of the diagram. The scale can either represent the current
-     range of the pixel, or the uncertainty of classification.
+    :param scale_bars: If True, add a scale bar to the right of the diagram. The scale can either represent the current
+     range of the pixel, or the uncertainty of classification. If the focus area is enabled, also add a scale bar.
     :param legend: If True, add a legend in a subplot at the bottom of the figure.
     :param vmin: If set, define the minimal value of the colorscale of the diagram's pixels.
     :param vmax: If set, define the maximal value of the colorscale of the diagram's pixels.
@@ -129,7 +130,7 @@ def plot_diagram(x_i: Sequence[float],
     axes_matching = [x_i[0] - half_p, x_i[-1] + half_p, y_i[0] - half_p, y_i[-1] + half_p]
 
     # Build the main diagram subplot
-    _plot_diagram_ax(diagram_ax, x_i, y_i, pixels, title, scan_history, fog_of_war, scale_bar, vmin, vmax,
+    _plot_diagram_ax(diagram_ax, x_i, y_i, pixels, title, scan_history, fog_of_war, scale_bars, vmin, vmax,
                      axes_matching, diagram_boundaries)
 
     # Show labels if provided
@@ -138,11 +139,21 @@ def plot_diagram(x_i: Sequence[float],
 
     # Build the focus area subplot
     if show_focus_area_ax:
+        focus_vmin, focus_vmax = vmin, vmax
+        sub_scale_bar = False
         if focus_area is True:
             # Get last scan coordinates and convert them to voltage.
             x_start, x_end, y_start, y_end = scan_history[-1].get_area_coord()
             focus_area = (x_i[x_start], x_i[x_end - 1], y_i[y_start], y_i[y_end - 1])
-        _plot_focus_area_ax(focus_area_ax, diagram_ax, pixels, focus_area_title, focus_area, vmin, vmax, axes_matching)
+            if scale_bars:
+                # If we show the scale bars, we can plot a different color range
+                focus_pixels = pixels[y_start: y_end, x_start: x_end]
+                focus_vmin = np.nanmin(focus_pixels).item()
+                focus_vmax = np.nanmax(focus_pixels).item()
+                sub_scale_bar = True
+
+        _plot_focus_area_ax(focus_area_ax, diagram_ax, pixels, focus_area_title, focus_area, sub_scale_bar,
+                            focus_vmin, focus_vmax, axes_matching)
 
     # Plot the scan history visualization
     if scan_history_mode and scan_history and len(scan_history) > 0:
@@ -230,20 +241,16 @@ def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Opt
 
     # Add the scale bar
     if scale_bar:
-        if settings.research_group in MEASURE_UNIT:
-            measuring = MEASURE_UNIT[settings.research_group]
-        else:
-            measuring = 'I'
-        # Add the scale bar that way because we already are inside a subplot
-        plt.colorbar(im, ax=ax, shrink=0.85, pad=0.02, label=f'{measuring} (A)')
+        _add_scale_bar(im, ax)
 
 
-def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, vmin, vmax, axes_matching: List[float]):
+def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, scale_bar: bool, vmin: Optional[float],
+                        vmax: Optional[float], axes_matching: List[float]):
     # Subplot title
     if title:
         focus_ax.set_title(title)
 
-    # Get coordinates and add half-pixel to match with the border of pixel (instead of center).
+    # Get coordinates and add half-pixel to match with the border of pixel (instead of the middle).
     half_p = settings.pixel_size / 2
     x_start, x_end, y_start, y_end = focus_area
     x_start -= half_p
@@ -251,8 +258,13 @@ def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, vmin, v
     x_end += half_p
     y_end += half_p
 
-    focus_ax.imshow(pixels, interpolation='none', cmap=PIXELS_CMAP, extent=axes_matching, vmin=vmin, vmax=vmax,
-                    origin='lower')
+    im = focus_ax.imshow(pixels, interpolation='none', cmap=PIXELS_CMAP, extent=axes_matching, vmin=vmin, vmax=vmax,
+                         origin='lower')
+
+    # Add the scale bar
+    if scale_bar:
+        _add_scale_bar(im, focus_ax, 0.05)
+
     focus_ax.set_xlim(x_start, x_end)
     focus_ax.set_ylim(y_start, y_end)
 
@@ -436,6 +448,21 @@ def _plot_legend_ax(legend_ax, diagram_ax, custom_legend, pixel_info: bool = Tru
                      handler_map={Text: TextHandler()})
 
 
+def _add_scale_bar(im: AxesImage, ax, pad: float = 0.02) -> None:
+    """
+    Add a scale bar to an imshow plot.
+
+    :param im: The axe image (output of the imshow function)
+    :param ax: The axe used to plot the image
+    """
+    if settings.research_group in MEASURE_UNIT:
+        measuring = MEASURE_UNIT[settings.research_group]
+    else:
+        measuring = 'I'
+    # Add the scale bar that way because we already are inside a subplot
+    plt.colorbar(im, ax=ax, shrink=0.85, pad=pad, label=f'{measuring} (A)')
+
+
 def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_history: List["StepHistoryEntry"],
                                 final_volt_coord: Tuple[float, float]) -> None:
     """
@@ -476,7 +503,7 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
         # Base arguments for final images
         common_kwargs = dict(
             x_i=x_axes, y_i=y_axes, pixels=values, title=title, scan_history=scan_history, focus_area=final_area,
-            focus_area_title='End area', save_in_buffer=True, text=True, vmin=vmin, vmax=vmax,
+            focus_area_title='End area', save_in_buffer=True, text=True, scale_bars=True, vmin=vmin, vmax=vmax,
             diagram_boundaries=diagram_boundaries
         )
 
@@ -486,8 +513,8 @@ def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_
             # Main animation frames
             async_result_main = pool.map_async(
                 partial(plot_diagram, x_axes, y_axes, values, title, True, None, None, focus_area=True,
-                        focus_area_title='Last patch', text=True, scan_history_alpha=8, vmin=vmin, vmax=vmax,
-                        save_in_buffer=True, diagram_boundaries=diagram_boundaries),
+                        focus_area_title='Last patch', text=True, scan_history_alpha=8, scale_bars=True,
+                        vmin=vmin, vmax=vmax, save_in_buffer=True, diagram_boundaries=diagram_boundaries),
                 (scan_history[0:i] for i in frame_ids)
             )
 

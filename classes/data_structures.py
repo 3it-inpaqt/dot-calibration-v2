@@ -102,7 +102,7 @@ class StepHistoryEntry:
          line and all lines are almost outside the active area.
         """
         return (self.model_classification and self.soft_truth_larger) or \
-               (not self.model_classification and not self.soft_truth_smaller)
+            (not self.model_classification and not self.soft_truth_smaller)
 
     def get_area_coord(self) -> Tuple[int, int, int, int]:
         start_x, start_y = self.coordinates
@@ -124,21 +124,24 @@ class StepHistoryEntry:
             is_online = scan_history[0].is_online
 
             # History statistics
-            accuracy = sum(1 for s in scan_history if s.is_classification_correct()) / nb_scan
-            nb_line = sum(1 for s in scan_history if s.ground_truth)  # s.ground_truth == True means line
-            nb_no_line = sum(1 for s in scan_history if not s.ground_truth)  # s.ground_truth == False means no line
-
-            if nb_line > 0 and not is_online:
-                line_success = sum(
-                    1 for s in scan_history if s.ground_truth and s.is_classification_correct()) / nb_line
+            line_success = accuracy = no_line_success = None
+            if is_online:
+                # Count line detected
+                nb_line = sum(1 for s in scan_history if s.model_classification)  # Line detected
+                nb_no_line = sum(1 for s in scan_history if not s.model_classification)  # No line detected
             else:
-                line_success = None
+                # Count ground truth
+                accuracy = sum(1 for s in scan_history if s.is_classification_correct()) / nb_scan
+                nb_line = sum(1 for s in scan_history if s.ground_truth)  # s.ground_truth == True means line
+                nb_no_line = sum(1 for s in scan_history if not s.ground_truth)  # s.ground_truth == False means no line
 
-            if nb_no_line > 0 and not is_online:
-                no_line_success = sum(1 for s in scan_history
-                                      if not s.ground_truth and s.is_classification_correct()) / nb_no_line
-            else:
-                no_line_success = None
+                if nb_line > 0:
+                    line_success = sum(
+                        1 for s in scan_history if s.ground_truth and s.is_classification_correct()) / nb_line
+
+                if nb_no_line > 0:
+                    no_line_success = sum(1 for s in scan_history
+                                          if not s.ground_truth and s.is_classification_correct()) / nb_no_line
 
             # Time information
             time_start_tuning = scan_history[0].timestamp_start

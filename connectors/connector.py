@@ -54,7 +54,7 @@ class Connector:
 
         if settings.plot_measurements:
             plot_diagram(result.x_axes, result.y_axes, result.data, title=f'Measurement #{self._nb_measurement:03,d}',
-                         scale_bar=True, file_name=f'measurement_{self._nb_measurement:03}')
+                         scale_bars=True, file_name=f'measurement_{self._nb_measurement:03}')
 
         return result
 
