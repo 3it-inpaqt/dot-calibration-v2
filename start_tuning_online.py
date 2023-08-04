@@ -19,7 +19,7 @@ def start_tuning_online_task() -> None:
     device = get_cuda_device()
     model = init_model().to(device)
     # Load the pretrained model
-    if not load_network_(model, settings.trained_network_cache_path, device):
+    if not load_network_(model, settings.trained_network_cache_path, device, load_thresholds=True):
         raise ValueError(f'Could not load the pretrained model from "{settings.trained_network_cache_path}".')
 
     with Connector.get_connector() as connector:

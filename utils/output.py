@@ -16,6 +16,7 @@ from PIL import Image
 from codetiming import Timer
 from torch.nn import Module
 
+from classes.classifier_nn import ClassifierNN
 from utils.logger import logger
 from utils.misc import yaml_preprocess
 from utils.settings import settings
@@ -407,23 +408,41 @@ def load_normalization() -> Tuple[float, float]:
                      f'Should be define in "normalization_values_path" setting or present in current un directory.')
 
 
-def load_network_(network: Module, file_path: Union[str, Path], device: torch.device) -> bool:
+def load_network_(network: ClassifierNN, file_path: Union[str, Path], device: torch.device,
+                  load_thresholds: bool = False) -> bool:
     """
     Load a full description of the network parameters and states from a previous save file.
 
     :param network: The network to load into (in place)
     :param file_path: The path to the file to load
     :param device: The pytorch device where to load the network
-    :return: True if the file exist and is loaded, False if the file is not found.
+    :param load_thresholds: If True, we will also try to load the thresholds
+    :return: True if the file exists and is loaded, False if the file is not found
     """
-
     cache_path = Path(file_path) if isinstance(file_path, str) else file_path
     if cache_path.is_file():
         network.load_state_dict(torch.load(cache_path, map_location=device))
         logger.info(f'Network parameters loaded from file ({cache_path})')
+
+        if load_thresholds:
+            load_network_thresholds(network)
+
         return True
     logger.warning(f'Network cache not found in "{cache_path}"')
     return False
+
+
+def load_network_thresholds(network: ClassifierNN) -> None:
+    """
+    Try to load the confidence thresholds for each class.
+
+    :param network: The model where we save the thresholds.
+    """
+    if settings.confidence_threshold > 0:
+        network.confidence_thresholds = settings.confidence_threshold  # Same threshold for every class
+        logger.info(f'Network confidence threshold set to {network.confidence_thresholds:.1%} for every class')
+    else:
+        raise ValueError('Impossible to load the model thresholds')
 
 
 def load_previous_network_version_(network: Module, version_name: str, device: torch.device) -> bool:
