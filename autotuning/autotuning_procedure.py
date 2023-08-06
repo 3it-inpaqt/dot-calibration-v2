@@ -506,7 +506,7 @@ class AutotuningProcedure:
         # Base arguments for all plots
         common_kwargs = dict(
             x_i=x_axes, y_i=y_axes, title=title, transition_lines=transition_lines, scan_history=self._scan_history,
-            final_volt_coord=final_volt_coord, scale_bar=True, diagram_boundaries=diagram_boundaries
+            final_volt_coord=final_volt_coord, scale_bars=True, diagram_boundaries=diagram_boundaries
         )
 
         # Parallel plotting for speed

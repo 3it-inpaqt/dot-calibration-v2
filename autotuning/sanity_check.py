@@ -37,8 +37,8 @@ class SanityCheck(AutotuningProcedure):
         max_x, max_y = self.diagram.voltage_to_coord(max_x_v, max_y_v)
 
         # Start from the middle of the starting area
-        self.x = min_x + ((max_x - min_x) // 2) - (settings.patch_size_x // 2)
-        self.y = min_y + ((max_y - min_y) // 2) - (settings.patch_size_y // 2)
+        start_x = self.x = min_x + ((max_x - min_x) // 2) - (settings.patch_size_x // 2)
+        start_y = self.y = min_y + ((max_y - min_y) // 2) - (settings.patch_size_y // 2)
 
         x_v, y_v = self.diagram.coord_to_voltage(self.x, self.y)
         logger.info(f'Auto-tuning sanity check. Start from ({x_v:.2f}V, {y_v:.2f}V). '
