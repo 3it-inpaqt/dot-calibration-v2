@@ -9,6 +9,7 @@ from typing import Any, List, Optional, Tuple, Union
 import imageio.v2 as imageio
 import matplotlib.pyplot as plt
 import pandas as pd
+import pyntfy
 import seaborn as sns
 import torch
 import yaml
@@ -520,6 +521,22 @@ def load_runs(patterns: Union[str, List[str]]) -> pd.DataFrame:
     logger.info(f'{len(data)} run(s) loaded with the pattern "{runs_dir}/{patterns}"')
 
     return pd.DataFrame(data)
+
+
+def push_notification(title: str, message: str) -> None:
+    """
+    Send a notification to any phone that subscribed the ntfy_topic specified in the settings.
+    Do nothing if the topic is not set, or it is a temporary run.
+
+    :param title: The title of the notification.
+    :param message: The message of the notification.
+    """
+    if settings.ntfy_topic and settings.is_saved_run():
+        try:
+            pyntfy.Notification(settings.ntfy_topic, title=title, message=message, url=settings.ntfy_server).send()
+            logger.debug(f'"{title}" notification sent')
+        except Exception as e:
+            logger.warning(f'Impossible to send "{title}" notification: {e}')
 
 
 class ExistingRunName(Exception):

@@ -16,3 +16,4 @@ pillow~=9.5
 imageio~=2.31
 imageio-ffmpeg~=0.4
 torchsampler~=0.1
+pyntfy~=0.2

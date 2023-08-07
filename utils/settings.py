@@ -98,6 +98,14 @@ class Settings:
     nb_plot_tuning_fail: int = 5
     nb_plot_tuning_success: int = 2
 
+    # Push phone notification for important updates if the topic is not empty.
+    # Send notification for: end of training, end of online tuning
+    # See https://docs.ntfy.sh/ for more information.
+    ntfy_topic: str = ''
+
+    # The ntfy server to use for push notification (public official server by default).
+    ntfy_server: str = 'https://ntfy.sh/'
+
     # ==================================================================================================================
     # ==================================================== Dataset =====================================================
     # ==================================================================================================================

@@ -4,7 +4,7 @@ from connectors.connector import Connector
 from runs.run_line_task import clean_up, get_cuda_device, init_model, preparation
 from runs.run_tuning_task import run_autotuning
 from utils.logger import logger
-from utils.output import load_network_
+from utils.output import load_network_, push_notification
 from utils.settings import settings
 from utils.timer import SectionTimer
 
@@ -57,10 +57,17 @@ if __name__ == '__main__':
     try:
         start_tuning_online_task()
 
+        # Send a push notification when the tuning is finished
+        push_notification('Online tuning finished', f'Online tuning "{settings.run_name}" finished')
+
     except KeyboardInterrupt:
         logger.error('Online tuning task interrupted by the user.', exc_info=True)
-    except Exception:
+    except Exception as e:
         logger.critical('Online tuning task interrupted by an unexpected error.', exc_info=True)
+
+        # Send a push notification if the tuning failed
+        push_notification('Online tuning failed', f'Online tuning "{settings.run_name}" failed with '
+                                                  f'an unexpected error: {e.__class__.__name__}')
     finally:
         # Clean up the environment, ready for a new run
         clean_up()
