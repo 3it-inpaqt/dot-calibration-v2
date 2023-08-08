@@ -5,8 +5,9 @@ import numpy as np
 from runs.run_line_task import clean_up, fix_seed
 from start_lines import start_line_task
 from start_tuning_offline import start_tuning_offline_task
+from start_tuning_online import start_tuning_online_task
 from utils.logger import logger
-from utils.output import ExistingRunName, init_out_directory, set_plot_style
+from utils.output import ExistingRunName, init_out_directory, set_plot_style, push_notification
 from utils.planner import AdaptativePlanner, BasePlanner, CombinatorPlanner, ParallelPlanner, Planner, SequencePlanner
 from utils.settings import settings
 
@@ -25,6 +26,7 @@ cnns_batch_norm = [False] * (len(cnns_hidden_size) + len(settings.conv_layers_ke
 
 def run_tasks_planner(runs_planner: BasePlanner,
                       tuning_task: bool = True,
+                      online_tuning: bool = False,
                       skip_validation: bool = False,
                       skip_existing_runs: bool = True) -> None:
     """
@@ -32,6 +34,7 @@ def run_tasks_planner(runs_planner: BasePlanner,
 
     :param runs_planner: The run planner to follow.
     :param tuning_task: If True, start the tuning task, if False start the line task.
+    :param online_tuning: If True, start the tuning task online, if False start the tuning task offline.
     :param skip_validation: If True, skip the settings validation.
     :param skip_existing_runs: If True, skipp run for which an out directory already exists.
     """
@@ -93,7 +96,10 @@ def run_tasks_planner(runs_planner: BasePlanner,
         try:
             # Start the run
             if tuning_task:
-                start_tuning_offline_task()
+                if online_tuning:
+                    start_tuning_online_task()
+                else:
+                    start_tuning_offline_task()
             else:
                 start_line_task()
 
@@ -112,6 +118,8 @@ def run_tasks_planner(runs_planner: BasePlanner,
         logger.warning(f'1 existing run skipped: {skipped_runs[0]}')
     elif len(skipped_runs) > 1:
         logger.warning(f'{len(skipped_runs)} existing runs skipped')
+
+    push_notification('Run planner finished', f'{nb_runs} runs finished with {len(skipped_runs)} skipped runs')
 
 
 # =========================================== Datasets Iterations ===========================================
@@ -385,3 +393,45 @@ tune_all_cross_valid = CombinatorPlanner([
     Planner('plot_diagrams', [False]),
     Planner('checkpoints_after_updates', [400]),
 ], runs_name='tuning_cross_valid-{seed:02}-{model_type}-{research_group}-{test_diagram}')
+
+# ============================================ Online Experiment ============================================
+
+exp_range = list(range(1, 6))
+# Train the models for the online experiment
+train_online_experiment = SequencePlanner([
+    CombinatorPlanner([
+        Planner('model_type', ['CNN']),
+        Planner('nb_train_update', [30_000]),
+        Planner('dropout', [0.1]),
+        Planner('seed', [1_000 + i for i in exp_range]),
+    ]),
+    CombinatorPlanner([
+        Planner('model_type', ['BCNN']),
+        Planner('nb_train_update', [35_000]),
+        Planner('dropout', [0]),
+        Planner('seed', [1_000 + i for i in exp_range])
+    ])
+], runs_name='exp-{model_type}')
+
+# Run the online experiment
+online_experiment = CombinatorPlanner([
+    Planner('autotuning_procedures', [['jump_u'], ['jump']]),
+    SequencePlanner([
+        CombinatorPlanner([
+            Planner('model_type', ['CNN']),
+            ParallelPlanner([
+                Planner('trained_network_cache_path', [f'out/exp-CNN-{i:02}/best_network.pt' for i in exp_range]),
+                Planner('normalization_values_path', [f'out/exp-CNN-{i:02}/normalization.yaml' for i in exp_range]),
+                Planner('seed', [1_000 + i for i in exp_range])
+            ])
+        ]),
+        CombinatorPlanner([
+            Planner('model_type', ['BCNN']),
+            ParallelPlanner([
+                Planner('trained_network_cache_path', [f'out/exp-BCNN-{i:02}/best_network.pt' for i in exp_range]),
+                Planner('normalization_values_path', [f'out/exp-BCNN-{i:02}/normalization.yaml' for i in exp_range]),
+                Planner('seed', [1_000 + i for i in exp_range])
+            ])
+        ])
+    ])
+], runs_name='experiment-{model_type}-{autotuning_procedures[0]}')
