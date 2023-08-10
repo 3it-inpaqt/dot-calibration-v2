@@ -65,6 +65,7 @@ def run_tasks_planner(runs_planner: BasePlanner,
         logger.info('Completed successful validation of the runs planner')
 
     nb_runs = len(runs_planner)
+    nb_error_run = 0
     logger.info(f'Starting a set of {nb_runs} runs with a planner')
 
     skipped_runs = list()
@@ -105,9 +106,11 @@ def run_tasks_planner(runs_planner: BasePlanner,
 
         except KeyboardInterrupt:
             logger.error('Task planner interrupted by the user.', exc_info=True)
+            nb_error_run += 1
             break
         except Exception:
             logger.critical('Task planner interrupted by an unexpected error.', exc_info=True)
+            nb_error_run += 1
         finally:
             # Clean up the environment, ready for a new run
             clean_up()
@@ -119,7 +122,11 @@ def run_tasks_planner(runs_planner: BasePlanner,
     elif len(skipped_runs) > 1:
         logger.warning(f'{len(skipped_runs)} existing runs skipped')
 
-    push_notification('Run planner finished', f'{nb_runs} runs finished with {len(skipped_runs)} skipped runs')
+    push_notification('Run planner finished',
+                      f'{nb_runs} runs completed:'
+                      f'\n - {nb_runs - len(skipped_runs) - nb_error_run} successful'
+                      f'\n - {nb_error_run} failed'
+                      f'\n - {len(skipped_runs)} skipped')
 
 
 # =========================================== Datasets Iterations ===========================================

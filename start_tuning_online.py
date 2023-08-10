@@ -31,6 +31,9 @@ def start_tuning_online_task() -> None:
         # Run the autotuning task with one online diagram
         run_autotuning(model, [diagram])
 
+    # Send a push notification when the tuning is finished
+    push_notification('Online tuning finished', f'Online tuning "{settings.run_name}" finished')
+
 
 def check_settings() -> None:
     """
@@ -56,9 +59,6 @@ if __name__ == '__main__':
     # noinspection PyBroadException
     try:
         start_tuning_online_task()
-
-        # Send a push notification when the tuning is finished
-        push_notification('Online tuning finished', f'Online tuning "{settings.run_name}" finished')
 
     except KeyboardInterrupt:
         logger.error('Online tuning task interrupted by the user.', exc_info=True)
