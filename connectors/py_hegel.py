@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import subprocess as sp
 import threading
@@ -37,6 +38,13 @@ class PyHegel(Connector):
             self._amplification = amplification
 
     def _setup_connection(self) -> None:
+        """
+        Start a PyHegel process and open a PIPE for communicate with it.
+        A consumer thread is created to consume the output of the process.
+        """
+
+        # Fix a potential crash with the CTRL+C handler in PyHegel sup-process. This is related to a Fortran library.
+        os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = 'TRUE'
 
         # Start the process
         self._process = Popen([
@@ -74,13 +82,25 @@ class PyHegel(Connector):
         self._is_connected = True
         logger.info('PyHegel connector ready.')
 
-    def _close_connection(self):
+    def _close_connection(self) -> None:
+        """
+        Stop the PyHegel process and close the connection.
+        Then consume the remaining output.
+        After this, a new connection can be opened.
+        """
         if self._process is not None:
-            #self._process.send_signal(sp.signal.CTRL_C_EVENT)
             self._process.stdin.write(str.encode("exit\n"))
 
         if self._stdout_consumer is not None:
+            # Wait 5 seconds for the thread to stop, but it could be not enough if a scan is in progress
             self._stdout_consumer.join(5)
+
+            if self._stdout_consumer.is_alive():
+                logger.error('PyHegel stdout consumer thread did not stop properly (an action is probably in progress)'
+                             ', forcing stop.')
+                # Force stop current action, the whole process may crash
+                self._process.send_signal(sp.signal.CTRL_C_EVENT)
+
             self._read_process_out()
 
         self._process = None
