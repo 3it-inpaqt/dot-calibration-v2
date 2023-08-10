@@ -76,7 +76,7 @@ class PyHegel(Connector):
 
     def _close_connection(self):
         if self._process is not None:
-            self._process.send_signal(sp.signal.CTRL_C_EVENT)
+            #self._process.send_signal(sp.signal.CTRL_C_EVENT)
             self._process.stdin.write(str.encode("exit\n"))
 
         if self._stdout_consumer is not None:
