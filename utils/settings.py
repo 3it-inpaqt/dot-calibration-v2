@@ -161,6 +161,10 @@ class Settings:
     # This is the r parameter in the following equation : Z_i = (1 - r) * Z_(i-1) + r * X_i
     ewma_parameter = 0.15
 
+    # If True, we take the absolute value after subtracting the EWMA from the derivative of the patch and ewma_threshold
+    # is not used.
+    is_ewma_with_abs = True
+
     # This is the k used in the EWMA method when we look if a value is outside this range: mean +/- k * sigma
     ewma_threshold = 3
 
@@ -348,7 +352,7 @@ class Settings:
     # ==================================================================================================================
 
     # Whether the inference of the ML model should be simulated on a circuit or not.
-    simulate_circuit = True
+    simulate_circuit = False
 
     # If simulate_circuit is True, then should the simulation be done with Xyce? Should be False if use_ltspice is True.
     use_xyce = True
@@ -379,14 +383,14 @@ class Settings:
 
     # The write standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.8%
-    sim_memristor_write_std = 0.0
+    sim_memristor_write_std = 0.008
 
     # The probability that a memristor will be blocked to r_max when we try to write a value to it (% [0,1])
-    ratio_failure_HRS = 0.0
+    ratio_failure_HRS = 0.05
 
     # The probability that a memristor will be blocked to r_min when we try to write a value to it (% [0,1])
     # ratio_failure_HRS + ratio_failure_LRS should be around 10%
-    ratio_failure_LRS = 0.0
+    ratio_failure_LRS = 0.05
 
     # The pulse amplitude for the input encoding (V)
     sim_pulse_amplitude = 0.2
@@ -417,7 +421,7 @@ class Settings:
     sim_max_test_inference = 1000
 
     # Number of parallel process to run (0 means the number of cpu cores)
-    sim_nb_process = 2
+    sim_nb_process = 1
 
     # File path of the LTspice program installed on the system
     ltspice_executable_path = 'C:\Program Files\ADI\LTspice\LTspice.exe'

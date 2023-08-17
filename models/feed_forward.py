@@ -147,6 +147,9 @@ class FeedForward(ClassifierNN):
                 weight_affected_prob = 1 - (1 - memristor_blocked_prob) ** 2
                 weight_affected_mask = torch.rand_like(param) < weight_affected_prob
 
+                # Generate masks for weights to be modified by two stucked memristors (both_memristors_affected_mask)
+                # or a single stuck memristor encoding the positive or negative values (pos_memristors_affected_mask,
+                # neg_memristors_affected_mask)
                 mask_generator = torch.rand_like(param)
                 both_memristors_affected_mask = mask_generator < (memristor_blocked_prob ** 2) / weight_affected_prob
                 pos_memristors_affected_mask = mask_generator > 1 - memristor_blocked_prob * \
@@ -158,6 +161,8 @@ class FeedForward(ClassifierNN):
                 pos_memristors_affected_mask = torch.bitwise_and(pos_memristors_affected_mask, weight_affected_mask)
                 neg_memristors_affected_mask = torch.bitwise_and(neg_memristors_affected_mask, weight_affected_mask)
 
+                # When both memristors encoding a weight are affected, generate the masks to select the weights where
+                # the memristors are LRS-LRS, LRS-HRS, HRS-LRS, HRS-HRS
                 lrs_prob = settings.ratio_failure_LRS / memristor_blocked_prob
                 hrs_prob = 1 - lrs_prob
                 lrs_lrs_prob = lrs_prob ** 2
@@ -176,6 +181,9 @@ class FeedForward(ClassifierNN):
                 both_memristors_hrs_lrs_mask = torch.bitwise_and(hrs_lrs_mask, both_memristors_affected_mask)
                 both_memristors_hrs_hrs_mask = torch.bitwise_and(hrs_hrs_mask, both_memristors_affected_mask)
 
+                # When only one memristor encoding a weight is affected, generate the masks to select the weights where
+                # the memristor encodes positive values and is LRS, same for HRS, the memristor encodes negative
+                # values and is LRS, same for HRS.
                 mask_generator = torch.rand_like(param)
                 lrs_mask = mask_generator < lrs_prob
                 hrs_mask = torch.bitwise_not(lrs_mask)
@@ -184,9 +192,12 @@ class FeedForward(ClassifierNN):
                 neg_memristors_lrs_mask = torch.bitwise_and(neg_memristors_affected_mask, lrs_mask)
                 neg_memristors_hrs_mask = torch.bitwise_and(neg_memristors_affected_mask, hrs_mask)
 
+                # Keep in memory the mask used to select the weights to be modified and the values of these weights
+                # before they are modified
                 self.mask_temp_cache.append(weight_affected_mask)
                 self.param_temp_cache.append(param.data * weight_affected_mask)
 
+                # Modify the weights
                 param.data[both_memristors_lrs_lrs_mask] = 0.0
                 param.data[both_memristors_lrs_hrs_mask] = settings.parameters_clipping
                 param.data[both_memristors_hrs_lrs_mask] = -settings.parameters_clipping
@@ -195,6 +206,7 @@ class FeedForward(ClassifierNN):
                 param.data[torch.bitwise_and(pos_memristors_hrs_mask, param > 0)] = 0.0
                 param.data[neg_memristors_lrs_mask] = param.data[neg_memristors_lrs_mask] - settings.parameters_clipping
                 param.data[torch.bitwise_and(neg_memristors_hrs_mask, param < 0)] = 0.0
+                param.clamp_(-settings.parameters_clipping, settings.parameters_clipping)
 
     def infer(self, inputs, nb_sample=0) -> (List[bool], List[float]):
         """

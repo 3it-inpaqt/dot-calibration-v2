@@ -19,7 +19,7 @@ from utils.progress_bar import ProgressBar
 
 def test_analog(model: ClassifierNN, test_dataset: Dataset):
     """
-    Convert the model an analog circuit, and run the simulation for each input of the test set.
+    Convert the model in an analog circuit, and run the simulation for each input of the test set.
 
     Args:
         model: The neural network model to convert.

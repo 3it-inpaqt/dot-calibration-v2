@@ -211,7 +211,8 @@ class NetlistGenerator:
             read_std=settings.sim_memristor_read_std,
             var_sample_size=settings.sim_var_sample_size,
             gain_tia=self.gain_tia,
-            gain_sum=self.gain_sum
+            gain_sum=self.gain_sum,
+            use_xyce=settings.use_xyce
         )
 
         return netlist, self.nb_layers

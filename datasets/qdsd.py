@@ -186,37 +186,7 @@ class QDSDLines(Dataset):
                                 f'{", ".join(test_ratio_or_names)}')
 
                 if settings.use_ewma:
-                    patches, labels = zip(*patches)
-                    patches = torch.stack(patches)
-
-                    # Calculate the derivative
-                    delta_patches = patches[:, :, 1:] - patches[:, :, :-1]
-                    # Calculate the EWMA
-                    dimensions = delta_patches.size()
-                    ewma = torch.zeros(dimensions[0], dimensions[1], dimensions[2] - 2)
-                    ewma[:,:,0] = delta_patches[:, :, 0:2].mean(dim=2) * (1 - settings.ewma_parameter) + \
-                                  delta_patches[:, :, 2] * settings.ewma_parameter
-                    for i in range(1, ewma.size()[2]):
-                        ewma[:, :, i] = ewma[:, :, i - 1] * (1 - settings.ewma_parameter) + \
-                                        delta_patches[:, :, i + 2] * settings.ewma_parameter
-                    # Calculate the difference between the derivative of the patches and the EWMA
-                    delta_patches_adj = delta_patches[:, :, 2:] - ewma
-
-                    # Calculate the pixels that are significantly different from the mean of their patch
-                    delta_patches_adj_mean = torch.mean(delta_patches_adj, dim=(1, 2))
-                    delta_patches_adj_std = torch.std(delta_patches_adj, dim=(1, 2))
-                    k = settings.ewma_threshold
-                    upper_bound = delta_patches_adj_mean + k * delta_patches_adj_std
-                    lower_bound = delta_patches_adj_mean - k * delta_patches_adj_std
-                    mask = (delta_patches_adj < lower_bound[:, None, None]) | \
-                           (delta_patches_adj > upper_bound[:, None, None])
-                    # Convert the boolean mask to a tensor of 1.0 for True and 0.0 for False
-                    result_patches = mask.float()
-
-                    # Zip the patches with the labels
-                    result_patches = torch.split(result_patches, split_size_or_sections=1, dim=0)
-                    result_patches = [tensor.squeeze(dim=0) for tensor in result_patches]
-                    patches = list(zip(result_patches, labels))
+                    patches = QDSDLines.use_ewma(patches)
 
                 if settings.use_data_cache and use_test_ratio:
                     # Save in cache for later runs
@@ -304,6 +274,44 @@ class QDSDLines(Dataset):
 
         return list(zip(torch.tensor(data), torch.tensor(labels)))
 
+    @staticmethod
+    def use_ewma(patches):
+        patches, labels = zip(*patches)
+        patches = torch.stack(patches)
+
+        # Calculate the derivative
+        delta_patches = patches[:, :, 1:] - patches[:, :, :-1]
+        # Calculate the EWMA
+        dimensions = delta_patches.size()
+        ewma = torch.zeros(dimensions[0], dimensions[1], dimensions[2] - 2)
+        ewma[:, :, 0] = delta_patches[:, :, 0:2].mean(dim=2) * (1 - settings.ewma_parameter) + \
+                        delta_patches[:, :, 2] * settings.ewma_parameter
+        for i in range(1, ewma.size()[2]):
+            ewma[:, :, i] = ewma[:, :, i - 1] * (1 - settings.ewma_parameter) + \
+                            delta_patches[:, :, i + 2] * settings.ewma_parameter
+        # Calculate the difference between the derivative of the patches and the EWMA
+        delta_patches_adj = delta_patches[:, :, 2:] - ewma
+
+        # Take the abs value of delta_patches_adj or binarize delta_patches_adj based on its extreme values.
+        if settings.is_ewma_with_abs:
+            result_patches = delta_patches_adj
+        else:
+            # Calculate the pixels that are significantly different from the mean of their patch
+            delta_patches_adj_mean = torch.mean(delta_patches_adj, dim=(1, 2))
+            delta_patches_adj_std = torch.std(delta_patches_adj, dim=(1, 2))
+            k = settings.ewma_threshold
+            upper_bound = delta_patches_adj_mean + k * delta_patches_adj_std
+            lower_bound = delta_patches_adj_mean - k * delta_patches_adj_std
+            mask = (delta_patches_adj < lower_bound[:, None, None]) | \
+                   (delta_patches_adj > upper_bound[:, None, None])
+            # Convert the boolean mask to a tensor of 1.0 for True and 0.0 for False
+            result_patches = mask.float()
+
+        # Zip the patches with the labels
+        result_patches = torch.split(result_patches, split_size_or_sections=1, dim=0)
+        result_patches = [tensor.squeeze(dim=0) for tensor in result_patches]
+        patches = list(zip(result_patches, labels))
+        return patches
 
 class AddGaussianNoise(object):
     """
