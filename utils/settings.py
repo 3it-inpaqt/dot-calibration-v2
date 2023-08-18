@@ -27,7 +27,7 @@ class Settings:
 
     # Name of the run to save the result ('tmp' for temporary files).
     # If empty or None thing is saved.
-    run_name: str = 'tmp'
+    run_name: str = ''
 
     # The seed to use for all random number generator during this run.
     # Forcing reproducibility could lead to a performance lost.
@@ -87,12 +87,24 @@ class Settings:
     # The file will be at the root of run directory, under then name: "final_network.pt"
     save_network: bool = True
 
-    # If True the diagrams will be plotted when they are loaded.
+    # If True, the diagrams will be plotted when they are loaded.
     # Always skipped if patches are loaded from cache.
     plot_diagrams: bool = True
 
-    # If True the image are saved in a format adapted to latex format (vectorial and no title).
+    # If True, images are saved in a format adapted to latex format (vectorial and no title).
     image_latex_format: bool = False
+
+    # The number of results to plot for each procedure.
+    nb_plot_tuning_fail: int = 5
+    nb_plot_tuning_success: int = 2
+
+    # Push phone notification for important updates if the topic is not empty.
+    # Send notification for: end of training, end of online tuning
+    # See https://docs.ntfy.sh/ for more information.
+    ntfy_topic: str = ''
+
+    # The ntfy server to use for push notification (public official server by default).
+    ntfy_server: str = 'https://ntfy.sh/'
 
     # ==================================================================================================================
     # ==================================================== Dataset =====================================================
@@ -102,18 +114,18 @@ class Settings:
     use_data_cache: bool = False
 
     # The size of a diagram patch send to the network input (number of pixel)
-    patch_size_x: int = 5
-    patch_size_y: int = 5
+    patch_size_x: int = 18
+    patch_size_y: int = 18
 
     # The patch overlapping (number of pixel)
-    patch_overlap_x: int = 1
-    patch_overlap_y: int = 1
+    patch_overlap_x: int = 10
+    patch_overlap_y: int = 10
 
     # The width of the border to ignore during the patch labeling (number of pixel)
     # E.g.: If one line touch only 1 pixel at the right of the patch and the label_offset_x is >1 then the patch will be
     # labeled as "no_line"
-    label_offset_x: int = 0
-    label_offset_y: int = 0
+    label_offset_x: int = 6
+    label_offset_y: int = 6
 
     # The size of the interpolated pixel in Volt.
     # Should be available in the dataset folder.
@@ -122,7 +134,7 @@ class Settings:
     # The name of the research group who provide the data.
     # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier' or 'stefanie_czischek'
     # Should be available in the dataset folder.
-    research_group: str = 'louis_gaudreau'
+    research_group: str = 'michel_pioro_ladriere'
 
     # The percentage of data kept for testing only.
     # If test_diagram is set, this value should be 0.
@@ -174,10 +186,10 @@ class Settings:
 
     # The type of model to use (could be a neural network).
     # Have to be in the implemented list: FF, BFF, CNN, BCNN.
-    model_type: str = 'FF'
+    model_type: str = 'CNN'
 
     # The number of fully connected hidden layer and their respective number of neurons.
-    hidden_layers_size: Sequence = (5,)
+    hidden_layers_size: Sequence = (200, 100)
 
     # Whether there should be a bias in the hidden layer or not (currently only implemented in FF and CNN)
     bias_in_hidden_layer = True
@@ -192,7 +204,7 @@ class Settings:
 
     # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
     # Have to match the number of layers (convolution + linear)
-    batch_norm_layers: Sequence = (False,)
+    batch_norm_layers: Sequence = (False, False, False, False)
 
     # ==================================================================================================================
     # ==================================================== Training ====================================================
@@ -212,7 +224,7 @@ class Settings:
     # Dropout rate for every dropout layers defined in networks.
     # If a network model doesn't have a dropout layer this setting will have no effect.
     # 0 skip dropout layers
-    dropout: int = 0.0
+    dropout: int = 0.4
 
     # The size of the mini-batch for the training and testing.
     batch_size: int = 512
@@ -237,7 +249,7 @@ class Settings:
 
     # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
     # Negative threshold means automatic value selection using tau.
-    confidence_threshold: float = -1
+    confidence_threshold: float = -1.0
 
     # Relative importance of model error compare to model uncertainty for automatic confidence threshold tuning.
     # Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
@@ -332,7 +344,7 @@ class Settings:
     # Possible values: 'mock', 'py_hegel'
     connector_name: str = 'mock'
 
-    # The level of automation of the connector.
+    # The automation level of the connector.
     # 'auto': the connector will automatically send the command to the measurement device.
     # 'semi-auto': the connector will show the command to the user before to send it to the measurement device.
     # 'manual': the connector will only show the command to the user, and will not send it to the measurement device.
@@ -346,6 +358,11 @@ class Settings:
     # The voltage range in which we can choose a random starting point, for each gate.
     start_range_voltage_x: Sequence = (float('nan'), float('nan'))
     start_range_voltage_y: Sequence = (float('nan'), float('nan'))
+
+    # Use cache from previous measurements to speed up the tuning.
+    # If False, the connector will always request a new measurement.
+    # If True, the connector will use previous data when it is possible.
+    use_cached_measurement: bool = True
 
     # ==================================================================================================================
     # ============================================= Circuit Simulation =================================================

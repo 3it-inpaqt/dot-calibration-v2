@@ -1,6 +1,5 @@
-from math import prod
 from random import randrange
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import torch
@@ -14,22 +13,31 @@ from utils.settings import settings
 
 
 class DiagramOnline(Diagram):
-    _torch_device: torch.device = None
     _measurement_history: List[ExperimentalMeasurement]
-    _origin_voltage: Tuple[float, float]
     _norm_min_value: float
     _norm_max_value: float
 
     def __init__(self, name: str, connector: "Connector"):
+        """
+        Create an instance of a DiagramOnline associated with a connector (interface to the measurement tool).
+
+        :param name: The name of the diagram.
+        :param connector: The connector to the measurement tool.
+        """
         super().__init__(name)
         self._connector = connector
         self._measurement_history = []
 
-        # Arbitrary define the mapping between the voltage and the coordinate at the origin (0, 0)
-        self._origin_voltage = settings.min_voltage, settings.min_voltage
-
         # Fetch the normalization values used during the training
         self._norm_min_value, self._norm_max_value = load_normalization()
+
+        # Create a virtual axes and discret grid that represent the voltage space to explore.
+        # Where NaN values represent the voltage space that has not been measured yet.
+        # The min value is included but not the max value (to match with python standards).
+        space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
+        self.x_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
+        self.y_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
+        self.values = torch.full((space_size, space_size), torch.nan)
 
     def get_random_starting_point(self) -> Tuple[int, int]:
         """
@@ -41,8 +49,8 @@ class DiagramOnline(Diagram):
         min_y_v, max_y_v = settings.start_range_voltage_y
 
         # Convert the voltage to coordinates
-        min_x, min_y = self._voltage_to_coord(min_x_v, min_y_v)
-        max_x, max_y = self._voltage_to_coord(max_x_v, max_y_v)
+        min_x, min_y = self.voltage_to_coord(min_x_v, min_y_v)
+        max_x, max_y = self.voltage_to_coord(max_x_v, max_y_v)
 
         # Make sure the patch is fully inside the starting range
         max_x = max_x - settings.patch_size_x
@@ -55,111 +63,89 @@ class DiagramOnline(Diagram):
         # Generate random coordinates inside the range
         return randrange(min_x, max_x), randrange(min_y, max_y)
 
-    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int]) -> torch.Tensor:
+    def get_patch(self, coordinate: Tuple[int, int], patch_size: Tuple[int, int], normalized: bool = True) \
+            -> torch.Tensor:
         """
         Extract one patch in the diagram (data only, no label).
 
         :param coordinate: The coordinate in the diagram (not the voltage)
-        :param patch_size: The size of the patch to extract (in number of pixel)
+        :param patch_size: The size of the patch to extract (in number of pixels)
+        :param normalized: If True, the patch will be normalized between 0 and 1
         :return: The patch.
         """
-
-        # Convert the coordinate to voltage
-        x, y = coordinate
-        min_x_v, min_y_v = settings.min_voltage, settings.min_voltage
-        max_x_v, max_y_v = settings.max_voltage, settings.max_voltage
         x_patch, y_patch = patch_size
-        x_range_coord = [x, x + x_patch]
-        y_range_coord = [y, y + y_patch]
-        x_range_volt = Diagram._coord_to_volt(x_range_coord, min_x_v, max_x_v, settings.pixel_size)
-        y_range_volt = Diagram._coord_to_volt(y_range_coord, min_y_v, max_y_v, settings.pixel_size)
+        x_start, y_start = coordinate
+        x_end = x_start + x_patch
+        y_end = y_start + y_patch
+        x_start_v, y_start_v = self.coord_to_voltage(x_start, y_start)
+        x_end_v, y_end_v = self.coord_to_voltage(x_end, y_end)
 
-        # Request a new measurement to the connector
-        logger.debug(f'Requesting measurement ({prod(patch_size):,d} points) to the {self._connector} connector: '
-                     f'|X|{x_range_coord[0]}->{x_range_coord[1]}| ({x_range_volt[0]:.3f}V->{x_range_volt[1]:.3f}V) '
-                     f'|Y|{y_range_coord[0]}->{y_range_coord[1]}| ({y_range_volt[0]:.3f}V->{y_range_volt[1]:.3f}V)')
-        measurement = self._connector.measurement(x_range_volt[0], x_range_volt[1], settings.pixel_size,
-                                                  y_range_volt[0], y_range_volt[1], settings.pixel_size)
+        if settings.use_cached_measurement:
+            # Try to optimize the patch measurement by using cached data
+            measurements_coords = self._split_patch_in_unmeasured_rectangles((x_start, x_end, y_start, y_end))
+            if len(measurements_coords) == 0:
+                logger.debug(f'Using only cached data for the current patch, no new measurement required')
+            elif len(measurements_coords) == 1 and (x_start, x_end, y_start, y_end) == measurements_coords[0]:
+                logger.debug(f'No cached data found for the current patch, requesting full patch measurement')
+            else:
+                logger.debug(f'Partial cached data found for the current patch, requesting {len(measurements_coords)} '
+                             f'measurement(s)')
+        else:
+            # Request a full patch measurement
+            measurements_coords = [(x_start, x_end, y_start, y_end)]
 
-        # Validate the measurement size
-        if tuple(measurement.data.shape) != patch_size:
-            raise ValueError(f'Unexpected measurement size: {tuple(measurement.data.shape)} while {patch_size} has'
-                             f' been requested.')
+        # Request the measurements to the connector (it could be 0, 1 or multiple measurements)
+        for i, (sub_x_start, sub_x_end, sub_y_start, sub_y_end) in enumerate(measurements_coords, start=1):
+            # Convert the coordinate to voltage
+            sub_x_start_v, sub_y_start_v = self.coord_to_voltage(sub_x_start, sub_y_start)
+            sub_x_end_v, sub_y_end_v = self.coord_to_voltage(sub_x_end, sub_y_end)
+            # Request a new measurement to the connector
+            nb_points = (sub_x_end - sub_x_start) * (sub_y_end - sub_y_start)
+            logger.debug(f'Requesting measurement ({nb_points:,d} points) to the {self._connector} connector: '
+                         f'|X|{sub_x_start}->{sub_x_end}| ({sub_x_start_v:.4f}V->{sub_x_end_v:.4f}V) '
+                         f'|Y|{sub_y_start}->{sub_y_end}| ({sub_y_start_v:.4f}V->{sub_y_end_v:.4f}V)')
+            measurement = self._connector.measurement(sub_x_start_v, sub_x_end_v, settings.pixel_size,
+                                                      sub_y_start_v, sub_y_end_v, settings.pixel_size)
+            measurement.note = f'Patch:' \
+                               f'\n  -|X|{x_start}->{x_end}| ({x_start_v:.4f}V->{x_end_v:.4f}V)' \
+                               f'\n  -|Y|{y_start}->{y_end}| ({y_start_v:.4f}V->{y_end_v:.4f}V)' \
+                               f'\n\nSub-section: {i}/{len(measurements_coords)}' \
+                               f'\n  -|X|{sub_x_start}->{sub_x_end}| ({sub_x_start_v:.4f}V->{sub_x_end_v:.4f}V)' \
+                               f'\n  -|Y|{sub_y_start}->{sub_y_end}| ({sub_y_start_v:.4f}V->{sub_y_end_v:.4f}V)'
 
-        # Save the measurement in the history to keep track of it
-        self._measurement_history.append(measurement)
-        # Send the data matrix to the appropriate device (cpu or gpu)
-        measurement.data.to(self._torch_device)
+            # Save the measurement in the history to keep track of it
+            self._measurement_history.append(measurement)
+            # Send the data matrix to the same device as the values
+            measurement.to(self.values.device)
+            # Save the measurement in the grid
+            self.values[sub_y_start:sub_y_end, sub_x_start: sub_x_end] = measurement.data
 
-        # Plot the diagram with all current measurements
-        if settings.is_named_run() and (settings.save_images or settings.show_images):
-            self.plot()
+            # Plot the diagram with all current measurements
+            if settings.is_named_run() and (settings.save_images or settings.show_images):
+                self.plot()
+
+        patch_data = self.values[y_start:y_end, x_start: x_end]
+        if patch_data.isnan().any():
+            raise ValueError(f'The patch ({x_start}, {y_start}) to ({x_end}, {y_end}) contains NaN values.')
 
         # Normalize the measurement with the normalization range used during the training, then return it.
-        return self.normalize(measurement.data)
+        return self.normalize(patch_data.clone()) if normalized else patch_data
 
-    def plot(self, focus_area: Optional[Tuple] = None, label_extra: Optional[str] = '') -> None:
-        values, x_axis, y_axis = self.get_values()
-        if values is not None:
-            plot_diagram(x_axis, y_axis, values, 'Online intermediate step' + label_extra, 'None', settings.pixel_size,
-                         focus_area=focus_area, allow_overwrite=True)
-
-    def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
-           copy: bool = False):
+    def plot(self) -> None:
         """
-        Save the torch device to use. Every new data will be sent to this device after being fetched from the connector.
-
-        :param device: A valid torch device.
-        :param dtype: Not used for online diagram.
-        :param non_blocking: Not used for online diagram.
-        :param copy: Not used for online diagram.
+        Plot or update the last image of the diagram.
         """
-        self._torch_device = device
+        values, x_axes, y_axes = self.get_values()
+        focus_area = False
+        text = None
+        if self._measurement_history and len(self._measurement_history) > 0:
+            last_m = self._measurement_history[-1]
+            focus_area = (last_m.x_axes[0], last_m.x_axes[-1], last_m.y_axes[0], last_m.y_axes[-1])
+            text = last_m.note
 
-    def get_values(self) -> Tuple[Optional[torch.Tensor], Sequence[float], Sequence[float]]:
-        """
-        Get all measured values of the diagram and the corresponding axis.
-
-        :return: The values as a tensor, the list of x-axis values, the list of y-axis values
-        """
-        if len(self._measurement_history) == 0:
-            return None, [], []
-
-        space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
-        values = torch.full((space_size, space_size), torch.nan)
-        x_axis = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
-        y_axis = np.linspace(settings.min_voltage, settings.max_voltage, space_size)
-
-        # Fill the spaces with the measurements
-        first_col, last_col, first_row, last_row = None, None, None, None
-        for measurement in self._measurement_history:
-            start_x, end_x = measurement.x_axes[0], measurement.x_axes[-1]
-            start_y, end_y = measurement.y_axes[0], measurement.y_axes[-1]
-            start_x, start_y = self._voltage_to_coord(start_x, start_y)
-            end_x, end_y = self._voltage_to_coord(end_x, end_y)
-
-            values[start_x: end_x, start_y: end_y] = measurement.data
-
-            # Keep track of data border to crop later
-            if first_col is None or start_x < first_col:
-                first_col = start_x
-            if last_col is None or end_x > last_col:
-                last_col = end_x
-            if first_row is None or start_y < first_row:
-                first_row = start_y
-            if last_row is None or end_y > last_row:
-                last_row = end_y
-
-        # Apply margins
-        margin = settings.patch_size_x
-        first_col = max(0, first_col - margin)
-        first_row = max(0, first_row - margin)
-        last_col = min(last_col + margin, len(x_axis))
-        last_row = min(last_row + margin, len(y_axis))
-
-        # TODO crop the data to remove the NaN values
-        # return values[first_row:last_row,first_col:last_col], x_axis[first_col:last_col], y_axis[first_row:last_row]
-        return values, x_axis, y_axis
+        plot_diagram(x_axes, y_axes, values, title=f'Online diagram {self.name}', focus_area_title='Last measurement',
+                     allow_overwrite=True, focus_area=focus_area, file_name=f'diagram_{self.name}', scale_bars=True,
+                     diagram_boundaries=self.get_cropped_boundaries(), text=text)
 
     def get_charge(self, coord_x: int, coord_y: int) -> ChargeRegime:
         """
@@ -184,22 +170,79 @@ class DiagramOnline(Diagram):
         measurement /= self._norm_max_value - self._norm_min_value
         return measurement
 
-    def _voltage_to_coord(self, x: float, y: float) -> Tuple[int, int]:
+    def get_cropped_boundaries(self) -> Tuple[float, float, float, float]:
         """
-        Convert a voltage to a coordinate in the diagram relatively to the origin chosen.
+        Get the coordinates of the diagram that crop to the measured area.
 
-        :param x: The voltage (x axes) to convert.
-        :param y: The voltage (y axes) to convert.
-        :return: The coordinate (x, y) in the diagram.
+        :return: Voltages of the cropped boundaries as: x_start, x_end, y_start, y_end.
         """
-        origin_x, origin_y = self._origin_voltage
-        return round(((x - origin_x) / settings.pixel_size)), round(((y - origin_y) / settings.pixel_size))
+        values, x_axis, y_axis = self.get_values()
+        # Crop the nan values from the image (not measured area)
+        # Solution from: https://stackoverflow.com/a/25831190/2666094
+        nans = torch.isnan(values)
+        nan_cols = torch.all(nans, axis=0).int()  # True where col is all NAN
+        nan_rows = torch.all(nans, axis=1).int()  # True where row is all NAN
 
-    def get_max_patch_coordinates(self) -> Tuple[int, int]:
-        """
-        Get the maximum coordinates of a patch in this diagram.
+        # The first index where not NAN
+        first_col = nan_cols.argmin()
+        first_row = nan_rows.argmin()
 
-        :return: The maximum coordinates as (x, y)
+        # The last index where not NAN
+        last_col = len(nan_cols) - nan_cols.flip(0).argmin()
+        last_row = len(nan_rows) - nan_rows.flip(0).argmin()
+
+        # Apply margins
+        margin = settings.patch_size_x
+        first_col = max(0, first_col - margin)
+        first_row = max(0, first_row - margin)
+        last_col = min(last_col + margin, len(x_axis) - 1)
+        last_row = min(last_row + margin, len(y_axis) - 1)
+
+        return x_axis[first_col], x_axis[last_col], y_axis[first_row], y_axis[last_row]
+
+    def _split_patch_in_unmeasured_rectangles(self, patch_coords) -> List[Tuple[int, int, int, int]]:
         """
-        x_max, y_max = self._voltage_to_coord(settings.max_voltage, settings.max_voltage)
-        return x_max - settings.patch_size_x, y_max - settings.patch_size_y
+        Split a patch in multiple rectangles of unmeasured diagram area.
+
+        :param patch_coords: The coordinates of the patch to measure.
+        :return: The list of rectangles as: x_start, x_end, y_start, y_end.
+        """
+        # Get a mask of scanned values
+        x_start, x_end, y_start, y_end = patch_coords
+        scanned = self.values[y_start:y_end, x_start: x_end].isnan().logical_not()
+
+        # All values have been scanned, return an empty list
+        if scanned.all():
+            return []
+
+        # No cached data for this patch, return one rectangle that covers the whole patch
+        if scanned.logical_not().all():
+            return [(x_start, x_end, y_start, y_end)]
+
+        # Patch partially scanned, split it in multiple rectangles that cover the unscanned areas
+        to_scan_rectangles = []
+        while not torch.all(scanned):
+            # Get the first index where not scanned (False)
+            # Indexes relative to the current patch
+            first_y, first_x = tuple(scanned.logical_not().int().nonzero()[0].tolist())
+
+            # Search for the last consecutive x index where not scanned
+            last_x = first_x + 1
+            for x in range(first_x + 1, len(scanned[first_y])):
+                if scanned[first_y, x]:
+                    break
+                last_x = x + 1
+
+            # Search for the last consecutive y index where everything is not scanned in the current x range
+            last_y = first_y + 1
+            for y in range(first_y + 1, len(scanned)):
+                if scanned[y, first_x:last_x].any():
+                    break
+                last_y = y + 1
+
+            # Set current rectangle as scanned
+            scanned[first_y:last_y, first_x:last_x] = True
+            # Add the rectangle to the list
+            to_scan_rectangles.append((first_x + x_start, last_x + x_start, first_y + y_start, last_y + y_start))
+
+        return to_scan_rectangles

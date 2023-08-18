@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import subprocess as sp
 import threading
@@ -37,6 +38,13 @@ class PyHegel(Connector):
             self._amplification = amplification
 
     def _setup_connection(self) -> None:
+        """
+        Start a PyHegel process and open a PIPE for communicate with it.
+        A consumer thread is created to consume the output of the process.
+        """
+
+        # Fix a potential crash with the CTRL+C handler in PyHegel sup-process. This is related to a Fortran library.
+        os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = 'TRUE'
 
         # Start the process
         self._process = Popen([
@@ -52,33 +60,47 @@ class PyHegel(Connector):
         # Wait the end of the initialization
         self._wait_end_of_command(10)
 
-        read_instrument_id = 'USB0::0x2A8D::0x0101::MY57515472::INSTR'
-        axes_y_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
-        axes_x_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
+        read_instrument_id = 'USB0::0x0957::0x0607::MY47015885::0'
+        axes_instrument_id = 'TCPIP::192.168.150.112::5025::SOCKET'
 
         commands = [
             # Reading instrument
             f"dmm = instruments.agilent_multi_34410A('{read_instrument_id}')",
-            # X-axes instrument
-            f"bilt3 = instruments.iTest_be2102('{axes_x_instrument_id}', 3)",
-            f"G1 = instruments.RampDevice(bilt3, 0.1)",
-            # Y-axes instrument
-            f"bilt1 = instruments.iTest_be2102('{axes_y_instrument_id}', 1)",
-            f"G2 = instruments.RampDevice(bilt1, 0.1)",
+            # Gate instruments (same slot for both)
+            f"bilt = instruments.iTest_be214x('{axes_instrument_id}', 9)",
+            # X-axes instrument (channel 2)
+            "set(bilt.slope, 0.1, ch=2)",
+            "G1 = (bilt.ramp, dict(ch=2))",
+            # Y-axes instrument (channel 1)
+            "set(bilt.slope, 0.1, ch=1)",
+            "G2 = (bilt.ramp, dict(ch=1))",
         ]
 
         for command in commands:
             self._send_command(command)
 
+        self._is_connected = True
         logger.info('PyHegel connector ready.')
 
-    def _close_connection(self):
+    def _close_connection(self) -> None:
+        """
+        Stop the PyHegel process and close the connection.
+        Then consume the remaining output.
+        After this, a new connection can be opened.
+        """
         if self._process is not None:
-            self._process.send_signal(sp.signal.CTRL_C_EVENT)
             self._process.stdin.write(str.encode("exit\n"))
 
         if self._stdout_consumer is not None:
+            # Wait 5 seconds for the thread to stop, but it could be not enough if a scan is in progress
             self._stdout_consumer.join(5)
+
+            if self._stdout_consumer.is_alive():
+                logger.error('PyHegel stdout consumer thread did not stop properly (an action is probably in progress)'
+                             ', forcing stop.')
+                # Force stop current action, the whole process may crash
+                self._process.send_signal(sp.signal.CTRL_C_EVENT)
+
             self._read_process_out()
 
         self._process = None
@@ -97,6 +119,11 @@ class PyHegel(Connector):
         out_file = get_new_measurement_out_file_path(f'{self._nb_measurement:03}_'
                                                      f'{start_volt_x:.4f}V_{start_volt_y:.4f}V')
 
+        # Internally pyHegel use np.linespace which include the last point.
+        # So we manually exclude the last point for compatibility with the other part of the code.
+        end_volt_x -= step_volt_x
+        end_volt_y -= step_volt_y
+
         # Send the command to pyHegel, block the process until it's done.
         self._send_command(
             f"sweep_multi([G1,G2], "
@@ -108,15 +135,15 @@ class PyHegel(Connector):
             f"progress={logger.getEffectiveLevel() <= logging.DEBUG}, "
             f"graph=False, "
             f"updown=[False,'alternate'])",
-            # Wait the answer for a maximum of 1 sec per point
-            max_wait_time=nb_measurements_x * nb_measurements_y
+            # Wait the answer for a maximum of 1 sec per point + some time for voltage ramp
+            max_wait_time=nb_measurements_x * nb_measurements_y + 120
         )
 
         # Parse the output file
         with open(out_file) as f:
             x, y, values = PyHegel._load_raw_points(f, self._amplification)
 
-        return ExperimentalMeasurement(x, y, values)
+        return ExperimentalMeasurement(x, y, values, None)
 
     def _send_command(self, command: str, max_wait_time: float = 10) -> None:
         """
@@ -180,19 +207,19 @@ class PyHegel(Connector):
 
         data = np.loadtxt(file, usecols=(0, 1, 2))
 
-        # Sort by x, then by y because the y sweeping can alternate between top and down.
-        data = data[np.lexsort((data[:, 1], data[:, 0]))]
+        # Sort by y, then by x because the y sweeping can alternate between top and down.
+        data = data[np.lexsort((data[:, 0], data[:, 1]))]
 
         x = np.unique(data[:, 0])
         y = np.unique(data[:, 1])
         values = torch.tensor(data[:, 2] / amplification, dtype=torch.float)
 
         # Reshape the values to match the x and y axes
-        values = values.reshape(len(x), len(y))
+        values = values.reshape(len(y), len(x))
 
         logger.debug(f'Raw measurement data parsed, {len(x)}×{len(y)} points with amplification: {amplification}')
 
-        return x, y, values.rot90()  # Rotate 90° because the origin is top left, and we want it bottom left
+        return x, y, values
 
     def _create_stdout_consumer_thread(self):
 

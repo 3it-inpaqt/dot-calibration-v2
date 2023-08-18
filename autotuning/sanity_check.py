@@ -1,9 +1,13 @@
 from typing import Tuple
 
+import torch
+
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.data_structures import Direction
+from datasets.diagram_online import DiagramOnline
 from plots.data import plot_diagram_step_animation
 from utils.logger import logger
+from utils.settings import settings
 
 
 class SanityCheck(AutotuningProcedure):
@@ -13,9 +17,34 @@ class SanityCheck(AutotuningProcedure):
         """
         Run some simple patterns to check if the autotuning is working as expected (especially the bloody coordinates).
         """
+        # The number of steps expected for this sanity-check procedure
+        nb_steps_expected = 1 + (self._sequence_size * 4) + (self._sequence_size * 8 + 4)
+        # The total number of measurements (pixel) expected for this sanity-check procedure
+        nb_measurements_expected = nb_steps_expected * settings.patch_size_x * settings.patch_size_y
+        # Because of label offset measurement could, therefore some datapoint are measured twice
+        surface_overlap_x = settings.label_offset_x * 2 * settings.patch_size_y
+        surface_overlap_y = settings.label_offset_y * 2 * settings.patch_size_x
+        nb_double_measurements_expected = self._sequence_size * 6 * (surface_overlap_x + surface_overlap_y)
+        # The number of unique measurements expected
+        nb_unique_measurements_expected = nb_measurements_expected - nb_double_measurements_expected
 
-        expected_number_of_steps = 1 + (self._sequence_size * 4) + (self._sequence_size * 8 + 4)
-        logger.info(f'Auto-tuning sanity check. Expected number of steps: {expected_number_of_steps}')
+        # Get the voltage range
+        min_x_v, max_x_v = settings.start_range_voltage_x
+        min_y_v, max_y_v = settings.start_range_voltage_y
+
+        # Convert the voltage to coordinates
+        min_x, min_y = self.diagram.voltage_to_coord(min_x_v, min_y_v)
+        max_x, max_y = self.diagram.voltage_to_coord(max_x_v, max_y_v)
+
+        # Start from the middle of the starting area
+        start_x = self.x = min_x + ((max_x - min_x) // 2) - (settings.patch_size_x // 2)
+        start_y = self.y = min_y + ((max_y - min_y) // 2) - (settings.patch_size_y // 2)
+
+        x_v, y_v = self.diagram.coord_to_voltage(self.x, self.y)
+        logger.info(f'Auto-tuning sanity check. Start from ({x_v:.2f}V, {y_v:.2f}V). '
+                    f'Expected number of steps: {nb_steps_expected}. '
+                    f'Expected number of measurements: {nb_measurements_expected} '
+                    f'(unique: {nb_unique_measurements_expected}).')
 
         # First scan the starting position
         logger.debug(f'Debug stage (0) - Scan the starting position')
@@ -28,11 +57,21 @@ class SanityCheck(AutotuningProcedure):
         # Check the four corners
         self._border_sanity_check()
 
-        if len(self._scan_history) == expected_number_of_steps:
-            logger.info(f'Expected number of steps ({expected_number_of_steps}) reached.')
-        else:
-            logger.error(f'Expected number of steps ({expected_number_of_steps}) not reached. '
-                         f'Number of steps: {len(self._scan_history)}')
+        assert len(self._scan_history) == nb_steps_expected, \
+            f"The number of steps ({len(self._scan_history)}) doesn't match with the expectation ({nb_steps_expected})."
+
+        if isinstance(self.diagram, DiagramOnline):
+            nb_unique_measurements = self.diagram.values.isnan().logical_not().sum()
+            assert nb_unique_measurements == nb_unique_measurements_expected, \
+                f"The number of unique measurements ({nb_unique_measurements}) doesn't match with the " \
+                f"expectation ({nb_unique_measurements_expected})."
+
+            assert not torch.isnan(self.diagram.values[0][0]).item(), 'Corner (0, 0) is not measured.'
+            assert not torch.isnan(self.diagram.values[-1][0]).item(), 'Corner (0, -1) is not measured.'
+            assert not torch.isnan(self.diagram.values[0][-1]).item(), 'Corner (-1, 0) is not measured.'
+            assert not torch.isnan(self.diagram.values[-1][-1]).item(), 'Corner (-1, -1) is not measured.'
+            assert not torch.isnan(self.diagram.values[start_y][start_x]).item(), \
+                f'Starting point ({start_x}, {start_y}) is not measured.'
 
         return self.get_patch_center()
 
@@ -85,7 +124,7 @@ class SanityCheck(AutotuningProcedure):
             self.move_to_coord(x=x, y=y)
             self.is_transition_line()
 
-            # We expect to find 2 valid directions at each corner
+            # We expect to find 2 valid directions in each corner
             directions = {
                 'up': Direction(last_x=x, last_y=y, move=self.move_up, check_stuck=self.is_max_up),
                 'right': Direction(last_x=x, last_y=y, move=self.move_right, check_stuck=self.is_max_right),
@@ -99,7 +138,7 @@ class SanityCheck(AutotuningProcedure):
                 # Go back at the corner position
                 self.move_to_coord(direction.last_x, direction.last_y)
 
-                # Since we are at the corner, we expect to skip 2 directions
+                # Since we are in the corner, we expect to skip 2 directions
                 if direction.check_stuck():
                     continue
 
@@ -121,7 +160,7 @@ class SanityCheck(AutotuningProcedure):
         :param final_coord: The final coordinate of the tuning procedure
         :param success_tuning: Result of the tuning (True = Success)
         """
-
-        name = f'{self.diagram.file_basename} steps'
-        # Generate a gif image
-        plot_diagram_step_animation(self.diagram, name, self._scan_history, final_coord, False)
+        file_name = f'tuning_{self}_{self.diagram.name}'
+        title = f'Tuning {self}: {self.diagram.name}'
+        # Generate a gif and / or video
+        plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_coord)

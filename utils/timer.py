@@ -1,7 +1,6 @@
 import logging
 import time
-from math import floor
-from typing import Union
+from typing import Dict, Union
 
 from codetiming import Timer, TimerError
 
@@ -77,18 +76,27 @@ class SectionTimer(Timer):
 def duration_to_str(sec: float, nb_units_display: int = 2, precision: str = 'ms'):
     """
     Transform a duration (in sec) into a human readable string.
-    d: day, h: hour, m: minute, s: second, ms: millisecond
+    d: day, h: hour, m: minute, s: second, ms: millisecond, us or μs: microsecond
 
-    :param sec: The number of second of the duration. Decimals are milliseconds.
-    :param nb_units_display: The maximum number of unit we want to show. If 0 print all units.
+    :param sec: The duration in second. Decimals are milliseconds.
+    :param nb_units_display: The maximum number of units we want to show. If 0 print all units.
     :param precision: The smallest unit we want to show.
-    :return: A human readable representation of the duration.
+    :return: A human-readable representation of the duration.
     """
 
     assert sec >= 0, f'Negative duration not supported ({sec})'
-    assert nb_units_display > 0, 'At least one unit should be displayed'
-    precision = precision.strip().lower()
-    assert precision in ['d', 'h', 'm', 's', 'ms'], 'Precision should be a valid unit: d, h, m, s, ms'
+    precision = precision.strip().lower().replace('us', 'μs')
+
+    periods = {
+        'd': 1_000 * 1_000 * 60 * 60 * 24,
+        'h': 1_000 * 1_000 * 60 * 60,
+        'm': 1_000 * 1_000 * 60,
+        's': 1_000 * 1_000,
+        'ms': 1_000,
+        'μs': 1
+    }
+
+    assert precision in periods, f'Precision should be a valid unit: {", ".join(periods.keys())}'
 
     # Null duration
     if sec == 0:
@@ -98,29 +106,30 @@ def duration_to_str(sec: float, nb_units_display: int = 2, precision: str = 'ms'
     if sec == float('inf'):
         return 'infinity'
 
-    # Convert to ms
-    mills = floor(sec * 1_000)
+    # Convert second to microsecond and round it to the nearest microsecond
+    micro_sec = round(sec * 1_000_000)
 
-    periods = [
-        ('d', 1_000 * 60 * 60 * 24),
-        ('h', 1_000 * 60 * 60),
-        ('m', 1_000 * 60),
-        ('s', 1_000),
-        ('ms', 1)
-    ]
+    values_per_period: Dict[str][int] = {}
 
-    strings = []
-    for period_name, period_mills in periods:
-        if mills >= period_mills:
-            period_value, mills = divmod(mills, period_mills)
-            strings.append(f"{period_value}{period_name}")
-        # Stop if we reach the minimal precision unit
-        if period_name == precision:
-            if len(strings) == 0:
-                return '<1' + period_name
+    for period_name, period_micro_s in periods.items():
+        # End condition: we reach the last unit or the number of units to display
+        nb = len(values_per_period)
+        is_last_unit = period_name == precision or (nb > 0 and nb + 1 == nb_units_display)
+        if is_last_unit:
+            # We round the last unit
+            period_value = round(micro_sec / period_micro_s)
+        else:
+            # We extract the value of the current unit, and we keep the rest for the next unit
+            period_value, micro_sec = divmod(micro_sec, period_micro_s)
+
+        if period_value > 0 or nb > 0:
+            # Add a 0 only if we already have a value in larger unit
+            values_per_period[period_name] = period_value
+        if is_last_unit:
             break
 
-    if nb_units_display > 0:
-        strings = strings[:nb_units_display]
+    # In the case of a duration lower than the precision unit
+    if len(values_per_period) == 0:
+        return '<1' + precision
 
-    return " ".join(strings)
+    return ' '.join(f'{value}{period_name}' for period_name, value in values_per_period.items())

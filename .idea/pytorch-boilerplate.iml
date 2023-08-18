@@ -7,7 +7,7 @@
       <excludeFolder url="file://$MODULE_DIR$/data" />
       <excludeFolder url="file://$MODULE_DIR$/cache" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.8 (dot-calibration-v2)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.10 (dot-calibration-v2)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

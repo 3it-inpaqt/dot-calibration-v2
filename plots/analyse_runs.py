@@ -1,4 +1,5 @@
 from collections import Counter
+from pathlib import Path
 from typing import List, Union
 
 import matplotlib.pyplot as plt
@@ -10,7 +11,7 @@ from matplotlib.ticker import PercentFormatter
 from pandas import DataFrame
 from tabulate import tabulate
 
-from datasets.diagram_offline import ChargeRegime
+from datasets.diagram_offline import ChargeRegime, DiagramOffline
 from utils.output import load_runs, set_plot_style
 from utils.settings import settings
 
@@ -560,8 +561,65 @@ def results_table():
                    floatfmt=(None, None, '.1%', '.1%', None, '.0f', '.1%', '.1%')))
 
 
+def process_online_experiment_results(offline_diagram: str):
+    data = load_runs(['experiment-*'])
+
+    # Load the scan of the diagram used for the online experiment
+    diagram = DiagramOffline.load_diagrams(settings.pixel_size,
+                                           settings.research_group,
+                                           Path('data', 'interpolated_csv.zip'),
+                                           Path('data', 'labels.json'),
+                                           True,
+                                           white_list=[offline_diagram])[0]
+
+    # Make a dataframe with a line per tuning result
+    tuning_table = []
+    target = ChargeRegime.ELECTRON_1
+    for _, row in data.iterrows():
+        for tuning_result in row['results.tuning_results']:
+            # Infer the number of electrons, based on the offline diagram
+            final_x, final_y = tuning_result['final_coord']
+            final_charge = diagram.get_charge(final_x, final_y)
+
+            tuning_table.append([
+                row['settings.model_type'],  # Model
+                'Uncertainty' in tuning_result['procedure_name'],  # Use uncertainty
+                tuning_result['nb_steps'],  # Nb scan
+                final_charge,  # Charge area
+                final_charge == target,  # Autotuning success
+            ])
+
+    # Convert to dataframe for convenance
+    tuning_table = pd.DataFrame(tuning_table,
+                                columns=['model', 'use_uncertainty', 'nb_scan', 'charge', 'tuning_success'])
+
+    tuning_table.sort_values(by=['model', 'use_uncertainty'], ascending=[True, False], inplace=True)
+
+    # Full table
+    print(tabulate(tuning_table, headers='keys', tablefmt='fancy_grid', showindex=False))
+
+    result_by_method = tuning_table.groupby(['model', 'use_uncertainty']).agg(
+        mean_scan=('nb_scan', 'mean'),
+        std_scan=('nb_scan', 'std'),
+        tuning_success=('tuning_success', lambda x: x.sum() / x.count()),
+    )
+
+    # Remove the 'group by' index and compact rename columns
+    result_by_method.reset_index(inplace=True)
+
+    # Convert boolean values
+    result_by_method['use_uncertainty'] = result_by_method['use_uncertainty'].map({True: 'Yes', False: 'No'})
+
+    # Rename columns
+    result_by_method.columns = ['Model', 'Tuning with uncertainty', 'Average steps', 'STD steps', 'Tuning success']
+
+    # Summary table
+    print(tabulate(result_by_method, headers='keys', tablefmt='fancy_grid', showindex=False,
+                   floatfmt=(None, None, '.0f', '.0f', '.1%')))
+
+
 if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    uncertainty_test_noise()
+    process_online_experiment_results('20230814-154756_B1_P1_map')

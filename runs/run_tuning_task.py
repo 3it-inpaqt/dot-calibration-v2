@@ -64,7 +64,8 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
         for procedure_name in settings.autotuning_procedures:
             # Set up the autotuning procedure_name according to the settings
             procedure = init_procedure(model, procedure_name)
-            nb_error_to_plot = 5
+            # Count the amount of success and failure to plot (value decremented inside the function save_show_results)
+            nb_to_plot = Counter({False: settings.nb_plot_tuning_fail, True: settings.nb_plot_tuning_success})
 
             nb_iteration = 1 if procedure_name == 'full' else settings.autotuning_nb_iteration
             for i in range(nb_iteration):
@@ -77,8 +78,8 @@ def run_autotuning(model: Optional[Classifier], diagrams: List[Diagram]) -> None
                     result = procedure.run_tuning()
 
                     # Save result and log
-                    autotuning_results[(procedure_name, diagram.file_basename)].append(result)
-                    nb_error_to_plot = save_show_results(result, procedure, i == 0, nb_error_to_plot)
+                    autotuning_results[(procedure_name, diagram.name)].append(result)
+                    save_show_results(result, procedure, nb_to_plot)
 
                     progress.incr()
 
@@ -121,37 +122,28 @@ def init_procedure(model: Optional[Classifier], procedure_name: str) -> Autotuni
 
 
 @SectionTimer('save results', log_level='debug')
-def save_show_results(autotuning_result: AutotuningResult, procedure: AutotuningProcedure, is_first_tuning: bool,
-                      nb_error_to_plot: int) -> int:
+def save_show_results(autotuning_result: AutotuningResult, procedure: AutotuningProcedure,
+                      nb_to_plot: Counter[bool]):
     """
     Save the current autotuning procedure results.
 
     :param procedure: The procedure which contains tuning stats.
     :param autotuning_result: The autotuning procedure results.
-    :param is_first_tuning: True if this is currently the first tuning of this diagram.
-    :param nb_error_to_plot: The remaining number of error procedure that we want to plot.
-    :return: The remaining number of error procedure that we want to plot after this one.
+    :param nb_to_plot: The remaining number of results that we want to plot (independent count for success and fail).
+     The counter is decremented after each plot.
     """
-
     success = autotuning_result.is_success_tuning
-    is_full_scan = isinstance(procedure, FullScan)
 
     # Log information
-    logger.debug(f'End tuning {procedure.diagram.file_basename} in {autotuning_result.nb_steps} steps '
+    logger.debug(f'End tuning {procedure.diagram.name} in {autotuning_result.nb_steps} steps '
                  f'({autotuning_result.success_rate:.1%} success). '
                  f'Final coordinates: {autotuning_result.final_coord} => {autotuning_result.charge_area} e '
                  f'{"[Good]" if success else "[Bad]"}')
 
-    # Plot tuning steps for the first round and some error samples
-    if is_first_tuning:
-        procedure.plot_step_history(autotuning_result.final_coord, success)
-        procedure.plot_step_history_animation(autotuning_result.final_coord, success)
-    elif nb_error_to_plot > 0 and not success and not is_full_scan:
-        procedure.plot_step_history(autotuning_result.final_coord, success)
-        procedure.plot_step_history_animation(autotuning_result.final_coord, success)
-        nb_error_to_plot -= 1
-
-    return nb_error_to_plot
+    if nb_to_plot[success] > 0 or isinstance(procedure, FullScan):
+        procedure.plot_step_history(autotuning_result.final_volt_coord, success)
+        procedure.plot_step_history_animation(autotuning_result.final_volt_coord, success)
+        nb_to_plot[success] -= 1
 
 
 @SectionTimer('save results', log_level='debug')

@@ -11,10 +11,10 @@ from plots.train_results import plot_train_progress
 from runs.test import test
 from utils.logger import logger
 from utils.misc import get_nb_loader_workers
-from utils.output import load_network_, load_previous_network_version_, save_network, save_results
+from utils.output import load_network_, load_previous_network_version_, save_network, save_results, push_notification
 from utils.progress_bar import ProgressBar, ProgressBarMetrics
 from utils.settings import settings
-from utils.timer import SectionTimer
+from utils.timer import SectionTimer, duration_to_str
 
 
 def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Optional[Dataset],
@@ -119,6 +119,8 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
 
     # Post train plots
     plot_train_progress(loss_evolution, metrics_evolution, nb_batch, best_checkpoint)
+    push_notification('Training finished',
+                      f'Training of "{settings.run_name}" finished in {duration_to_str(timer.last)}')
 
 
 def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Optional[Dataset],

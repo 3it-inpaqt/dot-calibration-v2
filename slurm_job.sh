@@ -1,14 +1,14 @@
 #!/bin/bash
-#SBATCH --account=rrg-rgmelko-ab
+#SBATCH --account=def-rgmelko
 #SBATCH --mail-user=victor.yon@usherbrooke.ca
 #SBATCH --mail-type=BEGIN,END,FAIL,INVALID_DEPEND,REQUEUE,TIME_LIMIT_90
-#SBATCH --gres=gpu:v100:1
+#SBATCH --gres=gpu:p100:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=24:00:00
 #SBATCH --job-name=dot-calibration-v2-runs-planner
 #SBATCH --output=out/slurm-%j.out
-module load geos/3.9.1 python/3.8.10
+module load geos/3.9.1 python/3.10.2
 
 # Create python virtual env (all package have to be available on the system)
 #virtualenv --no-download "$SLURM_TMPDIR"/venv
@@ -20,4 +20,4 @@ module load geos/3.9.1 python/3.8.10
 source venv/bin/activate
 
 # Start job
-python start_full_exp.py
+python start_tasks_planner.py

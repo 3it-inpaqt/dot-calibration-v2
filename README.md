@@ -7,7 +7,7 @@ Using [QDSD](https://github.com/3it-inpaqt/qdsd-dataset) dataset.
 
 ## Install
 
-Required `python >= 3.8` and `pip`
+Required `python >= 3.10` and `pip`
 
 ```shell script
 pip install -r requirements.txt

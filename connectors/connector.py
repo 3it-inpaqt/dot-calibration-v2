@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from classes.data_structures import ExperimentalMeasurement
 from datasets.diagram_online import DiagramOnline
 from plots.data import plot_diagram
@@ -10,12 +12,14 @@ class Connector:
     _is_connected: bool = False
     _nb_measurement: int = 0
 
+    @abstractmethod
     def _setup_connection(self) -> None:
         """
         Set up the connection to the experimental setup.
         """
         raise NotImplementedError
 
+    @abstractmethod
     def _close_connection(self) -> None:
         """
         Close the connection to the experimental setup.
@@ -26,13 +30,16 @@ class Connector:
                     start_volt_y: float, end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
         """
         Request an experimental measurement to the connector.
+        The intervals exclude the last point.
+        Eg: start_volt_x = 0, end_volt_x = 1, step_volt_x = 0.1 will result in the following 10 voltages:
+            [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 
-        :param start_volt_x: The beginning of the voltage sweep in the x-axis.
-        :param end_volt_x: The end of the voltage sweep in the x-axis.
-        :param step_volt_x: The step size of the voltage sweep in the x-axis.
-        :param start_volt_y: The beginning of the voltage sweep in the y-axis.
-        :param end_volt_y: The end of the voltage sweep in the y-axis.
-        :param step_volt_y: The step size of the voltage sweep in the y-axis.
+        :param start_volt_x: The beginning of the voltage sweeps in the x-axis.
+        :param end_volt_x: The end of the voltage sweeps in the x-axis.
+        :param step_volt_x: The step size of the voltage sweeps in the x-axis.
+        :param start_volt_y: The beginning of the voltage sweeps in the y-axis.
+        :param end_volt_y: The end of the voltage sweeps in the y-axis.
+        :param step_volt_y: The step size of the voltage sweeps in the y-axis.
         :return: The experimental measurement.
         """
 
@@ -46,15 +53,19 @@ class Connector:
             result = self._measurement(start_volt_x, end_volt_x, step_volt_x, start_volt_y, end_volt_y, step_volt_y)
 
         if settings.plot_measurements:
-            plot_diagram(result.x_axes, result.y_axes, result.data, f'measurement_{self._nb_measurement:03}', None,
-                         step_volt_x, scale_bar=True)
+            plot_diagram(result.x_axes, result.y_axes, result.data, title=f'Measurement #{self._nb_measurement:03,d}',
+                         scale_bars=True, file_name=f'measurement_{self._nb_measurement:03}')
 
         return result
 
+    @abstractmethod
     def _measurement(self, start_volt_x: float, end_volt_x: float, step_volt_x: float,
                      start_volt_y: float, end_volt_y: float, step_volt_y: float) -> ExperimentalMeasurement:
         """
         Request an experimental measurement to the connector.
+        The intervals exclude the last point.
+        Eg: start_volt_x = 0, end_volt_x = 1, step_volt_x = 0.1 will result in the following 10 voltages:
+            [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
         The internal logic of the measurement has to be overwritten by each connector implementation.
 
         :param start_volt_x: The beginning of the voltage sweep in the x-axis.
@@ -73,7 +84,7 @@ class Connector:
         """
         if not self._is_connected:
             raise RuntimeError('The connector should be connected before to get an online diagram.')
-        return DiagramOnline('online_diagram', self)
+        return DiagramOnline(f'Online {self}', self)
 
     def __enter__(self):
         """ Method called when entering the context manager. """

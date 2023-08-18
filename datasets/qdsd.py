@@ -35,6 +35,10 @@ class QDSDLines(Dataset):
         :param role: The role of this dataset ("train" or "test" or "validation")
         """
 
+        if len(patches) == 0:
+            raise RuntimeError(f'The list of {role} patches is empty. It could be because of a missing label, file or '
+                               f'an error in a diagram name.')
+
         self.role = role
 
         # Get patches and their labels (using ninja unzip)
@@ -175,7 +179,7 @@ class QDSDLines(Dataset):
 
                 for diagram in diagrams:
                     diagram_patches = diagram.get_patches(patch_size, overlap, label_offset)
-                    if not use_test_ratio and diagram.file_basename in test_ratio_or_names:
+                    if not use_test_ratio and diagram.name in test_ratio_or_names:
                         test_patches.extend(diagram_patches)
                     else:
                         patches.extend(diagram_patches)

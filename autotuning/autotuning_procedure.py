@@ -1,4 +1,5 @@
 from multiprocessing import Pool
+from time import perf_counter
 from typing import List, Optional, Tuple
 
 import torch
@@ -89,6 +90,7 @@ class AutotuningProcedure:
         :return: The line classification (True = line detected) and
          the confidence score (0: low confidence to 1: very high confidence).
         """
+        time_start = perf_counter()
 
         # Check coordinates according to the current policy.
         # They could be changed to fit inside the diagram if necessary
@@ -102,10 +104,12 @@ class AutotuningProcedure:
             # Oracle use ground truth with full confidence
             prediction = ground_truth
             confidence = 1
+            time_data_processed = time_data_fetched = perf_counter()
         else:
             with torch.no_grad():
                 # Cut the patch area and send it to the model for inference
                 patch = self.diagram.get_patch((self.x, self.y), self.patch_size)
+                time_data_fetched = perf_counter()
                 # Reshape as valid input for the model (batch size, patch x, patch y)
                 size_x, size_y = self.patch_size
                 patch = patch.view((1, size_x, size_y))
@@ -114,12 +118,17 @@ class AutotuningProcedure:
                 # Extract data from pytorch tensor
                 prediction = prediction.item()
                 confidence = confidence.item()
+                time_data_processed = perf_counter()
 
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
-        self._scan_history.append(StepHistoryEntry((self.x, self.y), prediction, confidence, ground_truth,
-                                                   soft_truth_larger, soft_truth_smaller, step_description))
+        is_above_confidence_threshold = self.model.is_above_confident_threshold(prediction, confidence)
+        self._scan_history.append(StepHistoryEntry(
+            (self.x, self.y), prediction, confidence, ground_truth, soft_truth_larger, soft_truth_smaller,
+            is_above_confidence_threshold, step_description, time_start, time_data_fetched, time_data_processed,
+            isinstance(self.diagram, DiagramOnline)
+        ))
 
         logger.debug(f'Patch {self.get_nb_steps():03} classified as {prediction} with confidence {confidence:.2%}')
 
@@ -148,6 +157,7 @@ class AutotuningProcedure:
         if len(self._batch_pending) == 0:
             return []
 
+        time_start = perf_counter()
         # Fetch data and ground truths (ground_truth, soft_truth_larger, soft_truth_smaller)
         ground_truths = []
         size_x, size_y = self.patch_size
@@ -160,21 +170,27 @@ class AutotuningProcedure:
             # Oracle use ground truth with full confidence
             predictions = next(zip(*ground_truths))  # Get the ground truth section only (first item of each sublist)
             confidences = [1] * len(ground_truths)
+            time_data_processed = time_data_fetched = perf_counter()
         else:
+            time_data_fetched = perf_counter()
             with torch.no_grad():
                 # Send to the model for inference
                 predictions, confidences = self.model.infer(patches, settings.bayesian_nb_sample_test)
                 # Extract data from GPU and convert to list
                 predictions = predictions.tolist()
                 confidences = confidences.tolist()
+            time_data_processed = perf_counter()
 
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
         for (x, y), pred, conf, (truth, truth_larger, truth_smaller) in \
                 zip(self._batch_pending, predictions, confidences, ground_truths):
-            self._scan_history.append(
-                StepHistoryEntry((x, y), pred, conf, truth, truth_larger, truth_smaller, step_description))
+            is_above_confidence_threshold = self.model.is_above_confident_threshold(pred, conf)
+            self._scan_history.append(StepHistoryEntry(
+                (x, y), pred, conf, truth, truth_larger, truth_smaller, is_above_confidence_threshold, step_description,
+                time_start, time_data_fetched, time_data_processed, isinstance(self.diagram, DiagramOnline)
+            ))
 
         self._batch_pending.clear()  # Empty pending
         return list(zip(predictions, confidences))
@@ -461,15 +477,15 @@ class AutotuningProcedure:
         return None, None, None
 
     def nb_pending(self) -> int:
-        """ Return the number of patch inference pending. """
+        """ Return the number of patch inferences pending. """
         return len(self._batch_pending)
 
-    def plot_step_history(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
+    def plot_step_history(self, final_volt_coord: Tuple[float, float], success_tuning: bool) -> None:
         """
         Plot the diagram with the tuning steps of the current procedure.
 
-        :param final_coord: The final coordinate of the tuning procedure
-        :param success_tuning: Result of the tuning (True = Success)
+        :param final_volt_coord: The final coordinate of the tuning procedure as volt.
+        :param success_tuning: Result of the tuning (True = Success).
         """
 
         if (not settings.save_images or not settings.is_named_run()) and not settings.show_images:
@@ -479,61 +495,67 @@ class AutotuningProcedure:
         values, x_axes, y_axes = d.get_values()
         is_online = isinstance(d, DiagramOnline)
         transition_lines = None if is_online else d.transition_lines
-        interpolation_method = None if is_online else 'nearest'
+        diagram_boundaries = d.get_cropped_boundaries() if is_online else None
 
-        if is_online:
-            name = f'Online tuning steps\n{self}'
-        else:
-            name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}\n{self}'
+        file_name = f'tuning_{self}_{self.diagram.name}'
+        title = f'Tuning {self}: {self.diagram.name}'
+        if not is_online:
+            file_name += "_GOOD" if success_tuning else "_FAIL"
+            title = "[GOOD] " if success_tuning else "[FAIL] " + title
 
-        # Parallel plotting for speed.
+        # Base arguments for all plots
+        common_kwargs = dict(
+            x_i=x_axes, y_i=y_axes, title=title, transition_lines=transition_lines, scan_history=self._scan_history,
+            final_volt_coord=final_volt_coord, scale_bars=True, diagram_boundaries=diagram_boundaries
+        )
+
+        # Parallel plotting for speed
         with Pool(get_nb_loader_workers()) as pool:
             # diagram + label + step with classification color
-            pool.apply_async(plot_diagram,
-                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': values, 'image_name': name,
-                                   'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
-                                   'transition_lines': transition_lines, 'scan_history': self._scan_history,
-                                   'final_coord': final_coord, 'show_offset': False, 'history_uncertainty': False})
+            pool.apply_async(plot_diagram, kwds=common_kwargs | {
+                'file_name': file_name,
+                'pixels': values,
+                'scan_history_mode': 'classes',
+            })
             # label + step with classification color and uncertainty
-            pool.apply_async(plot_diagram,
-                             kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                   'image_name': name + ' uncertainty', 'interpolation_method': interpolation_method,
-                                   'pixel_size': settings.pixel_size, 'transition_lines': transition_lines,
-                                   'scan_history': self._scan_history, 'final_coord': final_coord, 'show_offset': False,
-                                   'history_uncertainty': True})
+            pool.apply_async(plot_diagram, kwds=common_kwargs | {
+                'file_name': file_name + '_uncertainty',
+                'scan_history_alpha': 'uncertainty',
+            })
+            # If it makes sense, also plot the classification errors
             if not settings.autotuning_use_oracle and not is_online:
                 # step with error and soft error color
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None, 'image_name': name + ' errors',
-                                       'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
-                                       'transition_lines': transition_lines, 'scan_history': self._scan_history,
-                                       'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
-                                       'confidence_thresholds': self.model.confidence_thresholds,
-                                       'history_uncertainty': False})
+                pool.apply_async(plot_diagram, kwds=common_kwargs | {
+                    'file_name': file_name + '_errors',
+                    'scan_history_mode': 'error',
+                })
                 # step with error color and uncertainty
-                pool.apply_async(plot_diagram,
-                                 kwds={'x_i': x_axes, 'y_i': y_axes, 'pixels': None,
-                                       'image_name': name + ' errors uncertainty',
-                                       'interpolation_method': interpolation_method, 'pixel_size': settings.pixel_size,
-                                       'transition_lines': transition_lines, 'scan_history': self._scan_history,
-                                       'final_coord': final_coord, 'show_offset': False, 'scan_errors': True,
-                                       'history_uncertainty': True})
+                pool.apply_async(plot_diagram, kwds=common_kwargs | {
+                    'file_name': file_name + '_errors_uncertainty',
+                    'scan_history_mode': 'error',
+                    'scan_history_alpha': 'uncertainty',
+                })
 
             # Wait for the processes to finish
             pool.close()
             pool.join()
 
-    def plot_step_history_animation(self, final_coord: Tuple[int, int], success_tuning: bool) -> None:
+    def plot_step_history_animation(self, final_volt_coord: Tuple[float, float], success_tuning: bool) -> None:
         """
         Plot the animated diagram with the tuning steps of the current procedure.
 
-        :param final_coord: The final coordinate of the tuning procedure
+        :param final_volt_coord: The final coordinate of the tuning procedure as volt.
         :param success_tuning: Result of the tuning (True = Success)
         """
+        is_online = isinstance(self.diagram, DiagramOnline)
+        file_name = f'tuning_{self}_{self.diagram.name}'
+        title = f'Tuning {self}: {self.diagram.name}'
+        if not is_online:
+            file_name += "_GOOD" if success_tuning else "_FAIL"
+            title = ('[GOOD] ' if success_tuning else '[FAIL] ') + title
 
-        name = f'{self.diagram.file_basename} steps {"GOOD" if success_tuning else "FAIL"}'
-        # Generate a gif image
-        plot_diagram_step_animation(self.diagram, name, self._scan_history, final_coord)
+        # Generate a gif and / or video
+        plot_diagram_step_animation(self.diagram, title, file_name, self._scan_history, final_volt_coord)
 
     def setup_next_tuning(self, diagram: Diagram, start_coord: Optional[Tuple[int, int]] = None) -> None:
         """
@@ -567,11 +589,13 @@ class AutotuningProcedure:
         """
 
         tuned_x, tuned_y = self._tune()
+        tuned_x_v, tuned_y_v = self.diagram.coord_to_voltage(tuned_x, tuned_y)
 
-        return AutotuningResult(diagram_name=self.diagram.file_basename,
+        return AutotuningResult(diagram_name=self.diagram.name,
                                 procedure_name=str(self),
                                 model_name=str(self.model),
                                 nb_steps=self.get_nb_steps(),
                                 nb_classification_success=self.get_nb_line_detection_success(),
                                 charge_area=self.diagram.get_charge(tuned_x, tuned_y),
-                                final_coord=(tuned_x, tuned_y))
+                                final_coord=(tuned_x, tuned_y),
+                                final_volt_coord=(tuned_x_v, tuned_y_v))
