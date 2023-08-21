@@ -63,7 +63,7 @@ class FeedForward(ClassifierNN):
             self.fc_layers.append(layer)
 
         # Binary Cross Entropy including sigmoid layer
-        self._criterion = nn.BCEWithLogitsLoss(reduction='none')
+        self._criterion = nn.BCEWithLogitsLoss()
         self._optimizer = optim.Adam(self.parameters(), lr=settings.learning_rate)
 
     def forward(self, x: Any) -> Any:
@@ -104,15 +104,6 @@ class FeedForward(ClassifierNN):
         # Forward + Backward + Optimize
         outputs = self(inputs)
         loss = self._criterion(outputs, labels.float())
-        if settings.penalize_near_zero_pred:
-            outputs = self(inputs)
-            negatives = outputs < 0.2
-            positives = outputs > -0.2
-            mask = negatives * positives
-            ones = torch.ones_like(mask)
-            loss_multiplicator = ones + 100 * mask
-            loss = loss * loss_multiplicator
-        loss = torch.mean(loss)
         loss.backward()
         self._optimizer.step()
 

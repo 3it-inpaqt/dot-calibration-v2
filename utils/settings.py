@@ -272,9 +272,6 @@ class Settings:
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
 
-    # Penalize the network if the output neuron makes a prediction that is near 0 before the sigmoid.
-    penalize_near_zero_pred = False
-
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================
     # ==================================================================================================================
