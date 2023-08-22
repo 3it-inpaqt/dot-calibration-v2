@@ -57,7 +57,7 @@ def plot_diagram(x_i: Sequence[float],
                  scan_history_alpha: Optional[Literal['uncertainty'] | int] = None,
                  focus_area: Optional[bool | Tuple[float, float, float, float]] = None,
                  focus_area_title: str = 'Focus area',
-                 final_volt_coord: Tuple[float, float] = None,
+                 final_volt_coord: Tuple[float, float] | List[Tuple[str, str, List[Tuple[float, float]]]] = None,
                  text: Optional[str | bool] = None,
                  scale_bars: bool = False,
                  legend: Optional[bool] = True,
@@ -101,6 +101,7 @@ def plot_diagram(x_i: Sequence[float],
     :param focus_area_title: Title for the focus area subplot.
     :param final_volt_coord: The final voltage coordinates that is within the target area, according to the tuning
      procedure (x, y).
+     If it is a list of tuple as (label, color, list of cood), it means that we want to show multiple final coordinates.
     :param text: A text to display at the left of the diagram.
         - If None, no text subplot.
         - If True, the text is automatically created to describe the step history.
@@ -396,16 +397,29 @@ def _plot_text_ax(text_ax, text: str):
     plt.setp(text_ax.spines.values(), color='bisque')
 
 
-def _plot_final_coord(diagram_ax, focus_area_ax, final_volt_coord: Tuple[float, float]):
-    last_x, last_y = final_volt_coord
+def _plot_final_coord(diagram_ax, focus_area_ax,
+                      final_volt_coord: Tuple[float, float] | List[Tuple[str, str, List[Tuple[float, float]]]]):
     half_p = settings.pixel_size / 2
-    for ax, cross_size, lw in ((diagram_ax, 200, 2), (focus_area_ax, 600, 4)):
-        if ax:
-            # Make white borders using a slightly bigger marker under it
-            ax.scatter(x=last_x - half_p, y=last_y - half_p, color='w', marker='x', s=cross_size * 1.1,
-                       linewidths=lw * 1.5, zorder=9998)
-            ax.scatter(x=last_x - half_p, y=last_y - half_p, color='fuchsia', marker='x', s=cross_size, label='End',
-                       linewidths=lw, zorder=9999)
+    z_order = 9999  # Stack the markers from the first to the last
+
+    # If the final coordinate is a single point, we convert it to a dict to factorize the code
+    if not isinstance(final_volt_coord, list):
+        final_volt_coord = ('End', 'fuchsia', [final_volt_coord])
+
+    # Iterate over the different labels group
+    for label, color, coords in final_volt_coord:
+        # Iterate over the different coordinates in the group
+        for last_x, last_y in coords:
+            # Plot the final coordinate in the main diagram and / or the focus area
+            for ax, cross_size, lw in ((diagram_ax, 200, 2), (focus_area_ax, 600, 4)):
+                if ax:
+                    # Make white borders using a slightly bigger marker under it
+                    ax.scatter(x=last_x - half_p, y=last_y - half_p, color='w', marker='x', s=cross_size * 1.1,
+                               linewidths=lw * 1.5, zorder=z_order - 1)
+                    ax.scatter(x=last_x - half_p, y=last_y - half_p, color=color, marker='x', s=cross_size, label=label,
+                               linewidths=lw, zorder=z_order)
+                    z_order -= 2
+                label = None  # Only show the label for the first coordinate of this group
 
 
 def _plot_legend_ax(legend_ax, diagram_ax, custom_legend, pixel_info: bool = True):

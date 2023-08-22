@@ -197,6 +197,17 @@ class DiagramOffline(Diagram):
                          transition_lines=self.transition_lines, charge_regions=self.charge_areas, scale_bars=True,
                          file_name=f'diagram_{self.name}_area', allow_overwrite=True)
 
+    def plot_results(self, final_volt_coords: Tuple[float, float] | List[Tuple[str, str, List[Tuple[float, float]]]]
+                     ) -> None:
+        """
+        Plot vanilla diagram with final voltage coordinates marked with crosses.
+        :param final_volt_coords: The final coordinates to mark on the diagram, single coordinates tuple or
+         grouped as a list of tuple as (label, color, list of cood).
+        """
+        plot_diagram(self.x_axes, self.y_axes, self.values, f'Diagram {self.name}', transition_lines=None,
+                     charge_regions=None, scale_bars=True, file_name=f'diagram_{self.name}_results',
+                     allow_overwrite=True, final_volt_coord=final_volt_coords)
+
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'
 

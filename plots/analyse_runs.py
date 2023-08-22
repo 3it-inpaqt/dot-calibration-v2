@@ -582,18 +582,52 @@ def process_online_experiment_results(offline_diagram: str):
             final_charge = diagram.get_charge(final_x, final_y)
 
             tuning_table.append([
+                row['settings.run_name'],
                 row['settings.model_type'],  # Model
                 'Uncertainty' in tuning_result['procedure_name'],  # Use uncertainty
                 tuning_result['nb_steps'],  # Nb scan
                 final_charge,  # Charge area
+                tuning_result['final_volt_coord'],  # Final coord
                 final_charge == target,  # Autotuning success
             ])
 
     # Convert to dataframe for convenance
     tuning_table = pd.DataFrame(tuning_table,
-                                columns=['model', 'use_uncertainty', 'nb_scan', 'charge', 'tuning_success'])
+                                columns=['run_name', 'model', 'use_uncertainty', 'nb_scan', 'charge',
+                                         'final_volt_coord', 'tuning_success'])
 
-    tuning_table.sort_values(by=['model', 'use_uncertainty'], ascending=[True, False], inplace=True)
+    # Filter final coordinates by category (model and uncertainty), for result plotting
+    final_coords = [
+        (
+            'CNN',
+            'lightskyblue',
+            map(tuple, tuning_table[
+                (tuning_table['model'] == 'CNN') & (tuning_table['use_uncertainty'] == False)
+                ]['final_volt_coord'].values.tolist())
+        ),
+        (
+            'CNN Uncertainty',
+            'royalblue',
+            map(tuple, tuning_table[(tuning_table['model'] == 'CNN') & (tuning_table['use_uncertainty'] == True)][
+                'final_volt_coord'].values.tolist())
+        ),
+        (
+            'BCNN',
+            'palegreen',
+            map(tuple, tuning_table[(tuning_table['model'] == 'BCNN') & (tuning_table['use_uncertainty'] == False)][
+                'final_volt_coord'].values.tolist())
+        ),
+        (
+            'BCNN Uncertainty',
+            'limegreen',
+            map(tuple, tuning_table[(tuning_table['model'] == 'BCNN') & (tuning_table['use_uncertainty'] == True)][
+                'final_volt_coord'].values.tolist())
+        ),
+    ]
+
+    diagram.plot_results(final_coords)
+
+    tuning_table.sort_values(by=['model', 'use_uncertainty', 'run_name'], ascending=[True, False, True], inplace=True)
 
     # Full table
     print(tabulate(tuning_table, headers='keys', tablefmt='fancy_grid', showindex=False))
