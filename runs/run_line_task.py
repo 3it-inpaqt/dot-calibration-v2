@@ -8,6 +8,7 @@ import torch
 from codetiming import Timer
 from torch.utils.data import Dataset
 
+from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
 from datasets.qdsd import QDSDLines
 from models.bayeasian_cnn import BCNN
@@ -25,6 +26,7 @@ from utils.output import init_out_directory, save_results, save_timers, set_plot
 from utils.settings import settings
 from utils.timer import SectionTimer
 from circuit_simulation.analog_tester import test_analog
+from circuit_simulation.circuit_simulator import CircuitSimulator
 
 
 def preparation() -> None:
@@ -232,7 +234,7 @@ def get_cuda_device() -> torch.device:
 
 @SectionTimer('line task')
 def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dataset: Optional[Dataset],
-                   network: ClassifierNN) -> None:
+                   network: ClassifierNN) -> Classifier:
     """
     Run the training and the testing of the network.
 
@@ -280,5 +282,10 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     save_results(success_run=True)
 
     if settings.simulate_circuit:
-        # Test the simulated circuit on Xyce
-        test_analog(network, test_dataset)
+        if settings.test_circuit:
+            # Test the simulated circuit
+            test_analog(network, test_dataset)
+        else:
+            return CircuitSimulator(network)
+
+    return network

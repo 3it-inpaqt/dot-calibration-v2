@@ -368,6 +368,10 @@ class Settings:
     # Whether the inference of the ML model should be simulated on a circuit or not.
     simulate_circuit = False
 
+    # Whether the simulated circuit should be tested (simulations can be long, you might want to avoid testing the
+    # circuits sometimes)
+    test_circuit = True
+
     # If simulate_circuit is True, then should the simulation be done with Xyce? Should be False if use_ltspice is True.
     use_xyce = True
 
@@ -375,7 +379,8 @@ class Settings:
     use_ltspice = False
 
     # If set and greater than 0, the model's parameters will be clipped between
-    # [-parameters_clipping, parameters_clipping] after each training batch.
+    # [-parameters_clipping, parameters_clipping] after each training batch. Set to None if no parameter clipping
+    # should be used
     parameters_clipping = 2
 
     # If set to True, the training will take into account that memristors may be blocked with
@@ -425,6 +430,7 @@ class Settings:
     sim_init_latency = 1e-9
 
     # The number of sample for the variability study. This setting have no effect if memristor_read_std is 0.
+    # TODO: Verify that this is correctly implemented before using it
     sim_var_sample_size = 10
 
     # The estimated delay between the input and the output of the sigmoid analog bloc. Used to synchronise the pulse
@@ -549,6 +555,30 @@ class Settings:
             assert (self.use_xyce and self.use_ltspice) == False, \
                 'Specify if Xyce or LTspice should be used to run the circuit simulation, but you can\'t choose both ' \
                 'at the same time'
+        if self.parameters_clipping is not None:
+            assert self.parameters_clipping > 0, 'Parameter clipping should be greater than 0'
+        assert self.sim_step_size > 0, 'Simulation step size should be greater than 0'
+        assert self.sim_step_size < self.sim_pulse_width + self.sim_pulse_rise_delay + self.sim_pulse_fall_delay + \
+               self.sim_init_latency + self.sim_resting_time, 'Simulation step size is too big'
+        assert self.sim_r_min < self.sim_r_max, 'LRS value of memristors should be smaller than the HRS value of ' \
+                                                'memristors'
+        assert self.sim_memristor_read_std >= 0, 'Memristors\' read variability should be greater or equal than 0'
+        assert self.sim_memristor_write_std >= 0, 'Memristors\' programming variability should be greater or equal ' \
+                                                  'than 0'
+        assert self.ratio_failure_HRS >= 0, 'There should be more or equal to 0% of memristors that are in a HRS'
+        assert self.ratio_failure_LRS >= 0, 'There should be more or equal to 0% of memristors that are in a LRS'
+        assert self.ratio_failure_HRS + self.ratio_failure_LRS <= 1, 'There can\'t be more than 100% of memristors ' \
+                                                                     'that are stuck-at fault'
+        assert self.sim_pulse_width > 0, 'Simulated pulses width should be greater than 0'
+        assert self.sim_pulse_rise_delay > 0, 'Simulated pulses rise delay should be greater than 0'
+        assert self.sim_pulse_fall_delay > 0, 'Simulated pulses fall delay should be greater than 0'
+        assert self.sim_init_latency > 0, 'Simulation\'s initial latency should be greater than 0'
+        assert self.sim_resting_time > 0, 'Simulation\'s resting time should be greater than 0'
+        assert self.sim_layer_latency > 0, 'Simulation\'s layer latency should be greater than 0'
+        assert self.sim_max_test_inference >= 0, 'Maximum number of test inferences on the circuit should be set ' \
+                                                 'to a number greater or equal to 0'
+        assert self.sim_nb_process >= 0, 'The number of parallel processes running circuit simulations should ' \
+                                         'be set to a number greater or equal to 0'
 
     def __init__(self):
         """

@@ -116,8 +116,8 @@ class FeedForward(ClassifierNN):
             self.param_temp_cache = []
             self.mask_temp_cache = []
 
-        # If the parameters_clipping is set, clip every parameter of the model
-        if settings.parameters_clipping is not None and settings.parameters_clipping > 0:
+        # If the parameters_clipping is set, clip every parameter of the model (used when simulating circuits)
+        if settings.parameters_clipping is not None and settings.simulate_circuit:
             with torch.no_grad():
                 for param in self.parameters():
                     param.clamp_(-settings.parameters_clipping, settings.parameters_clipping)
@@ -130,6 +130,10 @@ class FeedForward(ClassifierNN):
         :return: None
         """
         with torch.no_grad():
+            if settings.parameters_clipping is not None:
+                parameters_abs_max = settings.parameters_clipping
+            else:
+                parameters_abs_max = max(layer.data.abs().max() for layer in self.parameters()).item()
             for param in self.parameters():
                 # if a memristor has probability p of being blocked and the value of a weight is encoded in two
                 # memristors, then the probability that the value of a weight doesn't get modified by a blocked
@@ -190,14 +194,14 @@ class FeedForward(ClassifierNN):
 
                 # Modify the weights
                 param.data[both_memristors_lrs_lrs_mask] = 0.0
-                param.data[both_memristors_lrs_hrs_mask] = settings.parameters_clipping
-                param.data[both_memristors_hrs_lrs_mask] = -settings.parameters_clipping
+                param.data[both_memristors_lrs_hrs_mask] = parameters_abs_max
+                param.data[both_memristors_hrs_lrs_mask] = -parameters_abs_max
                 param.data[both_memristors_hrs_hrs_mask] = 0.0
-                param.data[pos_memristors_lrs_mask] = param.data[pos_memristors_lrs_mask] + settings.parameters_clipping
+                param.data[pos_memristors_lrs_mask] = param.data[pos_memristors_lrs_mask] + parameters_abs_max
                 param.data[torch.bitwise_and(pos_memristors_hrs_mask, param > 0)] = 0.0
-                param.data[neg_memristors_lrs_mask] = param.data[neg_memristors_lrs_mask] - settings.parameters_clipping
+                param.data[neg_memristors_lrs_mask] = param.data[neg_memristors_lrs_mask] - parameters_abs_max
                 param.data[torch.bitwise_and(neg_memristors_hrs_mask, param < 0)] = 0.0
-                param.clamp_(-settings.parameters_clipping, settings.parameters_clipping)
+                param.clamp_(-parameters_abs_max, parameters_abs_max)
 
     def infer(self, inputs, nb_sample=0) -> (List[bool], List[float]):
         """
