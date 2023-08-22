@@ -35,7 +35,6 @@ class CircuitSimulator(Classifier):
         """
         outputs_before_thr = []
         predictions = []
-        print(patches.size())
         for patch in patches:
             inputs = torch.flatten(patch).tolist()
             if settings.use_xyce:
