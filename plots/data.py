@@ -5,7 +5,7 @@ from itertools import chain
 from math import ceil, sqrt
 from multiprocessing import Pool
 from pathlib import Path
-from typing import List, Literal, Optional, Sequence, Tuple, Union
+from typing import List, Literal, Optional, Sequence, Tuple, Union, Iterable
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -57,7 +57,7 @@ def plot_diagram(x_i: Sequence[float],
                  scan_history_alpha: Optional[Literal['uncertainty'] | int] = None,
                  focus_area: Optional[bool | Tuple[float, float, float, float]] = None,
                  focus_area_title: str = 'Focus area',
-                 final_volt_coord: Tuple[float, float] | List[Tuple[str, str, List[Tuple[float, float]]]] = None,
+                 final_volt_coord: Tuple[float, float] | List[Tuple[str, str, Iterable[Tuple[float, float]]]] = None,
                  text: Optional[str | bool] = None,
                  scale_bars: bool = False,
                  legend: Optional[bool] = True,
@@ -398,13 +398,13 @@ def _plot_text_ax(text_ax, text: str):
 
 
 def _plot_final_coord(diagram_ax, focus_area_ax,
-                      final_volt_coord: Tuple[float, float] | List[Tuple[str, str, List[Tuple[float, float]]]]):
+                      final_volt_coord: Tuple[float, float] | List[Tuple[str, str, Iterable[Tuple[float, float]]]]):
     half_p = settings.pixel_size / 2
     z_order = 9999  # Stack the markers from the first to the last
 
     # If the final coordinate is a single point, we convert it to a dict to factorize the code
     if not isinstance(final_volt_coord, list):
-        final_volt_coord = ('End', 'fuchsia', [final_volt_coord])
+        final_volt_coord = [('End', 'fuchsia', [final_volt_coord])]
 
     # Iterate over the different labels group
     for label, color, coords in final_volt_coord:

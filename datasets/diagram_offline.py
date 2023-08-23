@@ -136,8 +136,13 @@ class DiagramOffline(Diagram):
         :param coord_y: The y coordinate to check (not the voltage)
         :return: The charge regime
         """
-        volt_x = self.x_axes[coord_x]
-        volt_y = self.y_axes[coord_y]
+        try:
+            volt_x = self.x_axes[coord_x]
+            volt_y = self.y_axes[coord_y]
+        except IndexError:
+            # Coordinates are out of the diagram
+            return ChargeRegime.UNKNOWN
+
         point = Point(volt_x, volt_y)
 
         # Check coordinates in each labeled area
@@ -197,7 +202,7 @@ class DiagramOffline(Diagram):
                          transition_lines=self.transition_lines, charge_regions=self.charge_areas, scale_bars=True,
                          file_name=f'diagram_{self.name}_area', allow_overwrite=True)
 
-    def plot_results(self, final_volt_coords: Tuple[float, float] | List[Tuple[str, str, List[Tuple[float, float]]]]
+    def plot_results(self, final_volt_coords: Tuple[float, float] | List[Tuple[str, str, Iterable[Tuple[float, float]]]]
                      ) -> None:
         """
         Plot vanilla diagram with final voltage coordinates marked with crosses.
