@@ -280,6 +280,17 @@ class QDSDLines(Dataset):
 
     @staticmethod
     def use_ewma(patches):
+        """
+        We start by calculating the derivative of the pixels in a patch with respect to the voltage of one of the gates
+        of the quantum dot. We then calculate the exponentially weighted moving average of the derivative and subtract
+        it from the derivative. This leads to two approaches. In the first approach, we take the absolute value of this
+        difference. In the second approach, we binarize this difference by assigning the value 1 to extreme values that
+        are outside of k standard deviations from the mean of the difference, and 0 otherwise.
+        See this paper: Moras, M. (2023). Outils d’identification du régime à un électron pour les boîtes quantiques
+        semiconductrices. Master's thesis, Université de Sherbrooke.
+        :param patches: stability diagrams patches and their labels.
+        :return: labels and patches return after applying the preprocessing method.
+        """
         patches, labels = zip(*patches)
         patches = torch.stack(patches)
 

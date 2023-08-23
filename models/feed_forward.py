@@ -46,13 +46,7 @@ class FeedForward(ClassifierNN):
                 if settings.batch_norm_layers[i]:
                     layer.append(nn.BatchNorm1d(layer_sizes[i + 1]))
                 # Activation function
-                if settings.simulate_circuit:
-                    # layer.append(nn.Hardtanh(min_val=0, max_val=1))
-                    layer.append(nn.ReLU())
-                    # layer.append(nn.Sigmoid())
-                else:
-                    layer.append(nn.ReLU())
-                    # layer.append(nn.Sigmoid())
+                layer.append(nn.ReLU())
                 # Dropout
                 if settings.dropout > 0:
                     layer.append(nn.Dropout(settings.dropout))

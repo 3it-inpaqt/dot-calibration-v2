@@ -398,6 +398,7 @@ class Settings:
 
     # The read standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.2%
+    # TODO: Verify that this is correctly implemented before using it
     sim_memristor_read_std = 0.0
 
     # The write standard deviation of the memristor resistance (% [0,1])
@@ -431,7 +432,7 @@ class Settings:
 
     # The number of sample for the variability study. This setting have no effect if memristor_read_std is 0.
     # TODO: Verify that this is correctly implemented before using it
-    sim_var_sample_size = 10
+    sim_var_sample_size = 0
 
     # The estimated delay between the input and the output of the sigmoid analog bloc. Used to synchronise the pulse
     # between layers.
@@ -444,7 +445,7 @@ class Settings:
     sim_nb_process = 1
 
     # File path of the LTspice program installed on the system
-    ltspice_executable_path = 'C:\Program Files\ADI\LTspice\LTspice.exe'
+    ltspice_executable_path = ''
 
 
     def is_named_run(self) -> bool:
@@ -579,6 +580,9 @@ class Settings:
                                                  'to a number greater or equal to 0'
         assert self.sim_nb_process >= 0, 'The number of parallel processes running circuit simulations should ' \
                                          'be set to a number greater or equal to 0'
+        if self.simulate_circuit and self.use_ltspice:
+            assert self.ltspice_executable_path != '', 'Set the LTspice executable path, it is probably ' \
+                                                       'C:\Program Files\ADI\LTspice\LTspice.exe'
 
     def __init__(self):
         """

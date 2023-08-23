@@ -66,10 +66,10 @@ class BCNN(ClassifierBayesNN):
         self.fc_layers = nn.ModuleList()
         for i in range(len(fc_layer_sizes) - 1):
             layer = nn.Sequential()
-            # Fully connected
-            layer.append(BayesianLinear(fc_layer_sizes[i], fc_layer_sizes[i + 1]))
             # If this is not the output layer
             if i != len(fc_layer_sizes) - 2:
+                # Fully connected
+                layer.append(BayesianLinear(fc_layer_sizes[i], fc_layer_sizes[i + 1], settings.bias_in_hidden_layer))
                 # Batch normalisation
                 if settings.batch_norm_layers[len(settings.conv_layers_channel) + i]:
                     layer.append(nn.BatchNorm1d(fc_layer_sizes[i + 1]))
@@ -78,6 +78,9 @@ class BCNN(ClassifierBayesNN):
                 # Dropout
                 if settings.dropout > 0:
                     layer.append(nn.Dropout(settings.dropout))
+            else:
+                # Fully connected
+                layer.append(BayesianLinear(fc_layer_sizes[i], fc_layer_sizes[i + 1], True))
 
             self.fc_layers.append(layer)
 
