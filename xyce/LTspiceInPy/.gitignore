@@ -1,9 +1,0 @@
-*.pyc
-*.log
-*.net
-*.raw
-_generated.asc*
-data
-.vs/
-__pycache__/
-MATLAB scripts/
