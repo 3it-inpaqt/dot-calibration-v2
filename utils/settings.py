@@ -272,6 +272,13 @@ class Settings:
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
 
+    # Whether dropconnect should be used during training or not. This is only implemented for FF models right now.
+    use_dropconnect = False
+
+    # If use_dropconnect is True, specifies the probability of setting a weight to 0 during the training. Should be
+    # between 0 and 1
+    dropconnect_prob = 0.1
+
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================
     # ==================================================================================================================
@@ -384,7 +391,7 @@ class Settings:
     parameters_clipping = 2
 
     # If set to True, the training will take into account that memristors may be blocked with
-    # xyce_memristor_blocked_prob
+    # xyce_memristor_blocked_prob. Currently only implemented for FF NNs.
     hardware_aware_training = False
 
     # The simulation step size for transient analysis (s)
@@ -526,6 +533,9 @@ class Settings:
         assert self.bayesian_nb_sample_test > 0, 'The number of bayesian sample should be at least 1'
         assert self.bayesian_confidence_metric in ['std', 'norm_std', 'entropy', 'norm_entropy'], \
             f'Invalid bayesian confidence metric value "{self.bayesian_confidence_metric}"'
+        if self.use_dropconnect:
+            assert self.dropconnect_prob > 0 and self.dropconnect_prob < 1, 'The probability used for dropconnect ' \
+                                                                            'should be between 0 and 1.'
 
         # Checkpoints
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints per epoch should be >= 0'
@@ -583,6 +593,10 @@ class Settings:
         if self.simulate_circuit and self.use_ltspice:
             assert self.ltspice_executable_path != '', 'Set the LTspice executable path, it is probably ' \
                                                        'C:\Program Files\ADI\LTspice\LTspice.exe'
+        if self.hardware_aware_training and self.model_type != 'FF':
+            raise NotImplementedError("Hardware-aware training is only implemented for FF NNs.")
+        if self.use_dropconnect and self.model_type != 'FF':
+            raise NotImplementedError("Training with dropconnect is only implemented for FF NNs.")
 
     def __init__(self):
         """

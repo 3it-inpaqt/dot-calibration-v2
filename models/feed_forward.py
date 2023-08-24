@@ -95,6 +95,10 @@ class FeedForward(ClassifierNN):
         if settings.hardware_aware_training:
             self.force_weights()
 
+        # Select and set a proportion of weights to 0 if dropconnect should be used.
+        if settings.use_dropconnect:
+            self.dropconnect()
+
         # Forward + Backward + Optimize
         outputs = self(inputs)
         loss = self._criterion(outputs, labels.float())
@@ -102,7 +106,7 @@ class FeedForward(ClassifierNN):
         self._optimizer.step()
 
         # If weights were forced to some values, reset the old values before the next training step
-        if settings.hardware_aware_training:
+        if settings.hardware_aware_training or settings.use_dropconnect:
             with torch.no_grad():
                 for i, param in enumerate(self.parameters()):
                     param.data = param.data * ~self.mask_temp_cache[i] + self.param_temp_cache[i]
@@ -196,6 +200,22 @@ class FeedForward(ClassifierNN):
                 param.data[neg_memristors_lrs_mask] = param.data[neg_memristors_lrs_mask] - parameters_abs_max
                 param.data[torch.bitwise_and(neg_memristors_hrs_mask, param < 0)] = 0.0
                 param.clamp_(-parameters_abs_max, parameters_abs_max)
+
+
+    def dropconnect(self):
+        """
+        Sets a proportion of weights to 0
+        :return: None
+        """
+        with torch.no_grad():
+            for param in self.parameters():
+                # Select the weights to drop
+                weights_to_drop_mask = torch.rand_like(param) < settings.dropconnect_prob
+                # Save the weights and masks used
+                self.mask_temp_cache.append(weights_to_drop_mask)
+                self.param_temp_cache.append(param.data * weights_to_drop_mask)
+                # Set the weights to 0
+                param.data[weights_to_drop_mask] = 0.0
 
     def infer(self, inputs, nb_sample=0) -> (List[bool], List[float]):
         """
