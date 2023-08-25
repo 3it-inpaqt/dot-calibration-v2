@@ -60,12 +60,12 @@ def calc_out_conv_layers(input_size: Tuple[int, int],
     # Keep only the layer that affect the size of the data
     resize_layers = []
     for la in layers:
-        if type(la) in [nn.Conv2d, nn.MaxPool2d, BayesianConv2d]:
+        if type(la) in [nn.Conv2d, nn.MaxPool2d, nn.AvgPool2d, BayesianConv2d]:
             resize_layers.append(la)
         elif type(la) is nn.Sequential:
             for sub_la in la:
                 # TODO make it recursive
-                if type(sub_la) in [nn.Conv2d, nn.MaxPool2d, BayesianConv2d]:
+                if type(sub_la) in [nn.Conv2d, nn.MaxPool2d, nn.AvgPool2d, BayesianConv2d]:
                     resize_layers.append(sub_la)
 
     out_h, out_w = input_size
@@ -73,12 +73,17 @@ def calc_out_conv_layers(input_size: Tuple[int, int],
     for la in resize_layers:
         # Compatibility with Max Pooling and BayesianConv2d where properties are integer instead of tuple
         padding = (la.padding, la.padding) if isinstance(la.padding, int) else la.padding
-        dilation = (la.dilation, la.dilation) if isinstance(la.dilation, int) else la.dilation
+        if not isinstance(la, nn.AvgPool2d):
+            dilation = (la.dilation, la.dilation) if isinstance(la.dilation, int) else la.dilation
         stride = (la.stride, la.stride) if isinstance(la.stride, int) else la.stride
         kernel_size = (la.kernel_size, la.kernel_size) if isinstance(la.kernel_size, int) else la.kernel_size
 
-        out_h = (out_h + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1
-        out_w = (out_w + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1
+        if isinstance(la, nn.AvgPool2d):
+            out_h = (out_h + 2 * padding[0] - kernel_size[0]) / stride[0] + 1
+            out_w = (out_w + 2 * padding[1] - kernel_size[1]) / stride[1] + 1
+        else:
+            out_h = (out_h + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1
+            out_w = (out_w + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1
 
         if type(la) in [nn.Conv2d, BayesianConv2d]:
             # Get the channel count from the last conv layer
@@ -129,3 +134,21 @@ def yaml_preprocess(item: Any) -> Union[str, int, float, List, Dict]:
     except TypeError:
         # Not iterable, then convert to string
         return str(item)
+
+
+def short_number(n: Union[int, float]) -> str:
+    """
+    Convert an integer into a short string notation using 'k' for 1 000 and 'M' for 1 000 000.
+
+    Args:
+        n: The integer to format.
+
+    Returns:
+        The formatted string.
+    """
+    if n < 1_000:
+        return str(n)
+    if n < 1_000_000:
+        return f'{n / 1_000:.1f}'.rstrip('0').rstrip('.') + 'k'  # Remove unnecessary decimal 0
+    # >= 1_000_000
+    return f'{n / 1_000_000:.1f}'.rstrip('0').rstrip('.') + 'M'  # Remove unnecessary decimal 0
