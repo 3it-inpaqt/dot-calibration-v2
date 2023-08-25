@@ -29,7 +29,7 @@ class Settings:
     # If empty or None thing is saved.
     run_name: str = ''
 
-    # The seed to use for all random number generator during this run.
+    # The seed to use for all random number generators during this run.
     # Forcing reproducibility could lead to a performance lost.
     seed: int = 42
 
@@ -51,20 +51,20 @@ class Settings:
     # The minimal logging level to write in the log file (see https://docs.python.org/3/library/logging.html#levels).
     logger_file_level: Union[str, int] = 'DEBUG'
 
-    # If True a log file is created for each run with a valid run_name.
+    # If True, a log file is created for each run with a valid run_name.
     # The console logger could be enabled at the same time.
-    # If False the logging will only be in console.
+    # If False, the logging will only be in the console.
     logger_file_enable: bool = True
 
     # If True uses a visual progress bar in the console during training and loading.
-    # Should be use with a logger_console_level as INFO or more for better output.
+    # Should be used with a logger_console_level as INFO or more for better output.
     visual_progress_bar: bool = True
 
-    # If True add color for pretty console output.
+    # If True, add color for pretty console output.
     # Should be disabled on Windows.
     console_color: bool = True
 
-    # If True show matplotlib images when they are ready.
+    # If True, show matplotlib images when they are ready.
     show_images: bool = False
 
     # If True and the run have a valid name, save matplotlib images in the run directory
@@ -110,18 +110,18 @@ class Settings:
     # ==================================================== Dataset =====================================================
     # ==================================================================================================================
 
-    # If true the data will be loaded from cache if possible.
+    # If true, the data will be loaded from the cache if possible.
     use_data_cache: bool = False
 
-    # The size of a diagram patch send to the network input (number of pixel)
+    # The sizes of a diagram patch send to the network input (number of pixels)
     patch_size_x: int = 18
     patch_size_y: int = 18
 
-    # The patch overlapping (number of pixel)
+    # The patch overlapping (number of pixels)
     patch_overlap_x: int = 10
     patch_overlap_y: int = 10
 
-    # The width of the border to ignore during the patch labeling (number of pixel)
+    # The width of the border to ignore during the patch labeling (number of pixels)
     # E.g.: If one line touch only 1 pixel at the right of the patch and the label_offset_x is >1 then the patch will be
     # labeled as "no_line"
     label_offset_x: int = 6
@@ -140,12 +140,12 @@ class Settings:
     # If test_diagram is set, this value should be 0.
     test_ratio: float = 0.2
 
-    # The base name (no extension) of the diagram file to use as test for line and tuning task.
+    # The base name (no extension) of the diagram file to use as test for the line and tuning task.
     # To use for cross-validation.
     # If test_ratio != 0, this value should be empty string.
     test_diagram: str = ''
 
-    # The percentage of data kept for validation only. 0 to disable validation.
+    # The percentage of data kept for validation only. Set tot 0 to disable validation.
     validation_ratio: float = 0.2
 
     # If True, data augmentation methods will be applied to increase the size of the train dataset.
@@ -168,9 +168,11 @@ class Settings:
     test_noise: float = 0.0
 
     # Whether an exponentially weighted moving average (EWMA) method should be used to preprocess the patches.
+    # See this paper: Moras, M. (2023). Outils d’identification du régime à un électron pour les boîtes quantiques
+    # semiconductrices.
     use_ewma = False
 
-    # This is the r parameter in the following equation : Z_i = (1 - r) * Z_(i-1) + r * X_i
+    # This is the r parameter in the following equation: Z_i = (1 - r) * Z_(i-1) + r * X_i
     ewma_parameter = 0.15
 
     # If True, we take the absolute value after subtracting the EWMA from the derivative of the patch and ewma_threshold
@@ -188,7 +190,7 @@ class Settings:
     # Have to be in the implemented list: FF, BFF, CNN, BCNN.
     model_type: str = 'CNN'
 
-    # The number of fully connected hidden layer and their respective number of neurons.
+    # The number of fully connected hidden layers and their respective number of neurons.
     hidden_layers_size: Sequence = (200, 100)
 
     # Whether there should be a bias in the hidden layer or not (currently only implemented in FF and CNN)
@@ -202,7 +204,7 @@ class Settings:
     # Have to match the convolution layers size
     max_pooling_layers: Sequence = (False, False)
 
-    # Define if there is a batch normalisation layer after each layer (True = batch normalisation)
+    # Define if there is a batch normalization layer after each layer (True = batch normalization)
     # Have to match the number of layers (convolution + linear)
     batch_norm_layers: Sequence = (False, False, False, False)
 
@@ -221,48 +223,56 @@ class Settings:
     # The learning rate value used by the SGD for parameters update.
     learning_rate: float = 0.001
 
-    # Dropout rate for every dropout layers defined in networks.
-    # If a network model doesn't have a dropout layer this setting will have no effect.
-    # 0 skip dropout layers
+    # Dropout rate for every dropout layer defined in networks.
+    # If a network model doesn't have a dropout layer, this setting will have no effect.
+    # Set to 0 to skip dropout layers
     dropout: int = 0.4
+
+    # Whether dropconnect should be used during training or not. This is only implemented for FF models right now.
+    use_dropconnect = False
+
+    # If use_dropconnect is True, specifies the probability of setting a weight to 0 during the training. Should be
+    # between 0 and 1
+    dropconnect_prob = 0.1
 
     # The size of the mini-batch for the training and testing.
     batch_size: int = 512
 
-    # The number of training epoch.
-    # Can't be set as the same time as nb_train_update, since it indirectly define nb_epoch.
-    # 0 is disabled (nb_train_update must me > 0)
+    # The number of training epochs.
+    # Can't be set as the same time as nb_train_update, since it indirectly defines nb_epoch.
+    # Set to 0 to disable (nb_train_update must me > 0)
     nb_epoch: int = 0
 
-    # The number of update before to stop the training.
-    # This is just a convenant way to define the number of epoch with variable batch and dataset size.
-    # The final value will be a multiple of the number of batch in 1 epoch (rounded to the higher number of epoch).
-    # Can't be set as the same time as nb_epoch, since it indirectly define it.
-    # 0 is disabled (nb_epoch must me > 0)
+    # The number of updates before to stop the training.
+    # This is just a convenant way to define the number of epochs with variable batch and dataset size.
+    # The final value will be a multiple of the batch number in 1 epoch (rounded to the higher number of epochs).
+    # Can't be set as the same time as nb_epoch, since it indirectly defines it.
+    # Set to 0 to disable (nb_epoch must me > 0)
     nb_train_update: int = 10_000
 
     # Save the best network state during the training based on the test main metric.
-    # Then load it when the training is complet.
-    # The file will be at the root of run directory, under then name: "best_network.pt"
+    # Then load it when the training is complete.
+    # The file will be at the root of run directory, under the name: "best_network.pt"
     # Required checkpoints_per_epoch > 0 and checkpoint_validation = True
     early_stopping: bool = True
 
-    # Threshold to consider the model inference good enough. Under this limit we consider that we don't know the answer.
+    # Threshold to consider the model inference good enough.
+    # Under this limit, we consider that we don't know the answer.
     # Negative threshold means automatic value selection using tau.
     confidence_threshold: float = -1.0
 
-    # Relative importance of model error compare to model uncertainty for automatic confidence threshold tuning.
-    # Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
+    # Relative importance of model error compares to model uncertainty for automatic confidence threshold tuning.
+    # The Confidence threshold is optimized by minimizing the following score: nb error + (nb unknown * tau)
     # Used only if the confidence threshold is not defined (<0)
     auto_confidence_threshold_tau: float = 0.2
 
-    # The number of sample used to compute the loss of bayesian networks.
+    # The number of samples used to compute the loss of bayesian networks.
     bayesian_nb_sample_train: int = 3
 
-    # The number of sample used to compute model inference during the validation.
+    # The number of samples used to compute model inference during the validation.
     bayesian_nb_sample_valid: int = 3
 
-    # The number of sample used to compute model inference during the testing.
+    # The number of samples used to compute model inference during the testing.
     bayesian_nb_sample_test: int = 10
 
     # The metric to use to compute the model inference confidence.
@@ -271,13 +281,6 @@ class Settings:
 
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
-
-    # Whether dropconnect should be used during training or not. This is only implemented for FF models right now.
-    use_dropconnect = False
-
-    # If use_dropconnect is True, specifies the probability of setting a weight to 0 during the training. Should be
-    # between 0 and 1
-    dropconnect_prob = 0.1
 
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================
@@ -288,7 +291,7 @@ class Settings:
     # Set to 0 to disable.
     checkpoints_per_epoch: int = 0
 
-    # The number of model update (back propagation) before to start a checkpoint
+    # The number of model updates (back propagation) before to start a checkpoint.
     # Can be combined with checkpoints_per_epoch.
     # Set to 0 to disable.
     checkpoints_after_updates: int = 200
@@ -298,7 +301,7 @@ class Settings:
     checkpoint_train_size: int = 640
 
     # If the inference metrics of the validation dataset should be computed, or not, during checkpoint.
-    # The validation ratio have to be higher than 0.
+    # The validation ratio has to be higher than 0.
     checkpoint_validation: bool = True
 
     # If the inference metrics of the testing dataset should be computed, or not, during checkpoint.
@@ -315,7 +318,7 @@ class Settings:
     # Have to be in the implemented list: random, shift, shift_u, jump, jump_u, full, sanity_check
     autotuning_procedures: Sequence = ('jump_u',)
 
-    # If True the line classification model cheat by using the diagram labels (no neural network loaded).
+    # If True, the line classification model cheat by using the diagram labels (no neural network loaded).
     # Used for baselines.
     autotuning_use_oracle: bool = False
 
@@ -324,8 +327,8 @@ class Settings:
     # Feature only available on jump algorithm.
     auto_detect_slope: bool = True
 
-    # If True the Jump algorithm will validate the leftmost line at different Y-position to avoid mistake in the case of
-    # fading lines.
+    # If True, the Jump algorithm will validate the leftmost line at different Y-position to avoid mistake in the case
+    # of fading lines.
     validate_left_line: bool = True
 
     # If the oracle is enabled, these numbers corrupt its precision.
@@ -336,8 +339,8 @@ class Settings:
     autotuning_oracle_line_random: float = 0
     autotuning_oracle_no_line_random: float = 0
 
-    # Number of iteration per diagram for the autotuning test.
-    # For the 'full' procedure this number is override to 1.
+    # Number of iterations per diagram for the autotuning test.
+    # For the 'full' procedure, this number is override to 1.
     autotuning_nb_iteration: int = 50
 
     # ==================================================================================================================
@@ -355,7 +358,7 @@ class Settings:
     interaction_mode: str = 'semi-auto'
 
     # The maximum and minimum voltage that we can request from the connector.
-    # This need to be explicitly defined before to tune an online diagram with a connector.
+    # This needs to be explicitly defined before to tune an online diagram with a connector.
     min_voltage: float = float('nan')
     max_voltage: float = float('nan')
 
@@ -375,23 +378,33 @@ class Settings:
     # Whether the inference of the ML model should be simulated on a circuit or not.
     simulate_circuit = False
 
-    # Whether the simulated circuit should be tested (simulations can be long, you might want to avoid testing the
-    # circuits sometimes)
-    test_circuit = True
-
-    # If simulate_circuit is True, then should the simulation be done with Xyce? Should be False if use_ltspice is True.
+    # If simulate_circuit is True, then should the simulation be done with Xyce?
+    # Only one simulation engine should be selected.
     use_xyce = True
 
-    # If simulate_circuit is True, then should the simulation be done with LTspice? Should be False if use_xyce is True.
+    # If simulate_circuit is True, then should the simulation be done with LTspice?
+    # Only one simulation engine should be selected.
     use_ltspice = False
+
+    # File path of the LTspice program installed on the system
+    ltspice_executable_path = ''
+
+    # Whether we should run the inference over the test-set with the simulated circuit.
+    # Warning: the simulations can be long, you might want to avoid testing the circuits sometimes.
+    test_circuit = True
+
+    # Maximum number of test inferences to simulate on the circuit (0 means the whole test set).
+    sim_max_test_inference = 1000
 
     # If set and greater than 0, the model's parameters will be clipped between
     # [-parameters_clipping, parameters_clipping] after each training batch. Set to None if no parameter clipping
     # should be used
+    # TODO: Move this setting to the training section and make it non-restrictive to the circuit simulation
     parameters_clipping = 2
 
     # If set to True, the training will take into account that memristors may be blocked with
-    # xyce_memristor_blocked_prob. Currently only implemented for FF NNs.
+    # xyce_memristor_blocked_prob.
+    # TODO: Currently only implemented for FF NNs.
     hardware_aware_training = False
 
     # The simulation step size for transient analysis (s)
@@ -407,6 +420,11 @@ class Settings:
     # Should be around 0.2%
     # TODO: Verify that this is correctly implemented before using it
     sim_memristor_read_std = 0.0
+
+    # The number of sample for the read variability study.
+    # This setting have no effect if memristor_read_std is 0.
+    # TODO: Verify that this is correctly implemented before using it
+    sim_var_sample_size = 0
 
     # The write standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.8%
@@ -437,23 +455,12 @@ class Settings:
     # Simulation initial latency before to start the first pulse (s)
     sim_init_latency = 1e-9
 
-    # The number of sample for the variability study. This setting have no effect if memristor_read_std is 0.
-    # TODO: Verify that this is correctly implemented before using it
-    sim_var_sample_size = 0
-
-    # The estimated delay between the input and the output of the sigmoid analog bloc. Used to synchronise the pulse
-    # between layers.
+    # The estimated delay between the input and the output of the activation function analog bloc.
+    # Used to synchronize the pulse between layers.
     sim_layer_latency = 1e-8
 
-    # Maximum number of test inferences to simulate on the circuit (0 means the whole test set)
-    sim_max_test_inference = 1000
-
-    # Number of parallel process to run (0 means the number of cpu cores)
+    # Number of parallel processes to run (0 means the number of cpu cores)
     sim_nb_process = 1
-
-    # File path of the LTspice program installed on the system
-    ltspice_executable_path = ''
-
 
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
@@ -592,7 +599,7 @@ class Settings:
                                          'be set to a number greater or equal to 0'
         if self.simulate_circuit and self.use_ltspice:
             assert self.ltspice_executable_path != '', 'Set the LTspice executable path, it is probably ' \
-                                                       'C:\Program Files\ADI\LTspice\LTspice.exe'
+                                                       'C:\Program Files\ADI\LTspice\LTspice.exe on Windows'
         if self.hardware_aware_training and self.model_type != 'FF':
             raise NotImplementedError("Hardware-aware training is only implemented for FF NNs.")
         if self.use_dropconnect and self.model_type != 'FF':

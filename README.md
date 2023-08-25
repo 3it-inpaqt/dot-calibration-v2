@@ -56,6 +56,7 @@ python3 start_tuning_offline.py
 ### Code
 
 * `autotuning/` : The different autotuning algorithm implementations
+* `circuit_simulation/` : Code to generate circuit description, run circuit simulation and benchmark the results
 * `classes/` : Custom classes and data structure definition
 * `connectors/` : Interface to connect with experimental measurement tools (for online diagrams tuning)
 * `datasets/` : Diagrams loading (from [QDSD](https://github.com/3it-inpaqt/qdsd-dataset)) and datasets in pyTorch
@@ -67,7 +68,7 @@ python3 start_tuning_offline.py
 * `utils/` : Miscellaneous utility code (output handling, settings, etc.)
 * `start_full_exp.py`: Script to run the complete experiment benchmark (line and autotuning tasks repeated with
   different meta-parameters)
-* `start_tasks_planner.py`: Script to automatise several benchmarks with grid-search
+* `start_tasks_planner.py`: Script to automatize several benchmarks with grid-search
 * `start_lines.py` : Main file to start the line classification task
 * `start_tuning_[online|offline].py` : Main files to start the charge state autotuning task (either online or offline)
 
