@@ -86,3 +86,8 @@ _Note: The not-solid lines represent work in progress._
 
 * [PyTorch](https://pytorch.org/)
 * [Blitz - Bayesian Layers in Torch Zoo](https://github.com/piEsposito/blitz-bayesian-deep-learning)
+
+# Contributors
+
+* [Victor Yon](https://github.com/victor-yon): Main developer
+* [Yohan Finet](https://github.com/YohanFinet): Integrate circuit simulation and hardware-aware methods
