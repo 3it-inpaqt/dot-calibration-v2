@@ -38,7 +38,7 @@ def start_line_task() -> Classifier:
 
     # Run the training and the test (train skipped if 'trained_network_cache_path' setting defined)
     if issubclass(type(model), ClassifierNN):
-        run_train_test(train_set, test_set, valid_set, model)
+        model = run_train_test(train_set, test_set, valid_set, model)
     else:
         # TODO start test here
         raise NotImplemented(f'Not implemented run for model type "{type(model)}"')

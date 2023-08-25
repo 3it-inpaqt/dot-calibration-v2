@@ -1,0 +1,12 @@
+.subckt rnn_sigmoid3_ha Vp Vout
+M1 Vout N003 0 0 nch_mac l=0.180u w=5u m=5
+M2 N003 N003 0 0 nch_mac l=0.18u w=5u m=5
+M3 N002 Vp N003 VDD pch_mac l=7u w=3u
+M4 N002 N001 Vout VDD pch_mac l=7u w=3u
+M5 VDD 1.2 N002 VDD pch_mac l=2u w=8u
+R1 Vout 0 46000
+V1 VDD 0 1.8
+V2 1.2 0 1.15
+V3 N001 0 -0.32
+C3 Vout 0 10p
+.ends rnn_sigmoid3_ha

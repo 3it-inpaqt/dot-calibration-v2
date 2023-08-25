@@ -132,7 +132,7 @@ class Settings:
     pixel_size: float = 0.001
 
     # The name of the research group who provide the data.
-    # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier'
+    # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier' or 'stefanie_czischek'
     # Should be available in the dataset folder.
     research_group: str = 'michel_pioro_ladriere'
 
@@ -167,6 +167,19 @@ class Settings:
     # Used to test uncertainty.
     test_noise: float = 0.0
 
+    # Whether an exponentially weighted moving average (EWMA) method should be used to preprocess the patches.
+    use_ewma = False
+
+    # This is the r parameter in the following equation : Z_i = (1 - r) * Z_(i-1) + r * X_i
+    ewma_parameter = 0.15
+
+    # If True, we take the absolute value after subtracting the EWMA from the derivative of the patch and ewma_threshold
+    # is not used.
+    is_ewma_with_abs = True
+
+    # This is the k used in the EWMA method when we look if a value is outside this range: mean +/- k * sigma
+    ewma_threshold = 3
+
     # ==================================================================================================================
     # ===================================================== Model ======================================================
     # ==================================================================================================================
@@ -177,6 +190,9 @@ class Settings:
 
     # The number of fully connected hidden layer and their respective number of neurons.
     hidden_layers_size: Sequence = (200, 100)
+
+    # Whether there should be a bias in the hidden layer or not (currently only implemented in FF and CNN)
+    bias_in_hidden_layer = True
 
     # The number of convolution layers and their respective properties (for CNN models only).
     conv_layers_kernel: Sequence = (4, 4)
@@ -255,6 +271,13 @@ class Settings:
 
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
+
+    # Whether dropconnect should be used during training or not. This is only implemented for FF models right now.
+    use_dropconnect = False
+
+    # If use_dropconnect is True, specifies the probability of setting a weight to 0 during the training. Should be
+    # between 0 and 1
+    dropconnect_prob = 0.1
 
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================
@@ -345,6 +368,93 @@ class Settings:
     # If True, the connector will use previous data when it is possible.
     use_cached_measurement: bool = True
 
+    # ==================================================================================================================
+    # ============================================= Circuit Simulation =================================================
+    # ==================================================================================================================
+
+    # Whether the inference of the ML model should be simulated on a circuit or not.
+    simulate_circuit = False
+
+    # Whether the simulated circuit should be tested (simulations can be long, you might want to avoid testing the
+    # circuits sometimes)
+    test_circuit = True
+
+    # If simulate_circuit is True, then should the simulation be done with Xyce? Should be False if use_ltspice is True.
+    use_xyce = True
+
+    # If simulate_circuit is True, then should the simulation be done with LTspice? Should be False if use_xyce is True.
+    use_ltspice = False
+
+    # If set and greater than 0, the model's parameters will be clipped between
+    # [-parameters_clipping, parameters_clipping] after each training batch. Set to None if no parameter clipping
+    # should be used
+    parameters_clipping = 2
+
+    # If set to True, the training will take into account that memristors may be blocked with
+    # xyce_memristor_blocked_prob. Currently only implemented for FF NNs.
+    hardware_aware_training = False
+
+    # The simulation step size for transient analysis (s)
+    sim_step_size = 3e-10
+
+    # The minimal resistance value that we consider for memristor programming (ohm)
+    sim_r_min = 5000
+
+    # The maximal resistance value that we consider for memristor programming (ohm)
+    sim_r_max = 15000
+
+    # The read standard deviation of the memristor resistance (% [0,1])
+    # Should be around 0.2%
+    # TODO: Verify that this is correctly implemented before using it
+    sim_memristor_read_std = 0.0
+
+    # The write standard deviation of the memristor resistance (% [0,1])
+    # Should be around 0.8%
+    sim_memristor_write_std = 0.008
+
+    # The probability that a memristor will be blocked to r_max when we try to write a value to it (% [0,1])
+    ratio_failure_HRS = 0.05
+
+    # The probability that a memristor will be blocked to r_min when we try to write a value to it (% [0,1])
+    # ratio_failure_HRS + ratio_failure_LRS should be around 10%
+    ratio_failure_LRS = 0.05
+
+    # The pulse amplitude for the input encoding (V)
+    sim_pulse_amplitude = 0.2
+
+    # The pulse duration for the input encoding (s)
+    sim_pulse_width = 3e-7
+
+    # The resting time after a pulse (s)
+    sim_resting_time = 5e-8
+
+    # Pulse delay from 0V to pulse_amplitude (s)
+    sim_pulse_rise_delay = 1e-9
+
+    # Pulse delay from pulse_amplitude to 0V (s)
+    sim_pulse_fall_delay = 1e-9
+
+    # Simulation initial latency before to start the first pulse (s)
+    sim_init_latency = 1e-9
+
+    # The number of sample for the variability study. This setting have no effect if memristor_read_std is 0.
+    # TODO: Verify that this is correctly implemented before using it
+    sim_var_sample_size = 0
+
+    # The estimated delay between the input and the output of the sigmoid analog bloc. Used to synchronise the pulse
+    # between layers.
+    sim_layer_latency = 1e-8
+
+    # Maximum number of test inferences to simulate on the circuit (0 means the whole test set)
+    sim_max_test_inference = 1000
+
+    # Number of parallel process to run (0 means the number of cpu cores)
+    sim_nb_process = 1
+
+    # File path of the LTspice program installed on the system
+    ltspice_executable_path = ''
+
+
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
         return len(self.run_name) > 0
@@ -379,7 +489,7 @@ class Settings:
             f"Invalid file log level '{self.logger_file_level}'"
 
         # Dataset
-        assert self.research_group in ['louis_gaudreau', 'michel_pioro_ladriere', 'eva_dupont_ferrier'], \
+        assert self.research_group in ['louis_gaudreau', 'michel_pioro_ladriere', 'eva_dupont_ferrier', 'stefanie_czischek'], \
             f'Unknown dataset research group: "{self.research_group}"'
         assert self.patch_size_x > 0, 'Patch size should be higher than 0'
         assert self.patch_size_y > 0, 'Patch size should be higher than 0'
@@ -423,6 +533,9 @@ class Settings:
         assert self.bayesian_nb_sample_test > 0, 'The number of bayesian sample should be at least 1'
         assert self.bayesian_confidence_metric in ['std', 'norm_std', 'entropy', 'norm_entropy'], \
             f'Invalid bayesian confidence metric value "{self.bayesian_confidence_metric}"'
+        if self.use_dropconnect:
+            assert self.dropconnect_prob > 0 and self.dropconnect_prob < 1, 'The probability used for dropconnect ' \
+                                                                            'should be between 0 and 1.'
 
         # Checkpoints
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints per epoch should be >= 0'
@@ -445,6 +558,45 @@ class Settings:
             'The first value of the range voltage should be lower or equal to the second'
         assert self.interaction_mode.lower().strip() in ('auto', 'semi-auto', 'manual'), \
             f'Invalid connector interaction mode: {self.interaction_mode}'
+
+        # Circuit Simulation
+        if self.simulate_circuit:
+            assert self.use_xyce or self.use_ltspice, \
+                'Specify if Xyce or LTspice should be used to run the circuit simulation'
+            assert (self.use_xyce and self.use_ltspice) == False, \
+                'Specify if Xyce or LTspice should be used to run the circuit simulation, but you can\'t choose both ' \
+                'at the same time'
+        if self.parameters_clipping is not None:
+            assert self.parameters_clipping > 0, 'Parameter clipping should be greater than 0'
+        assert self.sim_step_size > 0, 'Simulation step size should be greater than 0'
+        assert self.sim_step_size < self.sim_pulse_width + self.sim_pulse_rise_delay + self.sim_pulse_fall_delay + \
+               self.sim_init_latency + self.sim_resting_time, 'Simulation step size is too big'
+        assert self.sim_r_min < self.sim_r_max, 'LRS value of memristors should be smaller than the HRS value of ' \
+                                                'memristors'
+        assert self.sim_memristor_read_std >= 0, 'Memristors\' read variability should be greater or equal than 0'
+        assert self.sim_memristor_write_std >= 0, 'Memristors\' programming variability should be greater or equal ' \
+                                                  'than 0'
+        assert self.ratio_failure_HRS >= 0, 'There should be more or equal to 0% of memristors that are in a HRS'
+        assert self.ratio_failure_LRS >= 0, 'There should be more or equal to 0% of memristors that are in a LRS'
+        assert self.ratio_failure_HRS + self.ratio_failure_LRS <= 1, 'There can\'t be more than 100% of memristors ' \
+                                                                     'that are stuck-at fault'
+        assert self.sim_pulse_width > 0, 'Simulated pulses width should be greater than 0'
+        assert self.sim_pulse_rise_delay > 0, 'Simulated pulses rise delay should be greater than 0'
+        assert self.sim_pulse_fall_delay > 0, 'Simulated pulses fall delay should be greater than 0'
+        assert self.sim_init_latency > 0, 'Simulation\'s initial latency should be greater than 0'
+        assert self.sim_resting_time > 0, 'Simulation\'s resting time should be greater than 0'
+        assert self.sim_layer_latency > 0, 'Simulation\'s layer latency should be greater than 0'
+        assert self.sim_max_test_inference >= 0, 'Maximum number of test inferences on the circuit should be set ' \
+                                                 'to a number greater or equal to 0'
+        assert self.sim_nb_process >= 0, 'The number of parallel processes running circuit simulations should ' \
+                                         'be set to a number greater or equal to 0'
+        if self.simulate_circuit and self.use_ltspice:
+            assert self.ltspice_executable_path != '', 'Set the LTspice executable path, it is probably ' \
+                                                       'C:\Program Files\ADI\LTspice\LTspice.exe'
+        if self.hardware_aware_training and self.model_type != 'FF':
+            raise NotImplementedError("Hardware-aware training is only implemented for FF NNs.")
+        if self.use_dropconnect and self.model_type != 'FF':
+            raise NotImplementedError("Training with dropconnect is only implemented for FF NNs.")
 
     def __init__(self):
         """

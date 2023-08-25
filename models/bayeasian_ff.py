@@ -37,10 +37,10 @@ class BFF(ClassifierBayesNN):
         self.fc_layers = nn.ModuleList()
         for i in range(len(layer_sizes) - 1):
             layer = nn.Sequential()
-            # Fully connected
-            layer.append(BayesianLinear(layer_sizes[i], layer_sizes[i + 1]))
             # If this is not the output layer
             if i != len(layer_sizes) - 2:
+                # Fully connected
+                layer.append(BayesianLinear(layer_sizes[i], layer_sizes[i + 1], settings.bias_in_hidden_layer))
                 # Batch normalisation
                 if settings.batch_norm_layers[i]:
                     layer.append(nn.BatchNorm1d(layer_sizes[i + 1]))
@@ -49,6 +49,9 @@ class BFF(ClassifierBayesNN):
                 # Dropout
                 if settings.dropout > 0:
                     layer.append(nn.Dropout(settings.dropout))
+            else:
+                # Fully connected
+                layer.append(BayesianLinear(layer_sizes[i], layer_sizes[i + 1], True))
 
             self.fc_layers.append(layer)
 
