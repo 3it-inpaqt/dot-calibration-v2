@@ -9,7 +9,7 @@ from torchsampler import ImbalancedDatasetSampler
 
 from classes.classifier_nn import ClassifierNN
 from datasets.qdsd import QDSDLines
-from plots.debug_plot import plot_repartition, classification, plot_train_progress_class
+from plots.debug_plot import plot_repartition, classification, plot_train_progress_class, generate_dataset
 from plots.train_results import plot_train_progress
 from runs.test import test
 from utils.logger import logger
@@ -38,8 +38,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
 
     # Turn on the training mode of the network
     network.train()
-    debug = True
-    if debug:
+    if settings.repartition_plot:
         plot_repartition(train_dataset, 'Repartition_dataset_before')
     sampler = None
     if settings.balance_class_sampling:
@@ -62,7 +61,7 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
                               shuffle=not settings.balance_class_sampling,
                               num_workers=get_nb_loader_workers(device))
 
-    if debug:
+    if settings.repartition_plot:
         plot_repartition(train_loader, 'Repartition_dataset')
     nb_batch = len(train_loader)
     nb_epoch = settings.nb_epoch if settings.nb_epoch > 0 else ceil(settings.nb_train_update / nb_batch)
@@ -91,37 +90,15 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
     best_checkpoint: dict = {'score': 0, 'batch_num': None}
     best_checkpoint_class = [{'score': 0, 'batch_num': None}] * (settings.dot_number + 2)
 
-    train_data = []
-    validation_data = []
-    test_data = []
-    train_datas = []
-    validation_datas = []
-    test_datas = []
-    label_data = [[], [], []]
+    if settings.track_train:
+        logger.debug('\nGen train dataset by class')
+        train_data = generate_dataset(train_dataset, 'train')
 
-    logger.debug(f'\nGen train dataset by class')
-    for u in range(len(train_dataset)):
-        train_datas.append(train_dataset[u][0])
-        label_data[0].append(train_dataset[u][1])
-    for j in range(settings.dot_number + 2):
-        data, label = classification(train_datas, label_data[0], j)
-        train_data.append(QDSDLines([data, label], f'check_class_train_{j}'))
+        logger.debug('\nGen vald dataset by class')
+        validation_data = generate_dataset(validation_dataset, 'val')
 
-    logger.debug(f'\nGen vald dataset by class')
-    for u in range(len(validation_dataset)):
-        validation_datas.append(validation_dataset[u][0])
-        label_data[1].append(validation_dataset[u][1])
-    for j in range(settings.dot_number + 2):
-        data, label = classification(validation_datas, label_data[1], j)
-        validation_data.append(QDSDLines([data, label], f'check_class_val_{j}'))
-
-    logger.debug(f'\nGen test dataset by class')
-    for u in range(len(test_dataset)):
-        test_datas.append(test_dataset[u][0])
-        label_data[2].append(test_dataset[u][1])
-    for j in range(settings.dot_number + 2):
-        data, label = classification(test_datas, label_data[2], j)
-        test_data.append(QDSDLines([data, label], f'check_class_test_{j}'))
+        logger.debug('\nGen test dataset by class')
+        test_data = generate_dataset(test_dataset, 'test')
 
     # Use timer and progress bar
     with SectionTimer('network training') as timer, ProgressBarTraining(nb_batch, nb_epoch) as progress:
@@ -141,22 +118,25 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
                         **{'acc': check_metrics['validation' if validation_dataset else 'train'].accuracy,
                            settings.main_metric: check_metrics['validation' if validation_dataset else 'train'].main})
                     metrics_evolution.append(check_metrics)
-                    for j in range(settings.dot_number + 2):
-                        check_metrics = _checkpoint(network, epoch * nb_batch + i, train_data[j], validation_data[j],
-                                                    test_data[j], best_checkpoint, device, clas=False)
-                        metrics_evolution_class[j].append(check_metrics)
+                    if settings.track_train:
+                        for j in range(settings.dot_number + 2):
+                            check_metrics = _checkpoint(network, epoch * nb_batch + i, train_data[j],
+                                                        validation_data[j],
+                                                        test_data[j], best_checkpoint, device, clas=False)
+                            metrics_evolution_class[j].append(check_metrics)
 
                     timer.resume()
 
                 # Loss for each class
-                for i in range(settings.dot_number + 2):
-                    input, label = classification(inputs, labels, i)
-                    if not len(input):
-                        logger.debug(f'Class {QDSDLines.classes[i]} skip, no patch found')
-                        continue
-                    outputs = network(input)
-                    loss = network._criterion(outputs, label.float())
-                    loss_evolution_class[i].append(float(loss))
+                if settings.track_train:
+                    for i in range(settings.dot_number + 2):
+                        input, label = classification(inputs, labels, i)
+                        if not len(input):
+                            logger.debug(f'Class {QDSDLines.classes[i]} skip, no patch found')
+                            continue
+                        outputs = network(input)
+                        loss = network._criterion(outputs, label.float())
+                        loss_evolution_class[i].append(float(loss))
 
                 # Run one training step for these data
                 loss = network.training_step(inputs, labels)
@@ -172,11 +152,11 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
         metrics_evolution.append(
             _checkpoint(network, nb_epoch * nb_batch, train_dataset, validation_dataset, test_dataset, best_checkpoint,
                         device))
-        for j in range(settings.dot_number + 2):
-            check_metrics = _checkpoint(network, nb_epoch * nb_batch, train_data[j], validation_data[j],
-                                        test_data[j], best_checkpoint, device, clas=False)
-            metrics_evolution_class[j].append(check_metrics)
-            print(f'Class {QDSDLines.classes[j]}: {[len(A) for A in metrics_evolution_class]}')
+        if settings.track_train:
+            for j in range(settings.dot_number + 2):
+                check_metrics = _checkpoint(network, nb_epoch * nb_batch, train_data[j], validation_data[j],
+                                            test_data[j], best_checkpoint, device, clas=False)
+                metrics_evolution_class[j].append(check_metrics)
 
     if settings.save_network:
         save_network(network, 'final_network')
@@ -192,17 +172,21 @@ def train(network: ClassifierNN, train_dataset: Dataset, validation_dataset: Opt
     # == Post train plots == #
     # General
     plot_train_progress(loss_evolution, metrics_evolution, nb_batch, best_checkpoint)
-    # By class
-    plt.figure('Train progress by class', figsize=(12, 6), dpi=200)
-    plt.suptitle(f'Train progress by class, Batch number (batch size): {settings.batch_size:n})')
-    if settings.dot_number == 2:
-        color = ['red', 'blue', 'green', 'yellow']
-    else:
-        color = plt.cm.hsv(np.linspace(0, 1, settings.dot_number + 2))
-    for i in range(settings.dot_number + 2):
-        plot_train_progress_class(loss_evolution_class[i], metrics_evolution_class[i], i, color[i],
+
+    if settings.track_train:
+        # By class
+        plt.figure('Train progress by class', figsize=(12, 6), dpi=200)
+        plt.suptitle(f'Train progress by class, Batch number (batch size): {settings.batch_size:n})')
+        if settings.dot_number == 2:
+            color = ['red', 'blue', 'green', 'brown']
+        else:
+            color = plt.cm.hsv(np.linspace(0, 1, settings.dot_number + 2))
+        for i in range(settings.dot_number + 2):
+            plot_train_progress_class(loss_evolution_class[i], metrics_evolution_class[i], i, color[i],
+                                      nb_batch, best_checkpoint)
+        plot_train_progress_class(loss_evolution, metrics_evolution, i + 1, 'black',
                                   nb_batch, best_checkpoint)
-    save_plot(f'train_progress_class')
+        save_plot(f'train_progress_class')
 
 
 def _checkpoint(network: ClassifierNN, batch_num: int, train_dataset: Dataset, validation_dataset: Optional[Dataset],

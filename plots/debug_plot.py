@@ -1,5 +1,4 @@
 from typing import List
-from typing import List
 
 import matplotlib.cm as cm
 import matplotlib.lines as mlines
@@ -7,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from matplotlib.colors import LinearSegmentedColormap
-from matplotlib.ticker import FuncFormatter
 
 from datasets.qdsd import QDSDLines
 from utils.logger import logger
@@ -112,6 +110,8 @@ def plot_train_progress_class(loss: List[float], metrics_evolution: List[dict], 
     """
     Plot the evolution of the loss and the main metric during the training.
 
+    :param ax_loss: Matplotlib axes for loss plot.
+    :param ax_metric: Matplotlib axes for metric plot.
     :param loss: A list of loss for each batch.
     :param nb: corresponding class
     :param metrics_evolution: A list of dictionaries as {batch_num, validation, train}.
@@ -119,8 +119,7 @@ def plot_train_progress_class(loss: List[float], metrics_evolution: List[dict], 
     :param best_checkpoint: A dictionary containing information about the best version of the network according to
         validation score processed during checkpoints.
     """
-    # Batch
-    # Vertical lines for each batch
+
     if batch_per_epoch:
         if len(loss) / batch_per_epoch > 400:
             batch_per_epoch *= 100
@@ -129,72 +128,95 @@ def plot_train_progress_class(loss: List[float], metrics_evolution: List[dict], 
 
     # == Loss representation == #
 
-    plt.subplot(121)
-    plt.title('Training: loss')
+    if len(metrics_evolution) > 0:
+        plt.subplot(settings.dot_number + 3, 2, 1 + nb * 2)
+    else:
+        plt.subplot(settings.dot_number + 3, 1, 1 + nb)
+
+    # plt.gca().set_facecolor('white')
+    # plt.gca().spines['top'].set_visible(True)
+    # plt.gca().spines['right'].set_visible(True)
+
+    # Vertical lines for each batch
+    if batch_per_epoch:
+        for epoch in range(0, len(loss) + 1, batch_per_epoch):
+            plt.axvline(x=epoch, color='black', linestyle=':', alpha=0.2)
+    plt.plot(loss, color=color)
+    # loss display
+    # plt.ylim(bottom=0, top=max(loss)*1.2)
+    if nb == settings.dot_number + 2:
+        plt.grid(False, axis='x')
+        plt.xlabel('Step')
+        plt.ylabel(f'All class')
+    else:
+        plt.ylabel(f'{QDSDLines.classes[nb]}')
+        plt.gca().get_xaxis().set_visible(False)
+    if nb == 0:
+        plt.title('Training: loss')
+
+    if not len(metrics_evolution) > 0:
+        return
+
+    # == Train == #
+
+    plt.subplot(1, 2, 2)
+    plt.title('Training: train')
+    # plt.gca().set_facecolor('white')
+    # plt.gca().spines['top'].set_visible(True)
+    # plt.gca().spines['right'].set_visible(True)
     # Vertical lines for each batch
     if nb == 0 and batch_per_epoch:
         for epoch in range(0, len(loss) + 1, batch_per_epoch):
             plt.axvline(x=epoch, color='black', linestyle=':', alpha=0.2)
-    # loss display
-    plt.plot(loss, label=f'{QDSDLines.classes[nb]}', color=color, alpha=0.3)
-    plt.ylim(bottom=0)
-    plt.ylabel('Loss')
+    legend_y_anchor = -0.25
+
+    # Plot the main metric evolution if available
+    checkpoint_batches = [a['batch_num'] for a in metrics_evolution]
+    # Train evolution
+    train_main_metric = [a['train'].main for a in metrics_evolution]
+    plt.plot(checkpoint_batches, train_main_metric, color=lighten_color(color, 2), linestyle=(0, (2, 1)), alpha=0.3)
+
+    # Validation evolution
+    if 'validation' in metrics_evolution[0] and metrics_evolution[0]['validation'] is not None:
+        valid_main_metric = [a['validation'].main for a in metrics_evolution]
+        plt.plot(checkpoint_batches, valid_main_metric, color=color, alpha=0.5)
+
+        # Star marker for best validation metric
+        if nb == (settings.dot_number + 2) and best_checkpoint and best_checkpoint['batch_num'] is not None:
+            plt.plot(best_checkpoint['batch_num'], best_checkpoint['score'], color='tab:gray',
+                     marker='*', markeredgecolor='k', markersize=10)
+            plt.axvline(best_checkpoint['batch_num'], best_checkpoint['score'], color='tab:gray')
+            legend_y_anchor -= 0.1
+
+    # plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.0%}'.format(y)))
+    # plt.ylim(bottom=0)
+
+    # Color for both axes
+    plt.ylabel(f'Metric: {settings.main_metric.capitalize()}')
     plt.xlabel('Step')
-    plt.legend()
+    valid = mlines.Line2D([], [], color='black',
+                          label=f'Validation dataset')
+    train = mlines.Line2D([], [], linestyle=(0, (2, 1)), color='lightgray',
+                          label=f'Train dataset')
+    best = mlines.Line2D([], [], color='white', marker='*', markeredgecolor='k', markersize=10,
+                         label=f'Best network {settings.main_metric}')
 
-    # == Train == #
-    if len(metrics_evolution) > 0:
-        plt.subplot(122)
-        plt.title(f'Training: {settings.main_metric.capitalize()}')
-        # Vertical lines for each batch
-        if nb == 0 and batch_per_epoch:
-            for epoch in range(0, len(loss) + 1, batch_per_epoch):
-                plt.axvline(x=epoch, color='black', linestyle=':', alpha=0.2)
-        legend_y_anchor = -0.25
-
-        # Plot the main metric evolution if available
-        checkpoint_batches = [a['batch_num'] for a in metrics_evolution]
-        # Train evolution
-        train_main_metric = [a['train'].main for a in metrics_evolution]
-        plt.plot(checkpoint_batches, train_main_metric, color=lighten_color(color, 2), linestyle=(0, (2, 1)), alpha=0.3)
-
-        # Testing evolution
-        if 'test' in metrics_evolution[0] and metrics_evolution[0]['test'] is not None:
-            test_main_metric = [a['test'].main for a in metrics_evolution]
-            plt.plot(checkpoint_batches, test_main_metric, alpha=0.4, olor=lighten_color(color, 3))
-        # Validation evolution
-        if 'validation' in metrics_evolution[0] and metrics_evolution[0]['validation'] is not None:
-            valid_main_metric = [a['validation'].main for a in metrics_evolution]
-            plt.plot(checkpoint_batches, valid_main_metric, color=color, alpha=0.5)
-
-            # Star marker for best validation metric
-            if best_checkpoint and best_checkpoint['batch_num'] is not None:
-                plt.plot(best_checkpoint['batch_num'], best_checkpoint['score'], color=color,
-                         marker='*', markeredgecolor='k', markersize=10)
-                legend_y_anchor -= 0.1
-
-        plt.gca().yaxis.set_major_formatter(FuncFormatter(lambda y, _: '{:.0%}'.format(y)))
-        plt.ylim(bottom=0, top=1)
-
-        # Color for both axes
-        plt.ylabel(settings.main_metric.capitalize())
-        plt.xlabel('Step')
-        valid = mlines.Line2D([], [], color='black',
-                              label=f'Validation for {QDSDLines.classes[nb]}')
-        test = mlines.Line2D([], [], linestyle=':', color='gray',
-                             label=f'Test for {QDSDLines.classes[nb]}')
-        train = mlines.Line2D([], [], linestyle=(0, (2, 1)), color='lightgray',
-                              label=f'Train for {QDSDLines.classes[nb]}')
-        best = mlines.Line2D([], [], color='white', marker='*', markeredgecolor='k', markersize=10,
-                             label=f'Best network {settings.main_metric}')
-
-        plt.legend(handles=[valid, test, train, best])
+    plt.legend(handles=[valid, train, best], loc='upper left')
 
 
 def lighten_color(input_color, amount_to_lighten):
     """
     Returns a lighter color.
     """
-    cmap = LinearSegmentedColormap.from_list("temp_cmap",
-                                             [input_color, (1, 1, 1)])  # transition from input_color to white
+    cmap = LinearSegmentedColormap.from_list("temp_cmap", [input_color, (1, 1, 1)])
     return cmap(amount_to_lighten)
+
+
+def generate_dataset(dataset, dataset_name):
+    data_list = []
+    label_list = []
+    for u in range(len(dataset)):
+        data_list.append(dataset[u][0])
+        label_list.append(dataset[u][1])
+    return [QDSDLines(classification(data_list, label_list, j), f'check_class_{dataset_name}_{j}')
+            for j in range(settings.dot_number + 2)]

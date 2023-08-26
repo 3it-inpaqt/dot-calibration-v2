@@ -305,6 +305,15 @@ class Settings:
     # The weight of complexity cost part when computing the loss of bayesian networks.
     bayesian_complexity_cost_weight: float = 1 / 50_000
 
+    # If True, plot the train graph for each class
+    track_train: bool = False
+
+    # If True, plot the repartition for each class
+    repartition_plot: bool = False
+
+    # Add rotation patch
+    rotat: bool = False
+
     # ==================================================================================================================
     # ================================================== Checkpoints ===================================================
     # ==================================================================================================================

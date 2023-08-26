@@ -1,10 +1,12 @@
 import argparse
+import random
 from pathlib import Path
 from random import shuffle
 from typing import Callable, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
+import torchvision.transforms.functional as TF
 from torch.utils.data import Dataset
 
 from datasets.diagram_ndot_offline import DiagramOfflineNDot
@@ -191,6 +193,18 @@ class QDSDLines(Dataset):
                 else:
                     patches.extend(diagram_patches)
 
+                # Add aleatory rotations
+                angle = [90, 270, 180, random.uniform(0, 360), random.uniform(0, 360)]
+                for ang in angle:
+                    logger.debug(f'Add rotation: {ang}')
+                    for patch, label in patches.copy():
+                        if label == settings.dot_number + 2:
+                            rotated_patch = QDSDLines.rotation(patch, ang)
+                            patches.append((rotated_patch, label))
+                        if label != 0:
+                            rotated_patch = QDSDLines.rotation(patch, ang)
+                            patches.append((rotated_patch, label))
+
             logger.info(f'{len(patches) + len(test_patches)} items loaded from {len(diagrams)} diagrams')
             if not use_test_ratio:
                 logger.info(f'{len(test_ratio_or_names)} diagrams used for test set ({len(test_patches)} items): '
@@ -303,6 +317,24 @@ class QDSDLines(Dataset):
             # Line [prediction]
             delta = [confidence[prediction - 1] - confidence[i] for i in range(len(confidence)) if i != prediction]
             return np.array(max(confidence[prediction - 1] - np.mean(delta), 0))
+
+    def rotation(tensor, angle):
+        """
+        Applique une rotation aléatoire à l'image.
+
+        :param tensor: Le tenseur à tourner.
+        :param max_angle: Angle maximal de rotation.
+        :return: Le tenseur tourné.
+        """
+        # Convertir le tenseur en image PIL
+        image = TF.to_pil_image(tensor)
+
+        # Appliquer la rotation
+        rotated_image = TF.rotate(image, angle)
+
+        # Convertir l'image PIL de retour en tenseur
+        rotated_tensor = TF.to_tensor(rotated_image)
+        return rotated_tensor
 
 
 class AddGaussianNoise(object):
