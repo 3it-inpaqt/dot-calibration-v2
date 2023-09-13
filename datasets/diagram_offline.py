@@ -311,10 +311,13 @@ class DiagramOffline(Diagram):
                 charge_area = None
 
                 if load_lines:
-                    # TODO adapt for double dot (load line_2 too)
+                    # TODO adapt for double dot
+                    line_labels = ['line_1', 'line_2']
+                    if settings.load_parasitic_lines:
+                        line_labels.append('line_parasite')
                     # Load transition line annotations
                     transition_lines = DiagramOffline._load_lines_annotations(
-                        filter(lambda l: 'line' in l['name'], current_labels['objects']), x, y,
+                        filter(lambda l: l['name'] in line_labels, current_labels['objects']), x, y,
                         pixel_size=label_pixel_size,
                         snap=1)
 

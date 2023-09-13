@@ -110,7 +110,7 @@ class Settings:
     # ==================================================== Dataset =====================================================
     # ==================================================================================================================
 
-    # If true, the data will be loaded from the cache if possible.
+    # If true, the data will be loaded from the cache if possible (maybe create bug with some settings).
     use_data_cache: bool = False
 
     # The sizes of a diagram patch send to the network input (number of pixels)
@@ -130,6 +130,10 @@ class Settings:
     # The size of the interpolated pixel in Volt.
     # Should be available in the dataset folder.
     pixel_size: float = 0.001
+
+    # If True, the parasitic lines will be considered as a line labels.
+    # Otherwise, the labels of parasitic line will be ignored.
+    load_parasitic_lines: bool = True
 
     # The name of the research group who provide the data.
     # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier' or 'stefanie_czischek'

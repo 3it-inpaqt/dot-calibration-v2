@@ -335,9 +335,11 @@ uncertainty_study_cross_valid = CombinatorPlanner([
 tune_oracle = CombinatorPlanner([
     Planner('autotuning_procedures', [['jump', 'shift', 'random']]),
     Planner('autotuning_use_oracle', [True]),
+    Planner('load_parasitic_lines', [False]),
     datasets_planner_cross_valid,
     # Setting for faster runs
     Planner('save_images', [False]),
+    Planner('save_video', [False]),
     Planner('plot_diagrams', [False]),
 ], runs_name='tuning-{seed:02}-oracle-{research_group}-{test_diagram}')
 
