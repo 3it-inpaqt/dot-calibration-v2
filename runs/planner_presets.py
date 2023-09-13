@@ -403,7 +403,7 @@ tune_all_cross_valid = CombinatorPlanner([
 
 # ============================================ Online Experiment ============================================
 
-exp_range = list(range(1, 20))
+exp_range = list(range(1, 21))
 # Train the models for the online experiment
 train_online_experiment = SequencePlanner([
     CombinatorPlanner([

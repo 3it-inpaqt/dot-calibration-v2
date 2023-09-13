@@ -123,7 +123,10 @@ class AutotuningProcedure:
         # Record the diagram scanning activity.
         decr = ('\n    > ' + self._step_descr.replace('\n', '\n    > ')) if len(self._step_descr) > 0 else ''
         step_description = self._step_name + decr
-        is_above_confidence_threshold = self.model.is_above_confident_threshold(prediction, confidence)
+        if settings.autotuning_use_oracle:
+            is_above_confidence_threshold = True
+        else:
+            is_above_confidence_threshold = self.model.is_above_confident_threshold(prediction, confidence)
         self._scan_history.append(StepHistoryEntry(
             (self.x, self.y), prediction, confidence, ground_truth, soft_truth_larger, soft_truth_smaller,
             is_above_confidence_threshold, step_description, time_start, time_data_fetched, time_data_processed,
