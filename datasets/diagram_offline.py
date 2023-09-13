@@ -292,14 +292,21 @@ class DiagramOffline(Diagram):
                 nb_no_label += 1
                 continue
 
+            try:
+                # Extract pixel size used for labeling this diagram (in volt)
+                label_pixel_size = float(next(filter(lambda l: l['name'] == 'pixel_size_volt',
+                                                     current_labels['classifications']))['text_answer']['content'])
+            except StopIteration:
+                # In case, we found a row for this diagram, but no pixel size
+                logger.warning(f'No pixel size found for {file_basename}')
+                nb_no_label += 1
+                continue
+
             # After python 3.9, it is necessary to specify binary mode for zip open
             with diagram_name.open(mode='rb') as diagram_file:
                 # Load values from CSV file
                 x, y, values = DiagramOffline._load_interpolated_csv(gzip.open(diagram_file))
 
-                # Extract pixel size used for labeling this diagram (in volt)
-                label_pixel_size = float(next(filter(lambda l: l['name'] == 'pixel_size_volt',
-                                                     current_labels['classifications']))['text_answer']['content'])
                 transition_lines = None
                 charge_area = None
 
