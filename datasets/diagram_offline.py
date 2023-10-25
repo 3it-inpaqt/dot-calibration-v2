@@ -218,6 +218,13 @@ class DiagramOffline(Diagram):
                      charge_regions=None, scale_bars=True, file_name=f'diagram_{self.name}_results',
                      allow_overwrite=True, final_volt_coord=final_volt_coords)
 
+    def to(self, device: torch.device = None, dtype: torch.dtype = None, non_blocking: bool = False,
+           copy: bool = False):
+        super().to(device, dtype, non_blocking, copy)
+        # Also send the normalized values to the same device as values
+        if self.values_norm is not None:
+            self.values_norm = self.values_norm.to(device, dtype, non_blocking, copy)
+
     def __str__(self):
         return '[OFFLINE] ' + super().__str__() + f' (size: {len(self.x_axes)}x{len(self.y_axes)})'
 
