@@ -66,15 +66,26 @@ class DiagramOffline(Diagram):
 
         :param coordinate: The coordinate in the diagram (not the voltage)
         :param patch_size: The size of the patch to extract (in number of pixels)
-        :param normalized: If True, the patch will be normalized between 0 and 1
+        :param normalized: If True, the patch will be normalized between 0 and 1.
+            Has no effect if settings.normalization is None.
         :return: The patch
         """
         coord_x, coord_y = coordinate
         size_x, size_y = patch_size
 
-        values = self.values if not normalized else self.values_norm
+        if normalized:
+            if settings.normalization == 'train-set':
+                # Should be already normalized in a separated tensor
+                return self.values_norm[coord_y:coord_y + size_y, coord_x:coord_x + size_x]
+            elif settings.normalization == 'patch':
+                # Normalize at the patch scale
+                patch = self.values[coord_y:coord_y + size_y, coord_x:coord_x + size_x]
+                min_value = patch.min()
+                max_value = patch.max()
+                return (patch - min_value) / (max_value - min_value)
 
-        return values[coord_y:coord_y + size_y, coord_x:coord_x + size_x]
+        # No normalization
+        return self.values[coord_y:coord_y + size_y, coord_x:coord_x + size_x]
 
     def get_patches(self, patch_size: Tuple[int, int] = (10, 10), overlap: Tuple[int, int] = (0, 0),
                     label_offset: Tuple[int, int] = (0, 0)) -> Generator:

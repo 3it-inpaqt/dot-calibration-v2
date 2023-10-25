@@ -1,5 +1,5 @@
 from random import randrange
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 import numpy as np
 import torch
@@ -14,8 +14,8 @@ from utils.settings import settings
 
 class DiagramOnline(Diagram):
     _measurement_history: List[ExperimentalMeasurement]
-    _norm_min_value: float
-    _norm_max_value: float
+    _norm_min_value: Optional[float]
+    _norm_max_value: Optional[float]
 
     def __init__(self, name: str, connector: "Connector"):
         """
@@ -28,8 +28,12 @@ class DiagramOnline(Diagram):
         self._connector = connector
         self._measurement_history = []
 
-        # Fetch the normalization values used during the training
-        self._norm_min_value, self._norm_max_value = load_normalization()
+        if settings.normalization == 'train-set':
+            # Fetch the normalization values used during the training
+            self._norm_min_value, self._norm_max_value = load_normalization()
+        else:
+            # Normalization None or per patch
+            self._norm_min_value = self._norm_max_value = None
 
         # Create a virtual axes and discret grid that represent the voltage space to explore.
         # Where NaN values represent the voltage space that has not been measured yet.
@@ -160,14 +164,25 @@ class DiagramOnline(Diagram):
 
     def normalize(self, measurement: torch.Tensor) -> torch.Tensor:
         """
-        Normalize some data with the same min/max value used during the training.
-        The normalisation values have been fetch via the normalization_values_path setting at the initialisation.
+        Normalize the datasets in function of the method defined in the settings.
 
-        :param measurement: The values to normalize.
+        :param measurement: Values to normalize.
         :return: The normalized values.
         """
-        measurement -= self._norm_min_value
-        measurement /= self._norm_max_value - self._norm_min_value
+        if settings.normalization == 'patch':
+            # Normalize the measurement with the min/max values of the current patch
+            min_value = measurement.min()
+            max_value = measurement.max()
+        elif settings.normalization == 'train-set':
+            # Normalize the measurement with the min/max values of the train set
+            min_value = self._norm_min_value
+            max_value = self._norm_max_value
+        else:
+            # No normalization
+            return measurement
+
+        measurement -= min_value
+        measurement /= max_value - min_value
         return measurement
 
     def get_cropped_boundaries(self) -> Tuple[float, float, float, float]:

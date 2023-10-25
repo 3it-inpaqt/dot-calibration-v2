@@ -2,9 +2,9 @@ from pathlib import Path
 from random import shuffle
 from typing import Callable, Iterable, List, Optional, Tuple, Union
 
+import numpy as np
 import torch
 from torch.utils.data import Dataset
-import numpy as np
 
 from datasets.diagram_offline import DiagramOffline
 from utils.logger import logger
@@ -134,8 +134,8 @@ class QDSDLines(Dataset):
                              validation_ratio: float = 0,
                              patch_size: Tuple[int, int] = (10, 10),
                              overlap: Tuple[int, int] = (0, 0),
-                             label_offset: Tuple[int, int] = (0, 0),
-                             normalize: bool = True) -> Tuple["QDSDLines", "QDSDLines", Optional["QDSDLines"]]:
+                             label_offset: Tuple[int, int] = (0, 0)) \
+            -> Tuple["QDSDLines", "QDSDLines", Optional["QDSDLines"]]:
         """
         Initialize dataset of transition lines patches.
         The sizes of the test and validation dataset depend on the ratio. The train dataset get all remaining data.
@@ -149,7 +149,6 @@ class QDSDLines(Dataset):
         :param patch_size: The size in pixel (x, y) of the patch to process (sub-area of the stability diagram)
         :param overlap: The overlapping size, in pixel (x, y) of the patch
         :param label_offset: The width of the border to ignore during the patch labeling, in number of pixel (x, y)
-        :param normalize: If True the datasets values are normalized according to the train set values
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
 
@@ -237,8 +236,8 @@ class QDSDLines(Dataset):
         logger.debug('Dataset:' + ''.join([f'\n\t{key}: {value}' for key, value in stats.items()]))
         save_results(**stats)
 
-        if normalize and not research_group == 'stefanie_czischek':
-            # Normalize datasets using train as a reference for min and max
+        if settings.normalization:
+            # Normalize datasets in function of the settings
             QDSDLines.normalize(datasets, train_set)
 
         # Uncomment for data distribution plot (slow)
@@ -255,15 +254,25 @@ class QDSDLines(Dataset):
         :param datasets: The datasets to normalize.
         :param ref_dataset: The reference dataset.
         """
-        ref_min = torch.min(ref_dataset._patches)
-        ref_max = torch.max(ref_dataset._patches)
 
-        # Save values to file, for consistant normalization later
-        save_normalization(ref_min.item(), ref_max.item())
+        if settings.normalization == 'train-set':
+            # Normalize every dataset in function of the min/max values from the training set
+            ref_min = torch.min(ref_dataset._patches)
+            ref_max = torch.max(ref_dataset._patches)
 
-        for dataset in (d for d in datasets if d):  # Skip None datasets
-            dataset._patches -= ref_min
-            dataset._patches /= (ref_max - ref_min)
+            # Save values to file, for consistant normalization later
+            save_normalization(ref_min.item(), ref_max.item())
+
+            for dataset in (d for d in datasets if d):  # Skip None datasets
+                dataset._patches -= ref_min
+                dataset._patches /= (ref_max - ref_min)
+
+        if settings.normalization == 'patch':
+            # Normalize the patchs in function of their own min/max values
+            for dataset in (d for d in datasets if d):  # Skip None datasets
+                min_per_patch = torch.amin(dataset._patches, dim=(1, 2), keepdim=True)
+                max_per_patch = torch.amax(dataset._patches, dim=(1, 2), keepdim=True)
+                dataset._patches = (dataset._patches - min_per_patch) / (max_per_patch - min_per_patch)
 
     @staticmethod
     def load_stefanie_data():

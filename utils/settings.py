@@ -163,6 +163,11 @@ class Settings:
     # see https://github.com/ufoym/imbalanced-dataset-sampler
     balance_class_sampling: bool = True
 
+    # The normalization method to use.
+    # Could be: None, 'patch', 'train-set'.
+    # See ../documentation/normalization.drawio.svg for more information.
+    normalization: str = 'patch'
+
     # The path to yaml file containing the normalization values (min and max).
     # Use to consistant normalization of the data after the training.
     normalization_values_path: str = ''
