@@ -1,9 +1,64 @@
-<mxfile host="app.diagrams.net" modified="2023-10-25T19:18:47.893Z" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/118.0" version="22.0.8" etag="WDoRkxuioM44h4xPnNSP" type="github">
+<mxfile host="app.diagrams.net" modified="2023-10-25T19:37:29.081Z" agent="Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/118.0" etag="fhgmSk5yGr2aKYuLeWNU" version="22.0.8" type="github">
   <diagram name="Page-1" id="uHlJiLuiVhWIHzXblVOx">
-    <mxGraphModel>
+    <mxGraphModel dx="908" dy="534" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
+        <mxCell id="JADT-roHGUCKU1zQfIbC-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="JADT-roHGUCKU1zQfIbC-1" target="JADT-roHGUCKU1zQfIbC-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-1" value="None" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="160" y="40" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-2" value="settings.normalization:" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="20" y="40" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="JADT-roHGUCKU1zQfIbC-3" target="JADT-roHGUCKU1zQfIbC-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-3" value="&quot;trainset&quot;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="JADT-roHGUCKU1zQfIbC-4" target="JADT-roHGUCKU1zQfIbC-19">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-4" value="&quot;patch&quot;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="560" y="40" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="JADT-roHGUCKU1zQfIbC-5" target="JADT-roHGUCKU1zQfIbC-11">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-15" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JADT-roHGUCKU1zQfIbC-13">
+          <mxGeometry x="-0.6" relative="1" as="geometry">
+            <mxPoint x="10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="JADT-roHGUCKU1zQfIbC-5" target="JADT-roHGUCKU1zQfIbC-14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-18" value="No" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="JADT-roHGUCKU1zQfIbC-17">
+          <mxGeometry x="-0.7714" y="-1" relative="1" as="geometry">
+            <mxPoint x="3" y="-1" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-5" value="Training skipped?" style="shape=rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="340" y="110" width="80" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-6" value="End" style="ellipse;html=1;shape=endState;fillColor=#000000;strokeColor=#000000;labelPosition=center;verticalLabelPosition=bottom;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="205" y="125" width="30" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-11" value="Load min and max values from settings.normalization_values_path" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="220" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-14" value="min/max = smallest/largest pixel value of the patches from the whole training set" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="390" y="220" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-19" value="min/max = smallest/largest pixel value of the current patch" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="125" width="200" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="JADT-roHGUCKU1zQfIbC-21" value="&lt;div style=&quot;font-size: 10px;&quot;&gt;&lt;i style=&quot;font-size: 10px;&quot;&gt;default&lt;/i&gt;&lt;/div&gt;v" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;spacing=2;" vertex="1" parent="1">
+          <mxGeometry x="560" y="10" width="120" height="30" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
