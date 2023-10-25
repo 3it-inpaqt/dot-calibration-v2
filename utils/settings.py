@@ -133,7 +133,7 @@ class Settings:
 
     # If True, the parasitic lines will be considered as a line labels.
     # Otherwise, the labels of parasitic line will be ignored.
-    load_parasitic_lines: bool = True
+    load_parasitic_lines: bool = False
 
     # The name of the research group who provide the data.
     # currently: 'louis_gaudreau' or 'michel_pioro_ladriere' or 'eva_dupont_ferrier' or 'stefanie_czischek'
@@ -244,7 +244,7 @@ class Settings:
 
     # The number of training epochs.
     # Can't be set as the same time as nb_train_update, since it indirectly defines nb_epoch.
-    # Set to 0 to disable (nb_train_update must me > 0)
+    # Set to 0 to disable (nb_train_update must be > 0)
     nb_epoch: int = 0
 
     # The number of updates before to stop the training.
@@ -328,7 +328,7 @@ class Settings:
 
     # If True, the tuning algorithm will try to detect the transition line slope. If not, will always use the prior
     # slope knowledge.
-    # Feature only available on jump algorithm.
+    # This feature is only available on jump algorithms.
     auto_detect_slope: bool = True
 
     # If True, the Jump algorithm will validate the leftmost line at different Y-position to avoid mistake in the case
@@ -373,7 +373,7 @@ class Settings:
     # Use cache from previous measurements to speed up the tuning.
     # If False, the connector will always request a new measurement.
     # If True, the connector will use previous data when it is possible.
-    use_cached_measurement: bool = True
+    use_cached_measurement: bool = False
 
     # ==================================================================================================================
     # ============================================= Circuit Simulation =================================================
