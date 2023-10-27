@@ -520,6 +520,7 @@ class Settings:
                                                                          '"test diagram" should be set'
         assert self.test_ratio + self.validation_ratio < 1, 'test_ratio + validation_ratio should be less than 1 to' \
                                                             ' have training data'
+        assert self.normalization in [None, 'patch', 'train-set'], f'Unknown normalization method: {self.normalization}'
 
         # Networks
         assert isinstance(self.model_type, str) and self.model_type.upper() in ['FF', 'BFF', 'CNN', 'BCNN'], \
