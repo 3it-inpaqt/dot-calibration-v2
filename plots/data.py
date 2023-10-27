@@ -16,6 +16,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.image import AxesImage
 from matplotlib.legend_handler import HandlerBase
 from matplotlib.text import Text
+from matplotlib.ticker import ScalarFormatter
 from shapely.geometry import LineString, Polygon
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
@@ -473,8 +474,17 @@ def _add_scale_bar(im: AxesImage, ax, pad: float = 0.02) -> None:
         measuring = MEASURE_UNIT[settings.research_group]
     else:
         measuring = 'I'
+
+    # Custom formatter to fix the number of decimals and avoid flickering video animation
+    class CustomScalarFormatter(ScalarFormatter):
+        def _set_format(self):
+            self.format = r'$\mathdefault{%1.2f}$'
+
+    formatter = CustomScalarFormatter(useMathText=True)
+
     # Add the scale bar that way because we already are inside a subplot
-    plt.colorbar(im, ax=ax, shrink=0.85, pad=pad, label=f'{measuring} (A)')
+    cbar = plt.colorbar(im, ax=ax, shrink=0.85, pad=pad, label=f'{measuring} (A)', format=formatter)
+    cbar.ax.yaxis.set_offset_position('left')
 
 
 def plot_diagram_step_animation(d: "Diagram", title: str, image_name: str, scan_history: List["StepHistoryEntry"],
