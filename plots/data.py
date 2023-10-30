@@ -278,13 +278,14 @@ def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, scale_b
 
 def _plot_labels(ax, charge_regions: List[Tuple["ChargeRegime", Polygon]], transition_lines: List[LineString]):
     labels_handlers = []
+    z = 9999  # Z order placed between pixels focus area
 
     if charge_regions:
         for i, (regime, polygon) in enumerate(charge_regions):
             polygon_x, polygon_y = polygon.exterior.coords.xy
-            ax.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True)
+            ax.fill(polygon_x, polygon_y, facecolor=(0, 0, 0.5, 0.3), edgecolor=(0, 0, 0.5, 0.8), snap=True, zorder=z)
             label_x, label_y = list(polygon.centroid.coords)[0]
-            params = dict(x=label_x, y=label_y, ha="center", va="center", color='b', weight='bold',
+            params = dict(x=label_x, y=label_y, ha="center", va="center", color='b', weight='bold', zorder=z + 2,
                           bbox=dict(boxstyle='round', pad=0.2, facecolor='w', alpha=0.5, edgecolor='w'))
             ax.text(**params, s=str(regime))
 
@@ -295,7 +296,7 @@ def _plot_labels(ax, charge_regions: List[Tuple["ChargeRegime", Polygon]], trans
     if transition_lines:
         for i, line in enumerate(transition_lines):
             line_x, line_y = line.coords.xy
-            ax.plot(line_x, line_y, color='lime', label='Line annotation')
+            ax.plot(line_x, line_y, color='lime', label='Line annotation', zorder=z + 1)
 
     return labels_handlers
 
