@@ -429,16 +429,16 @@ online_experiment = CombinatorPlanner([
         CombinatorPlanner([
             Planner('model_type', ['CNN']),
             ParallelPlanner([
-                Planner('trained_network_cache_path', [f'out/exp-CNN-{i:03d}/best_network.pt' for i in exp_range]),
-                Planner('normalization_values_path', [f'out/exp-CNN-{i:03d}/normalization.yaml' for i in exp_range]),
+                Planner('trained_network_cache_path',
+                        [f'out/exp-CNN-{i:03d}/best_network.pt' for i in exp_range]),
                 Planner('seed', [1_000 + i for i in exp_range])
             ])
         ]),
         CombinatorPlanner([
             Planner('model_type', ['BCNN']),
             ParallelPlanner([
-                Planner('trained_network_cache_path', [f'out/exp-BCNN-{i:03d}/best_network.pt' for i in exp_range]),
-                Planner('normalization_values_path', [f'out/exp-BCNN-{i:03d}/normalization.yaml' for i in exp_range]),
+                Planner('trained_network_cache_path',
+                        [f'out/exp-BCNN-{i:03d}/best_network.pt' for i in exp_range]),
                 Planner('seed', [1_000 + i for i in exp_range])
             ])
         ])
