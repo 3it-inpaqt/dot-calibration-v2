@@ -411,7 +411,7 @@ train_online_experiment = SequencePlanner([
     CombinatorPlanner([
         Planner('model_type', ['CNN']),
         Planner('nb_train_update', [30_000]),
-        Planner('dropout', [0.1]),
+        Planner('dropout', [0.6]),
         Planner('seed', [1_000 + i for i in exp_range]),
     ]),
     CombinatorPlanner([

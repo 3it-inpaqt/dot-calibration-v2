@@ -368,8 +368,8 @@ class Settings:
 
     # The maximum and minimum voltage that we can request from the connector.
     # This needs to be explicitly defined before to tune an online diagram with a connector.
-    min_voltage: float = float('nan')
-    max_voltage: float = float('nan')
+    range_voltage_x: Sequence = (float('nan'), float('nan'))
+    range_voltage_y: Sequence = (float('nan'), float('nan'))
 
     # The voltage range in which we can choose a random starting point, for each gate.
     start_range_voltage_x: Sequence = (float('nan'), float('nan'))
@@ -505,8 +505,8 @@ class Settings:
             f"Invalid file log level '{self.logger_file_level}'"
 
         # Dataset
-        assert self.research_group in ['louis_gaudreau', 'michel_pioro_ladriere', 'eva_dupont_ferrier', 'stefanie_czischek'], \
-            f'Unknown dataset research group: "{self.research_group}"'
+        assert self.research_group in ['louis_gaudreau', 'michel_pioro_ladriere', 'eva_dupont_ferrier',
+                                       'stefanie_czischek'], f'Unknown dataset research group: "{self.research_group}"'
         assert self.patch_size_x > 0, 'Patch size should be higher than 0'
         assert self.patch_size_y > 0, 'Patch size should be higher than 0'
         assert self.patch_overlap_x >= 0, 'Patch overlapping should be 0 or more'
@@ -551,8 +551,7 @@ class Settings:
         assert self.bayesian_confidence_metric in ['std', 'norm_std', 'entropy', 'norm_entropy'], \
             f'Invalid bayesian confidence metric value "{self.bayesian_confidence_metric}"'
         if self.use_dropconnect:
-            assert self.dropconnect_prob > 0 and self.dropconnect_prob < 1, 'The probability used for dropconnect ' \
-                                                                            'should be between 0 and 1.'
+            assert 0 < self.dropconnect_prob < 1, 'The probability used for dropconnect should be between 0 and 1.'
 
         # Checkpoints
         assert self.checkpoints_per_epoch >= 0, 'The number of checkpoints per epoch should be >= 0'
@@ -568,13 +567,27 @@ class Settings:
         # Connector
         assert len(self.start_range_voltage_x) == 2 and len(self.start_range_voltage_y) == 2, \
             'The start_range of voltage should be a list of 2 values (min, max)'
-        assert ((isnan(self.start_range_voltage_x[0]) and isnan(self.start_range_voltage_x[1])) or
-                (self.start_range_voltage_x[0] <= self.start_range_voltage_x[1])) and \
-               ((isnan(self.start_range_voltage_y[0]) and isnan(self.start_range_voltage_y[1])) or
-                (self.start_range_voltage_y[0] <= self.start_range_voltage_y[1])), \
-            'The first value of the range voltage should be lower or equal to the second'
+        assert len(self.range_voltage_x) == 2 and len(self.range_voltage_y) == 2, \
+            'The range of voltage should be a list of 2 values (min, max)'
         assert self.interaction_mode.lower().strip() in ('auto', 'semi-auto', 'manual'), \
             f'Invalid connector interaction mode: {self.interaction_mode}'
+
+        # If at least one of the voltage ranges is set, check every value consistency
+        if not (isnan(self.range_voltage_x[0]) and isnan(self.range_voltage_x[1]) and
+                isnan(self.range_voltage_y[0]) and isnan(self.range_voltage_y[1])):
+            assert self.range_voltage_x[0] < self.range_voltage_x[1], \
+                'The first value of the range_voltage should be lower than the second one (min, max)'
+            assert self.range_voltage_y[0] < self.range_voltage_y[1], \
+                'The first value of the range_voltage should be lower than the second one (min, max)'
+            assert self.start_range_voltage_x[0] < self.start_range_voltage_x[1], \
+                'The first value of the start_range_voltage should be lower than the second one (min, max)'
+            assert self.start_range_voltage_y[0] < self.start_range_voltage_y[1], \
+                'The first value of the start_range_voltage should be lower than the second one (min, max)'
+            assert (self.start_range_voltage_x[0] >= self.range_voltage_x[0] and
+                    self.start_range_voltage_x[1] <= self.range_voltage_x[1] and
+                    self.start_range_voltage_y[0] >= self.range_voltage_y[0] and
+                    self.start_range_voltage_y[1] <= self.range_voltage_y[1]), \
+                'The start_range_voltage should be inside the range_voltage'
 
         # Circuit Simulation
         if self.simulate_circuit:
@@ -698,7 +711,7 @@ class Settings:
         :return: Human readable description of the settings.
         """
         return 'Settings:\n\t' + \
-               '\n\t'.join([f'{name}: {str(value)}' for name, value in asdict(self).items()])
+            '\n\t'.join([f'{name}: {str(value)}' for name, value in asdict(self).items()])
 
 
 # Singleton setting object

@@ -107,12 +107,14 @@ class Connector:
         :param y_v: The voltage in the y-axis.
         :return: True if the voltage is valid, a RuntimeError is raised otherwise.
         """
-        if x_v < settings.min_voltage or x_v > settings.max_voltage:
+        min_x_v, max_x_v = settings.range_voltage_x
+        min_y_v, max_y_v = settings.range_voltage_y
+        if x_v < min_x_v or x_v > max_x_v:
             raise RuntimeError(f'Voltage {x_v:.4f}V is not valid in the x-axis. '
-                               f'Not in range [{settings.min_voltage:.4f}V, {settings.max_voltage:.4f}V].')
-        if y_v < settings.min_voltage or y_v > settings.max_voltage:
+                               f'Not in range [{min_x_v:.4f}V, {max_x_v:.4f}V].')
+        if y_v < min_y_v or y_v > max_y_v:
             raise RuntimeError(f'Voltage {x_v:.4f}V is not valid in the x-axis. '
-                               f'Not in range [{settings.min_voltage:.4f}V, {settings.max_voltage:.4f}V].')
+                               f'Not in range [{min_y_v:.4f}V, {max_y_v:.4f}V].')
         return True
 
     @staticmethod

@@ -38,10 +38,16 @@ class DiagramOnline(Diagram):
         # Create a virtual axes and discret grid that represent the voltage space to explore.
         # Where NaN values represent the voltage space that has not been measured yet.
         # The min value is included but not the max value (to match with python standards).
-        space_size = int((settings.max_voltage - settings.min_voltage) / settings.pixel_size)  # Assume square space
-        self.x_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
-        self.y_axes = np.linspace(settings.min_voltage, settings.max_voltage, space_size, endpoint=False)
-        self.values = torch.full((space_size, space_size), torch.nan)
+        min_x_v, max_x_v = settings.range_voltage_x
+        min_y_v, max_y_v = settings.range_voltage_y
+        space_size_x = int((max_x_v - min_x_v) / settings.pixel_size)
+        space_size_y = int((max_y_v - min_y_v) / settings.pixel_size)
+        self.x_axes = np.linspace(min_x_v, max_x_v, space_size_x, endpoint=False)
+        self.y_axes = np.linspace(min_y_v, max_y_v, space_size_y, endpoint=False)
+        self.values = torch.full((space_size_y, space_size_x), torch.nan)
+
+        logger.info(f'Initialized online diagram with {space_size_x:,d}x{space_size_y:,d} pixels in range '
+                    f'[{min_x_v:.4f}, {max_x_v:.4f}]V x [{min_y_v:.4f}, {max_y_v:.4f}]V')
 
     def get_random_starting_point(self) -> Tuple[int, int]:
         """
