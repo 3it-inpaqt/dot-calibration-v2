@@ -16,7 +16,7 @@ def plot_autotuning_results(results, overall) -> None:
     # One row per regime and diagram
     df = df.melt(id_vars=['Diagram'], var_name='Number of electrons', value_name='Quantity')
     # Plot
-    plot = sns.barplot(x='Number of electrons', y='Quantity', data=df, saturation=.7,
+    plot = sns.barplot(hue='Number of electrons', y='Quantity', data=df, saturation=.7, legend=False,
                        palette=['grey', 'tab:red', 'tab:green', 'tab:red', 'tab:red', 'tab:red'])
     plot.set_title(f'Final dot regime after autotuning.\nAverage steps: {avg_steps:.1f} '
                    f'({model_success_rate:.1%} line detection success)')
