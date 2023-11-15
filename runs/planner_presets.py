@@ -19,7 +19,8 @@ cnns_lr = 0.001
 ff_update = 15_000
 cnn_update = 10_000
 bcnn_update = 10_000
-ff_dropout = cnn_dropout = bcnn_dropout = 0
+ff_dropout = cnn_dropout = 0.6
+bcnn_dropout = 0
 ffs_batch_norm = [False] * len(ffs_hidden_size)
 cnns_batch_norm = [False] * (len(cnns_hidden_size) + len(settings.conv_layers_kernel))
 
@@ -70,7 +71,7 @@ def run_tasks_planner(runs_planner: BasePlanner,
 
     skipped_runs = list()
 
-    # At every iteration of the loop the settings will be updated according to the planner current state
+    # At every iteration of the loop, the settings will be updated according to the planner current state
     for i, run_name in enumerate(runs_planner):
         logger.info(f'Runs competed: {i}/{nb_runs} ({i / nb_runs:05.1%}) - Next run: {run_name}')
         # Set the name of this run according to the planner
@@ -133,17 +134,17 @@ def run_tasks_planner(runs_planner: BasePlanner,
 
 # All datasets but no cross-validation (for baseline and quick tests)
 datasets_planner = ParallelPlanner([
-    Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau']),
-    Planner('pixel_size', [0.001, 0.0025]),
-    Planner('nb_epoch', [0, 0]),  # Nb epoch defined by nb_train_update
-    Planner('label_offset_x', [6, 7]),
-    Planner('label_offset_y', [6, 7]),
-    Planner('conv_layers_channel', [[12, 24], [6, 12]]),
-    Planner('validate_left_line', [False, True]),
-    Planner('test_diagram', ['', ''])
+    Planner('research_group', ['michel_pioro_ladriere', 'louis_gaudreau', 'eva_dupont_ferrier']),
+    Planner('pixel_size', [0.001, 0.0025, 0.002]),
+    Planner('nb_epoch', [0, 0, 0]),  # Nb epoch defined by nb_train_update
+    Planner('label_offset_x', [6, 7, 6]),
+    Planner('label_offset_y', [6, 7, 6]),
+    Planner('conv_layers_channel', [[12, 24], [6, 12], [6, 12]]),
+    Planner('validate_left_line', [False, True, False]),
+    Planner('test_diagram', ['', '', ''])
 ])
 
-# Default settings for each dataset (for code factorisation)
+# Default settings for each dataset (for code factorization)
 datasets_planner_cross_valid = SequencePlanner([
     CombinatorPlanner([
         Planner('research_group', ['michel_pioro_ladriere']),
@@ -173,6 +174,21 @@ datasets_planner_cross_valid = SequencePlanner([
         Planner('test_diagram',
                 ['Jan12200s', 'Jan06019s', 'Jan07300s', 'Jan10100s', 'jan09_200ser', 'Jan07100s', 'Jan14300s',
                  'oct24100s', 'oct28000s']),
+    ]),
+    CombinatorPlanner([
+        Planner('research_group', ['eva_dupont_ferrier']),
+        Planner('pixel_size', [0.002]),
+        Planner('nb_epoch', [0]),  # Nb epoch defined by nb_train_update
+        Planner('label_offset_x', [6]),
+        Planner('label_offset_y', [6]),
+        Planner('conv_layers_channel', [[6, 12]]),
+        Planner('test_ratio', [0]),
+        Planner('validate_left_line', [False]),
+        # List diagrams for cross-validation
+        Planner('test_diagram',
+                ['20231104-095601_Map_P1_B1', '20230814-154756_B1_P1_map', '20230730-104935_P1_B1',
+                 '20230729-110914_P1_B1', '20230121-095006_Map_B2_D1', '20221129-145606_MAp_B4_D1',
+                 '20221203-222349_Map_B3_D3', '20220630-223107_Map_B3_D3', '20220701-142952_Map_B3_D3']),
     ])
 ])
 
@@ -303,8 +319,6 @@ uncertainty_study_all = CombinatorPlanner([
         # Use pre-trained models
         AdaptativePlanner('trained_network_cache_path',
                           'out/tuning-{seed:02}-{model_type}-{research_group}/best_network.pt'),
-        AdaptativePlanner('normalization_values_path',
-                          'out/tuning-{seed:02}-{model_type}-{research_group}/normalization.yaml'),
     ]),
     # Add noise in the test set
     Planner('test_noise', list(chain(np.arange(0, 0.1, 0.02), np.arange(0.1, 1.01, 0.1)))),
@@ -318,11 +332,8 @@ uncertainty_study_cross_valid = CombinatorPlanner([
         ]),
         # Use pre-trained models
         AdaptativePlanner('trained_network_cache_path',
-                          'out/tuning_cross_valid-{seed:02}-{model_type}-{research_group}-{test_diagram}/'
-                          'best_network.pt'),
-        AdaptativePlanner('normalization_values_path',
-                          'out/tuning_cross_valid-{seed:02}-{model_type}-{research_group}-{test_diagram}/'
-                          'normalization.yaml'),
+                          'out/tuning_cross_valid-{seed:02}-{model_type}-{research_group}-'
+                          '{test_diagram}/best_network.pt'),
     ]),
     # Add noise in the test set
     Planner('test_noise', list(chain(np.arange(0, 0.1, 0.02), np.arange(0.1, 1.01, 0.1)))),
@@ -356,9 +367,7 @@ full_scan_all = ParallelPlanner([
     ]),
     # Use pre-trained models
     AdaptativePlanner('trained_network_cache_path',
-                      'out/tuning-{seed:02}-{model_type}-{research_group}/best_network.pt'),
-    AdaptativePlanner('normalization_values_path',
-                      'out/tuning-{seed:02}-{model_type}-{research_group}/normalization.yaml'),
+                      'out/tuning-{seed:02}-{model_type}-{research_group}/best_network.pt')
 ], runs_name='full_scan-{model_type}-{research_group}')
 
 # Make full scan plots with cross-validation
@@ -376,9 +385,6 @@ full_scan_cross_valid = ParallelPlanner([
     AdaptativePlanner('trained_network_cache_path',
                       'out/tuning_cross_valid-{seed:02}-{model_type}-{research_group}-{test_diagram}/'
                       'best_network.pt'),
-    AdaptativePlanner('normalization_values_path',
-                      'out/tuning_cross_valid-{seed:02}-{model_type}-{research_group}-{test_diagram}/'
-                      'normalization.yaml'),
 ], runs_name='full_scan_cross_valid-{model_type}-{research_group}-{test_diagram}')
 
 # Run training and tuning on all datasets and procedures
