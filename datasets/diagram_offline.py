@@ -275,7 +275,7 @@ class DiagramOffline(Diagram):
 
         # Open the zip file and iterate over all csv files
         # in_zip_path should use "/" separator, no matter the current OS
-        in_zip_path = f'{pixel_size * 1000}mV/' + ('single' if single_dot else 'double') + f'/{research_group}/'
+        in_zip_path = f'{pixel_size * 1000}mV/{research_group}/'
         zip_dir = zipfile.Path(diagrams_path, at=in_zip_path)
 
         if not zip_dir.is_dir():
@@ -285,6 +285,7 @@ class DiagramOffline(Diagram):
         diagrams = []
         nb_no_label = 0
         nb_excluded = 0
+        nb_filtered = 0
         # Iterate over all csv files inside the zip file
         for diagram_name in zip_dir.iterdir():
             file_basename = Path(str(diagram_name)).stem  # Remove extension
@@ -314,10 +315,21 @@ class DiagramOffline(Diagram):
                 # Extract pixel size used for labeling this diagram (in volt)
                 label_pixel_size = float(next(filter(lambda l: l['name'] == 'pixel_size_volt',
                                                      current_labels['classifications']))['text_answer']['content'])
+                # Extract the number of dots for this diagram
+                nb_dots = next(
+                    filter(lambda l: l['name'] == 'nb_dot', current_labels['classifications'])
+                )['radio_answer']['name']
+                # The classification should be "single" or "double"
+                is_single_dot = nb_dots == 'single'
             except StopIteration:
-                # In case, we found a row for this diagram, but no pixel size
-                logger.warning(f'No pixel size found for {file_basename}')
+                # In case, we found a row for this diagram, but with missing label
+                logger.warning(f'Invalid label for {file_basename}')
                 nb_no_label += 1
+                continue
+
+            if single_dot != is_single_dot:
+                # Skip if this is not the type of diagram we want
+                nb_filtered += 1
                 continue
 
             # After python 3.9, it is necessary to specify binary mode for zip open
@@ -367,6 +379,9 @@ class DiagramOffline(Diagram):
 
         if nb_excluded > 0:
             logger.info(f'{nb_excluded} diagram(s) excluded because not in white list')
+
+        if nb_filtered > 0:
+            logger.info(f'{nb_filtered} diagram(s) filtered because not the selected type of diagram')
 
         if len(diagrams) == 0:
             logger.error(f'No diagram loaded in "{zip_dir}"')

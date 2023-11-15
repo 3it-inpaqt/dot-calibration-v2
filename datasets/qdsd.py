@@ -8,7 +8,7 @@ from torch.utils.data import Dataset
 
 from datasets.diagram_offline import DiagramOffline
 from utils.logger import logger
-from utils.output import load_data_cache, save_data_cache, save_normalization, save_results
+from utils.output import save_normalization, save_results
 from utils.settings import settings
 
 DATA_DIR = Path('data')
@@ -151,57 +151,42 @@ class QDSDLines(Dataset):
         :param label_offset: The width of the border to ignore during the patch labeling, in number of pixel (x, y)
         :return A tuple of datasets: (train, test, validation) or (train, test) if validation_ratio is 0
         """
-
         use_test_ratio = isinstance(test_ratio_or_names, float)
         test_patches = []
         patches = []
         if research_group == 'stefanie_czischek':
             patches = QDSDLines.load_stefanie_data()
         else:
-            cache_path = Path(DATA_DIR, 'cache',
-                              f'qdsd_lines_{research_group}_{pixel_size}V_'
-                              f'{"single_" if single_dot else "double_"}'
-                              f'{patch_size[0]}-{patch_size[1]}_{overlap[0]}-{overlap[1]}_'
-                              f'{label_offset[0]}-{label_offset[1]}.p')
+            # Load fom files and labels (but lines only)
+            diagrams = DiagramOffline.load_diagrams(pixel_size,
+                                                    research_group,
+                                                    Path(DATA_DIR, 'interpolated_csv.zip'),
+                                                    Path(DATA_DIR, 'labels.json'),
+                                                    single_dot,
+                                                    True, False)
 
-            if settings.use_data_cache and use_test_ratio and cache_path.is_file():
-                # Fast load from cache
-                patches = load_data_cache(cache_path)
-            else:
-                # Load fom files and labels (but lines only)
-                diagrams = DiagramOffline.load_diagrams(pixel_size,
-                                                        research_group,
-                                                        Path(DATA_DIR, 'interpolated_csv.zip'),
-                                                        Path(DATA_DIR, 'labels.json'),
-                                                        single_dot,
-                                                        True, False)
+            for diagram in diagrams:
+                diagram_patches = diagram.get_patches(patch_size, overlap, label_offset)
+                if not use_test_ratio and diagram.name in test_ratio_or_names:
+                    test_patches.extend(diagram_patches)
+                else:
+                    patches.extend(diagram_patches)
 
-                for diagram in diagrams:
-                    diagram_patches = diagram.get_patches(patch_size, overlap, label_offset)
-                    if not use_test_ratio and diagram.name in test_ratio_or_names:
-                        test_patches.extend(diagram_patches)
-                    else:
-                        patches.extend(diagram_patches)
+            logger.info(f'{len(patches) + len(test_patches)} items loaded from {len(diagrams)} diagrams')
+            if not use_test_ratio:
+                logger.info(f'{len(test_ratio_or_names)} diagrams used for test set ({len(test_patches)} items): '
+                            f'{", ".join(test_ratio_or_names)}')
 
-                logger.info(f'{len(patches) + len(test_patches)} items loaded from {len(diagrams)} diagrams')
-                if not use_test_ratio:
-                    logger.info(f'{len(test_ratio_or_names)} diagrams used for test set ({len(test_patches)} items): '
-                                f'{", ".join(test_ratio_or_names)}')
+            if settings.use_ewma:
+                patches = QDSDLines.use_ewma(patches)
 
-                if settings.use_ewma:
-                    patches = QDSDLines.use_ewma(patches)
-
-                if settings.use_data_cache and use_test_ratio:
-                    # Save in cache for later runs
-                    save_data_cache(cache_path, patches)
-
-        # In case of test set defined by a diagram name the valid ratio should be counted based on train size only
+        # In the case of test set defined by a diagram name, the valid ratio should be counted based on train size only
         nb_patches = len(patches) + len(test_patches) if use_test_ratio else len(patches)
 
         # Shuffle patches before to split them into different the datasets
         shuffle(patches)
 
-        # Create data transform method if test noise is enable
+        # Create data transform method if test noise is enabled
         if settings.test_noise > 0:
             test_transform = [AddGaussianNoise(std=settings.test_noise)]
         else:
@@ -336,6 +321,7 @@ class QDSDLines(Dataset):
         result_patches = [tensor.squeeze(dim=0) for tensor in result_patches]
         patches = list(zip(result_patches, labels))
         return patches
+
 
 class AddGaussianNoise(object):
     """

@@ -375,11 +375,6 @@ class Settings:
     start_range_voltage_x: Sequence = (float('nan'), float('nan'))
     start_range_voltage_y: Sequence = (float('nan'), float('nan'))
 
-    # Use cache from previous measurements to speed up the tuning.
-    # If False, the connector will always request a new measurement.
-    # If True, the connector will use previous data when it is possible.
-    use_cached_measurement: bool = False
-
     # ==================================================================================================================
     # ============================================= Circuit Simulation =================================================
     # ==================================================================================================================
