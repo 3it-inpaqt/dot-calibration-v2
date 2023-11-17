@@ -2,7 +2,7 @@ from runs.planner_presets import full_scan_all, full_scan_cross_valid, run_tasks
     tune_all_cross_valid, tune_oracle, uncertainty_study_all, uncertainty_study_cross_valid
 
 # Start a batch of runs with pre-defined settings to get every result for a specific seed.
-# It is possible to run multiple instance of this script in parallel with different seeds.
+# It is possible to run multiple instances of this script in parallel with different seeds.
 # Every existing run will be skipped.
 if __name__ == '__main__':
     # Run tuning with oracle and random as a baseline

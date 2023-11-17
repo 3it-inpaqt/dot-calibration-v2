@@ -52,7 +52,7 @@ class AutotuningProcedure:
         self._step_name: str = 'Not started'
         self._step_descr: str = ''
 
-        # The default move step. If None the (patch size - offset) is use.
+        # The default move step. If None, the (patch size - offset) is used.
         if default_step is None:
             offset_x, offset_y = self.label_offsets
             self._default_step_x, self._default_step_y = patch_size
@@ -407,7 +407,7 @@ class AutotuningProcedure:
     def _enforce_boundary_policy(self, force: bool = False) -> bool:
         """
         Check if the coordinates violate the boundary policy. If they do, move the coordinates according to the policy.
-        :param force: If True the boundaries are forced, no matter the currant policy.
+        :param force: If True, the boundaries are forced, no matter the currant policy.
         :return: True if the coordinates are acceptable in the current policy, False if not.
         """
 

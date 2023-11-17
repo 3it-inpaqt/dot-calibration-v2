@@ -24,7 +24,7 @@ class Jump(AutotuningProcedure):
     _leftmost_line_coord: Optional[Tuple[int, int]] = None
 
     def _tune(self) -> Tuple[int, int]:
-        # Search first line, if none found return a random position
+        # Search the first line, if none found return a random position
         if not self._search_first_line():
             return self.diagram.get_random_starting_point()
 
@@ -71,7 +71,7 @@ class Jump(AutotuningProcedure):
         nb_exploration_steps = 0
         while nb_exploration_steps < self._max_steps_exploration and not Direction.all_stuck(directions):
 
-            # Move and search line in every not stuck directions
+            # Move and search line in every not stuck direction
             for direction in (d for d in directions if not d.is_stuck):
                 nb_exploration_steps += 1
 
@@ -103,7 +103,7 @@ class Jump(AutotuningProcedure):
         # (Top search, Bottom search)
         searches = (SearchLineSlope(), SearchLineSlope())
 
-        max_angle_search = 65  # Max search angle on both side of the prior knowledge
+        max_angle_search = 65  # Max search angle on both sides of the prior knowledge
         search_step = 8
         # Scan top and bottom with a specific angle range
         for side, search in zip((180, 0), searches):
@@ -254,7 +254,7 @@ class Jump(AutotuningProcedure):
                     if direction.is_stuck:
                         break  # We don't scan if we have reached the border
 
-                    # Skip half line distance left
+                    # Skip half-line distance left
                     self._move_left_perpendicular_to_line(ceil(self._default_step_x * line_step_distance / 2))
 
                     # Go left for 2x the line distance (total 2.5x the line distance)
@@ -341,13 +341,18 @@ class Jump(AutotuningProcedure):
         y_delta = y_line - self.y
         return (y_delta > 0 and m < 0) or (y_delta < 0 and m > 0)
 
-    def _move_relative_to_line(self, angle: float, step_size: Optional[int] = None) -> None:
+    def _move_relative_to_line(self, angle: float, step_size: Optional[int] = None,
+                               avoid_small_steps: bool = False) -> None:
         """
         Shift the current coordinates in a direction relative to the estimated lines directions.
 
         :param angle: The direction relative to the line (in degree).
-        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
-         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        :param step_size: The step size for the shifting (number of pixels).
+            If None, the procedure default value is used, which is the (patch size - offset) if None is specified
+            neither at the initialization.
+        :param avoid_small_steps: If True, the procedure will try to avoid steps smaller than the step size in every
+            axis when reaching a border.
+            If False, the normal border policy is applied.
         """
 
         init_x, init_y = self.x, self.y
@@ -356,23 +361,26 @@ class Jump(AutotuningProcedure):
         distance_x = step_size if step_size is not None else self._default_step_x
         distance_y = step_size if step_size is not None else self._default_step_y
 
-        # Convert angle from degree to radian
+        # Convert the angle from degree to radian
         angle = angle * (pi / 180)
 
         self.x = round(self.x + (distance_x * cos(angle)))
         self.y = round(self.y + (distance_y * sin(angle)))
 
-        # Enforce boundary now to avoid very small steps in some cases
-        if self.is_max_left() or self.is_max_right():
-            if angle < pi:
-                self.y = init_y + distance_y  # Go up
-            else:
-                self.y = init_y - distance_y  # Go down
-        elif self.is_max_up() or self.is_max_down():
-            if angle < pi / 2 or angle > (3 * pi) / 2:
-                self.x = init_x + distance_x  # Go right
-            else:
-                self.x = init_x - distance_x  # Go left
+        if avoid_small_steps:
+            # Enforce boundary now to avoid tiny steps in some cases
+            if self.is_max_left() or self.is_max_right():
+                if angle < pi:
+                    self.y = init_y + distance_y  # Go up
+                else:
+                    self.y = init_y - distance_y  # Go down
+            elif self.is_max_up() or self.is_max_down():
+                if angle < pi / 2 or angle > (3 * pi) / 2:
+                    self.x = init_x + distance_x  # Go right
+                else:
+                    self.x = init_x - distance_x  # Go left
+        else:
+            self._enforce_boundary_policy()
 
     def _move_left_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
         """
@@ -381,7 +389,7 @@ class Jump(AutotuningProcedure):
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        self._move_relative_to_line(270 - self._line_slope, step_size)
+        self._move_relative_to_line(270 - self._line_slope, step_size, avoid_small_steps=True)
 
     def _move_right_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
         """
@@ -390,13 +398,13 @@ class Jump(AutotuningProcedure):
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        self._move_relative_to_line(90 - self._line_slope, step_size)
+        self._move_relative_to_line(90 - self._line_slope, step_size, avoid_small_steps=True)
 
     def _move_up_follow_line(self, step_size: Optional[int] = None) -> None:
-        self._move_relative_to_line(180 - self._line_slope, step_size)
+        self._move_relative_to_line(180 - self._line_slope, step_size, avoid_small_steps=True)
 
     def _move_down_follow_line(self, step_size: Optional[int] = None) -> None:
-        self._move_relative_to_line(-self._line_slope, step_size)
+        self._move_relative_to_line(-self._line_slope, step_size, avoid_small_steps=True)
 
     def _get_avg_line_step_distance(self) -> float:
         """ Get the mean line distance in number of steps. """
