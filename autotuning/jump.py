@@ -382,29 +382,29 @@ class Jump(AutotuningProcedure):
         else:
             self._enforce_boundary_policy()
 
-    def _move_left_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
+    def _move_left_perpendicular_to_line(self, step_size: Optional[int] = None, avoid_small_steps=True) -> None:
         """
         Alias of _move_relative_to_line
 
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        self._move_relative_to_line(270 - self._line_slope, step_size, avoid_small_steps=True)
+        self._move_relative_to_line(270 - self._line_slope, step_size, avoid_small_steps)
 
-    def _move_right_perpendicular_to_line(self, step_size: Optional[int] = None) -> None:
+    def _move_right_perpendicular_to_line(self, step_size: Optional[int] = None, avoid_small_steps=True) -> None:
         """
         Alias of _move_perpendicular_to_line(False)
 
         :param step_size: The step size for the shifting (number of pixels). If None the procedure default
          value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
         """
-        self._move_relative_to_line(90 - self._line_slope, step_size, avoid_small_steps=True)
+        self._move_relative_to_line(90 - self._line_slope, step_size, avoid_small_steps)
 
-    def _move_up_follow_line(self, step_size: Optional[int] = None) -> None:
-        self._move_relative_to_line(180 - self._line_slope, step_size, avoid_small_steps=True)
+    def _move_up_follow_line(self, step_size: Optional[int] = None, avoid_small_steps=True) -> None:
+        self._move_relative_to_line(180 - self._line_slope, step_size, avoid_small_steps)
 
-    def _move_down_follow_line(self, step_size: Optional[int] = None) -> None:
-        self._move_relative_to_line(-self._line_slope, step_size, avoid_small_steps=True)
+    def _move_down_follow_line(self, step_size: Optional[int] = None, avoid_small_steps=True) -> None:
+        self._move_relative_to_line(-self._line_slope, step_size, avoid_small_steps)
 
     def _get_avg_line_step_distance(self) -> float:
         """ Get the mean line distance in number of steps. """

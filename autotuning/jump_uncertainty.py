@@ -43,8 +43,12 @@ class JumpUncertainty(Jump):
 
         nb_search_steps = 0
 
-        up = Direction(last_x=self.x, last_y=self.y, move=self._move_up_follow_line, check_stuck=self.is_max_up)
-        down = Direction(last_x=self.x, last_y=self.y, move=self._move_down_follow_line, check_stuck=self.is_max_down)
+        up = Direction(last_x=self.x, last_y=self.y,
+                       move=lambda: self._move_up_follow_line(avoid_small_steps=False),
+                       check_stuck=self.is_max_up_or_left)
+        down = Direction(last_x=self.x, last_y=self.y,
+                         move=lambda: self._move_down_follow_line(avoid_small_steps=False),
+                         check_stuck=self.is_max_down_or_right)
         directions = [up, down]
 
         best_guess, best_confidence = current_line, current_confidence
@@ -54,7 +58,7 @@ class JumpUncertainty(Jump):
                 nb_search_steps += 1
                 self._step_descr = f'checking line ({nb_search_steps}/{self._max_steps_checking_line})'
 
-                self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
+                self.move_to_coord(direction.last_x, direction.last_y)  # Go to the last position of this direction
                 direction.move()  # Move according to the current direction
                 direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                 direction.is_stuck = direction.check_stuck()  # Check if reach a corner
