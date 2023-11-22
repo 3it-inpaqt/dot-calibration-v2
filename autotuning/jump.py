@@ -42,8 +42,6 @@ class Jump(AutotuningProcedure):
         # Move to one electron coordinates based on the leftmost line found
         self._guess_one_electron()
 
-        # Enforce the boundary policy to make sure the final guess is in the diagram area
-        self._enforce_boundary_policy(force=True)
         return self.get_patch_center()
 
     def _search_first_line(self) -> bool:
@@ -294,7 +292,8 @@ class Jump(AutotuningProcedure):
         x, y = self._leftmost_line_coord
         self.move_to_coord(x, y)
         self._move_right_perpendicular_to_line(ceil(self._default_step_x *
-                                                    (self._get_avg_line_step_distance() / 2 + 1)))
+                                                    (self._get_avg_line_step_distance() / 2 + 1)),
+                                               avoid_small_steps=False)
 
         # Enforce the boundary policy to make sure the final guess is in the diagram area
         self._enforce_boundary_policy(force=True)
@@ -338,7 +337,8 @@ class Jump(AutotuningProcedure):
 
         # Check if the current position is at the left (https://math.stackexchange.com/a/1896651/1053890)
         y_line = m * self.x + b
-        y_delta = y_line - self.y
+        # Invert y delta if oriented to the right
+        y_delta = y_line - self.y if 0 < self._line_slope < 90 else self.y - y_line
         return (y_delta > 0 and m < 0) or (y_delta < 0 and m > 0)
 
     def _move_relative_to_line(self, angle: float, step_size: Optional[int] = None,
@@ -435,7 +435,7 @@ class Jump(AutotuningProcedure):
             self._line_distances = [3]  # Prior assumption about distance between lines
 
         elif settings.research_group == 'eva_dupont_ferrier':
-            self._line_slope = 10  # Prior assumption about line direction
+            self._line_slope = -10  # Prior assumption about line direction
             self._line_distances = [5]  # Prior assumption about distance between lines
 
         else:
