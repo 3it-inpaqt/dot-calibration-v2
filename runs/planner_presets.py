@@ -183,7 +183,7 @@ datasets_planner_cross_valid = SequencePlanner([
         Planner('label_offset_y', [6]),
         Planner('conv_layers_channel', [[6, 12]]),
         Planner('test_ratio', [0]),
-        Planner('validate_left_line', [False]),
+        Planner('validate_left_line', [True]),
         # List diagrams for cross-validation
         Planner('test_diagram',
                 ['20231104-095601_Map_P1_B1', '20230814-154756_B1_P1_map', '20230730-104935_P1_B1',
