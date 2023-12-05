@@ -298,6 +298,23 @@ class AutotuningProcedure:
         if y is not None:
             self.y = y
 
+    def move_to_coord_center(self, x: int = None, y: int = None) -> None:
+        """
+        Move the current coordinate to a center the patch around the target coordinate (instead of moving the patch
+        bottom left corner to the coordinate).
+        Could change x or y or both.
+
+        :param x: The new x coordinate.
+        :param y: The new y coordinate.
+        """
+        patch_size_x, patch_size_y = self.patch_size
+        if x is not None:
+            x = x - (patch_size_x // 2)
+        if y is not None:
+            y = y - (patch_size_y // 2)
+
+        self.move_to_coord(x, y)
+
     def is_max_left(self) -> bool:
         """
         :return: True if the current coordinates have reach the left border of the diagram. False if not.

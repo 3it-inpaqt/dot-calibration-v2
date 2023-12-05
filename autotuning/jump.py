@@ -1,5 +1,6 @@
-from math import atan2, ceil, cos, pi, radians, sin, tan
-from typing import List, Optional, Tuple
+from collections import deque
+from math import atan2, ceil, cos, pi, radians, sin, tan, sqrt
+from typing import List, Optional, Tuple, Deque
 
 from autotuning.autotuning_procedure import AutotuningProcedure
 from classes.data_structures import Direction, SearchLineSlope
@@ -15,13 +16,55 @@ class Jump(AutotuningProcedure):
     _max_steps_validate_left_line: int = 250  # Nb steps
     _max_nb_leftmost_checking: int = 6
 
-    _nb_line_found: int = 0
     # Line angle degree (0 = horizontal | 90 = vertical | 45 = slope -1 | 135 = slope 1)
     _line_slope: float = None
-    # List of distance between lines in pixel
-    _line_distances: List[int] = None
-    # Coordinate of the leftmost line found so far
-    _leftmost_line_coord: Optional[Tuple[int, int]] = None
+    # Line distance prior knowledge as number of pixels
+    _line_distances_prior: int = None
+    # List of lines found
+    _line_sequence: List[Tuple[int, int]] = None
+    # List of lines found with potential duplicates and None for no line found
+    _line_sequence_raw: Deque[Tuple[int, int] | None] = None
+
+    @property
+    def _nb_line_found(self) -> int:
+        """ Number of lines found so far. """
+        return len(self._line_sequence)
+
+    @property
+    def _leftmost_line_coord(self) -> Tuple[int, int] | None:
+        """ Coordinates of the leftmost line found so far. """
+        return self._line_sequence[0] if self._nb_line_found > 0 else None
+
+    @property
+    def _line_avg_distance(self) -> float:
+        """
+        Compute the average distance between lines found.
+        The prior knowledge is considered as an initial measurement.
+
+        :return: Average distance between lines found so far in pixels.
+        """
+        # We start with the prior knowledge
+        distance_sequence = [self._line_distances_prior]
+
+        for i in range(1, self._nb_line_found):
+            # Compute distance between the current line and the previous one
+            x_1, y_1 = self._line_sequence[i - 1]
+            x_2, y_2 = self._line_sequence[i]
+
+            # Special condition for 90° (vertical line) because tan(90) is undefined
+            if self._line_slope == 90:
+                distance_sequence.append(abs(x_1 - x_2))
+            else:
+                # Reconstruct line equation (ax + by + c = 0)
+                a = tan(radians(- self._line_slope))  # Inverted angle because the setup is wierd
+                b = -1
+                c = y_1 - (x_1 * a)
+
+                # Calculate the distance between the line and the point
+                distance_sequence.append(abs(a * x_2 + b * y_2 + c) / sqrt(a ** 2 + b ** 2))
+
+        # Return the average distance between lines
+        return sum(distance_sequence) / len(distance_sequence)
 
     def _tune(self) -> Tuple[int, int]:
         # Search the first line, if none found return a random position
@@ -55,7 +98,6 @@ class Jump(AutotuningProcedure):
 
         # First scan at the start position
         if self._is_confirmed_line():
-            self._nb_line_found = 1
             return True
 
         directions = [
@@ -79,7 +121,6 @@ class Jump(AutotuningProcedure):
                 direction.is_stuck = direction.check_stuck()  # Check if reach a corner
 
                 if self._is_confirmed_line():
-                    self._nb_line_found = 1
                     return True
 
         return False
@@ -94,7 +135,7 @@ class Jump(AutotuningProcedure):
         start_x, start_y = self.x, self.y
 
         # Step distance relative to the line distance to reduce the risk to reach another line
-        step_distance = round(self._default_step_y * self._get_avg_line_step_distance())
+        step_distance = round(self._line_avg_distance)
         # Start angle base on prior knowledge
         start_angle = round(self._line_slope)
 
@@ -167,9 +208,8 @@ class Jump(AutotuningProcedure):
         logger.debug(f'Stage ({3 if settings.auto_detect_slope else 2}) - Search empty')
         self._step_name = f'{3 if settings.auto_detect_slope else 2}. Search 0 e-'
 
-        # At the beginning of this function we should be on a line.
-        # Since this is the first we met, this is the leftmost by default.
-        self._leftmost_line_coord = self.x, self.y
+        # At the beginning of this function, we should be on a line.
+        self._record_line(self.get_patch_center())
 
         nb_search_steps = 0
 
@@ -178,40 +218,35 @@ class Jump(AutotuningProcedure):
         right = Direction(last_x=self.x, last_y=self.y, move=self._move_right_perpendicular_to_line,
                           check_stuck=self.is_max_up_right)
         directions = (left, right)
-        left.no_line_count = 0
-        right.no_line_count = 0
 
         while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions):
             for direction in (d for d in directions if not d.is_stuck):
-                avg_line_distance = self._get_avg_line_step_distance()
-                self._step_descr = f'line slope: {self._line_slope:.0f}°\navg line dist: {avg_line_distance:.1f}\n' \
-                                   f'nb line found: {self._nb_line_found}\n' \
-                                   f'leftmost line: {self._get_leftmost_line_coord_str()}'
+                avg_line_distance = self._line_avg_distance
+                self._step_descr = (f'line slope: {self._line_slope:.0f}°\n'
+                                    f'avg line dist: {self._get_line_distance_str()}\n'
+                                    f'nb line found: {self._nb_line_found}\n'
+                                    f'leftmost line: {self._get_leftmost_line_coord_str()}')
                 nb_search_steps += 1
 
-                self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
+                self.move_to_coord(direction.last_x, direction.last_y)  # Go to the last position of this direction
                 direction.move()  # Move according to the current direction
                 direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                 direction.is_stuck = direction.check_stuck()  # Check if reach a corner
 
                 line_detected = self._is_confirmed_line()  # Check line and save position if leftmost one
 
-                # If new line detected, save distance and reset counter
                 if line_detected:
-                    if direction.no_line_count >= 1:
-                        self._nb_line_found += 1
-                        self._line_distances.append(direction.no_line_count)
-                        # Stop exploring right if we found enough lines
-                        right.is_stuck = right.is_stuck or self._nb_line_found >= self._max_line_explore_right
-                    direction.no_line_count = 0
+                    self._record_line(self.get_patch_center(), is_before=direction == left)
+                    # Stop exploring right if we found enough lines
+                    right.is_stuck = right.is_stuck or self._nb_line_found >= self._max_line_explore_right
                 # If no line detected since long time compare to the average distance between line, stop to go in this
                 # direction
                 else:
-                    direction.no_line_count += 1
-                    # Stop to explore this direction if we found more than 1 line and we found no line in 3x the average
-                    # line distance in this direction.
-                    # TODO could also use the line distance std
-                    if self._nb_line_found > 1 and direction.no_line_count > 3 * avg_line_distance:
+                    self._record_line(None, is_before=direction == left)
+                    # Stop to explore this direction if we found more than 1 line, and we found no line in 3x the
+                    # average line distance in this direction.
+                    last_line_distance = self._distance_from_last_line(is_before=direction == left)
+                    if self._nb_line_found > 1 and last_line_distance > 3 * avg_line_distance:
                         direction.is_stuck = True
 
     def validate_left_line(self) -> None:
@@ -222,7 +257,8 @@ class Jump(AutotuningProcedure):
         """
         logger.debug(f'Stage ({4 if settings.auto_detect_slope else 3}) - Validate left line')
         self._step_name = f'{4 if settings.auto_detect_slope else 3}. Validate leftmost line'
-        line_step_distance = self._get_avg_line_step_distance()
+        line_distance = self._line_avg_distance
+        half_patch_x, half_patch_y = settings.patch_size_x / 2, settings.patch_size_y / 2
 
         # Go up and down following the line
         up = Direction(last_x=0, last_y=0, move=self._move_up_follow_line, check_stuck=self.is_max_up_or_left)
@@ -237,37 +273,45 @@ class Jump(AutotuningProcedure):
             # Both directions start at the leftmost point
             up.last_x, up.last_y = start_point
             down.last_x, down.last_y = start_point
+            # Move the patch coordinates (bottom left corner) have the starting point at the center of the patch
+            up.last_x, up.last_y = up.last_x - half_patch_x, up.last_y - half_patch_y
+            down.last_x, down.last_y = down.last_x - half_patch_x, down.last_y - half_patch_y
             up.is_stuck = down.is_stuck = False  # Unstuck since we are stating at a new location
             while not new_line_found and not Direction.all_stuck((up, down)):
                 for direction in (d for d in (up, down) if not d.is_stuck):
-                    # Check if we reached the maximum number of leftmost search for the current line
+                    # Check if we reached the maximum number of scans for the current line
                     nb_line_search += 1
                     if nb_line_search > self._max_nb_leftmost_checking:
                         return
-                    self.move_to_coord(direction.last_x, direction.last_y)  # Go to last position of this direction
+                    self.move_to_coord(direction.last_x, direction.last_y)  # Go to the last position of this direction
                     # Step distance relative to the line distance
-                    direction.move(round(self._default_step_y * line_step_distance * 2))
+                    direction.move(round(line_distance * 2))
                     direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                     direction.is_stuck = direction.check_stuck()
                     if direction.is_stuck:
                         break  # We don't scan if we have reached the border
 
                     # Skip half-line distance left
-                    self._move_left_perpendicular_to_line(ceil(self._default_step_x * line_step_distance / 2))
+                    self._move_left_perpendicular_to_line(ceil(line_distance / 2))
+                    self._record_line(None)  # We assume there is no line in this skipped section
 
                     # Go left for 2x the line distance (total 2.5x the line distance)
-                    for i in range(ceil(line_step_distance * 2)):
+                    for i in range(ceil(line_distance * 2 / self._default_step_x)):
                         nb_steps += 1
                         # If new line found and this is the new leftmost one, start again the checking loop
-                        if self._is_confirmed_line() and start_point != self._leftmost_line_coord:
-                            self._nb_line_found += 1
-                            new_line_found = True
-                            start_point = self._leftmost_line_coord
+                        if self._is_confirmed_line():
+                            self._record_line(self.get_patch_center())
                             self._step_descr = f'line slope: {self._line_slope:.0f}°\n' \
-                                               f'avg line dist: {line_step_distance:.1f}\n' \
+                                               f'avg line dist: {self._get_line_distance_str()}\n' \
                                                f'nb line found: {self._nb_line_found}\n' \
                                                f'leftmost line: {self._get_leftmost_line_coord_str()}'
-                            break
+                            if start_point != self._leftmost_line_coord:
+                                new_line_found = True
+                                start_point = self._leftmost_line_coord
+                                break
+                        else:
+                            self._record_line(None)
+
                         self._move_left_perpendicular_to_line()
                         if self.is_max_left() or self.is_max_down():
                             break  # Nothing else to see here
@@ -290,9 +334,8 @@ class Jump(AutotuningProcedure):
             return
 
         x, y = self._leftmost_line_coord
-        self.move_to_coord(x, y)
-        self._move_right_perpendicular_to_line(ceil(self._default_step_x *
-                                                    (self._get_avg_line_step_distance() / 2 + 1)),
+        self.move_to_coord_center(x, y)
+        self._move_right_perpendicular_to_line(ceil(self._line_avg_distance / 2 + 1),
                                                avoid_small_steps=False)
 
         # Enforce the boundary policy to make sure the final guess is in the diagram area
@@ -309,10 +352,6 @@ class Jump(AutotuningProcedure):
 
         # Infer with the model at the current position
         line_detected, _ = self.is_transition_line()
-
-        # If this is the leftmost line detected so far, save it
-        if line_detected and (self._leftmost_line_coord is None or self._is_left_relative_to_line()):
-            self._leftmost_line_coord = self.x, self.y
 
         return line_detected
 
@@ -386,8 +425,9 @@ class Jump(AutotuningProcedure):
         """
         Alias of _move_relative_to_line
 
-        :param step_size: The step size for the shifting (number of pixels). If None the procedure default
-         value is used, which is the (patch size - offset) if None is specified neither at the initialisation.
+        :param step_size: The step size for the shifting (number of pixels).
+            If None, the procedure default value is used, which is the (patch size - offset) if None is specified
+            neither at the initialization.
         """
         self._move_relative_to_line(270 - self._line_slope, step_size, avoid_small_steps)
 
@@ -406,21 +446,75 @@ class Jump(AutotuningProcedure):
     def _move_down_follow_line(self, step_size: Optional[int] = None, avoid_small_steps=True) -> None:
         self._move_relative_to_line(-self._line_slope, step_size, avoid_small_steps)
 
-    def _get_avg_line_step_distance(self) -> float:
-        """ Get the mean line distance in number of steps. """
-        return sum(self._line_distances) / len(self._line_distances)
+    def _record_line(self, coord: Tuple[int, int] | None, is_before: bool = True) -> None:
+        """
+        Record a line in the line sequence.
+        If is_before is true, we record it in the direction of the empty regime.
+        Otherwise, we record it while going away from the empty regime.
+
+        :param coord: Coordinates of the line found or None if no line found.
+        """
+        if is_before:
+            self._line_sequence_raw.appendleft(coord)
+        else:
+            self._line_sequence_raw.append(coord)
+        # Recalculate the line clean sequence (remove duplicates measurements of the same line)
+        self._calculate_line_sequence()
+
+    def _calculate_line_sequence(self) -> None:
+        """
+        Recalculate the line sequence by removing duplicates measurements of the same line.
+        And remove the None values that represent no line found.
+        """
+        self._line_sequence.clear()
+        consecutive_lines = []
+        for record in list(self._line_sequence_raw) + [None]:
+            # If no line found, or we reach the end of the sequence, add the previous line coordinates
+            if record is None:
+                if len(consecutive_lines) == 1:
+                    # Add the previous line coordinates based on the only measurement
+                    self._line_sequence.append(consecutive_lines[0])
+                elif len(consecutive_lines) > 1:
+                    # Add the previous line coordinates, calculated the center between the first and last measurement
+                    x_1, y_1 = consecutive_lines[0]
+                    x_2, y_2 = consecutive_lines[-1]
+                    self._line_sequence.append((round((x_1 + x_2) / 2), round((y_1 + y_2) / 2)))
+                consecutive_lines.clear()
+            else:
+                consecutive_lines.append(record)
+
+    def _distance_from_last_line(self, is_before: bool = True) -> float:
+        """
+        Compute the distance between the current position and the last line found in a specific direction.
+        :param is_before: If True, compute the distance from the last line found in the direction of the empty regime.
+            Otherwise, compute the distance from the last line found while going away from the empty regime.
+        :return: Distance in pixels.
+        """
+        last_line_coord = self._line_sequence[0 if is_before else -1]
+        # TODO make it more accurate by using the distance between current position and the line instead of the distance
+        #  between the two points
+        return sqrt((self.x - last_line_coord[0]) ** 2 + (self.y - last_line_coord[1]) ** 2)
 
     def _get_leftmost_line_coord_str(self) -> str:
         """
         :return: Leftmost coordinates with volt conversion.
         """
-        if self._leftmost_line_coord is None:
+        if len(self._line_sequence) == 0:
             return 'None'
 
-        x, y = self._leftmost_line_coord
+        x, y = self._line_sequence[0]
         x_volt, y_volt = self.diagram.coord_to_voltage(x, y)
 
         return f'{x_volt:.2f}V,{y_volt:.2f}V'
+
+    def _get_line_distance_str(self) -> str:
+        """
+        :return: Average distance between lines as a string with volt conversion.
+        """
+        if len(self._line_sequence) == 0:
+            return 'None'
+
+        return f'{self._line_avg_distance * settings.pixel_size:.3f}V'
 
     def reset_procedure(self):
         super().reset_procedure()
@@ -428,19 +522,20 @@ class Jump(AutotuningProcedure):
         # TODO move in settings
         if settings.research_group == 'michel_pioro_ladriere':
             self._line_slope = 75  # Prior assumption about line direction
-            self._line_distances = [5]  # Prior assumption about distance between lines
+            self._line_distances_prior = 30  # Prior assumption about distance between lines (5 patches)
 
         elif settings.research_group == 'louis_gaudreau':
             self._line_slope = 45  # Prior assumption about line direction
-            self._line_distances = [3]  # Prior assumption about distance between lines
+            self._line_distances_prior = 16  # Prior assumption about distance between lines (4 patches)
 
         elif settings.research_group == 'eva_dupont_ferrier':
             self._line_slope = -10  # Prior assumption about line direction
-            self._line_distances = [5]  # Prior assumption about distance between lines
+            self._line_distances_prior = 30  # Prior assumption about distance between lines (5 patches)
 
         else:
             logger.warning(f'No prior knowledge defined for the dataset: {settings.research_group}')
             self._line_slope = 45  # Prior assumption about line direction
-            self._line_distances = [4]  # Prior assumption about distance between lines
+            self._line_distances_prior = 4  # Prior assumption about distance between lines
 
-        self._leftmost_line_coord = None
+        self._line_sequence = []
+        self._line_sequence_raw = deque()

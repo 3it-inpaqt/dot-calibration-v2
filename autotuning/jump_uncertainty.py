@@ -26,10 +26,6 @@ class JumpUncertainty(Jump):
             line_detected = self._checking_line(line_detected, confidence)
             self.move_to_coord(x, y)  # Back to the position we were before checking
 
-        # If this is the leftmost line detected so far, save it
-        if line_detected and (self._leftmost_line_coord is None or self._is_left_relative_to_line()):
-            self._leftmost_line_coord = self.x, self.y
-
         return line_detected
 
     def _checking_line(self, current_line: bool, current_confidence: float) -> bool:
