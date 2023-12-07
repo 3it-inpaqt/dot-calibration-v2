@@ -101,10 +101,10 @@ class Jump(AutotuningProcedure):
             return True
 
         directions = [
-            Direction(last_x=self.x, last_y=self.y, move=self.move_down_left, check_stuck=self.is_max_down_left),
-            Direction(last_x=self.x, last_y=self.y, move=self.move_up_left, check_stuck=self.is_max_up_left),
-            Direction(last_x=self.x, last_y=self.y, move=self.move_up_right, check_stuck=self.is_max_up_right),
-            Direction(last_x=self.x, last_y=self.y, move=self.move_down_right, check_stuck=self.is_max_down_right),
+            Direction(last_x=self.x, last_y=self.y, move=self.move_down_left, check_stuck=self.is_corner),
+            Direction(last_x=self.x, last_y=self.y, move=self.move_up_left, check_stuck=self.is_corner),
+            Direction(last_x=self.x, last_y=self.y, move=self.move_up_right, check_stuck=self.is_corner),
+            Direction(last_x=self.x, last_y=self.y, move=self.move_down_right, check_stuck=self.is_corner),
         ]
 
         # Stop if max exploration steps reach or all directions are stuck (reach corners)
@@ -214,9 +214,9 @@ class Jump(AutotuningProcedure):
         nb_search_steps = 0
 
         left = Direction(last_x=self.x, last_y=self.y, move=self._move_left_perpendicular_to_line,
-                         check_stuck=self.is_max_down_left)
+                         check_stuck=self.is_corner)
         right = Direction(last_x=self.x, last_y=self.y, move=self._move_right_perpendicular_to_line,
-                          check_stuck=self.is_max_up_right)
+                          check_stuck=self.is_corner)
         directions = (left, right)
 
         while nb_search_steps < self._max_steps_search_empty and not Direction.all_stuck(directions):

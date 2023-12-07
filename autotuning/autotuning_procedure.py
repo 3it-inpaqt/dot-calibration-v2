@@ -421,6 +421,12 @@ class AutotuningProcedure:
         """
         return self.is_max_down() or self.is_max_right()
 
+    def is_corner(self) -> bool:
+        """
+        :return: True if the current coordinates have reached a corner of the diagram. False if not.
+        """
+        return self.is_max_up_left() or self.is_max_up_right() or self.is_max_down_left() or self.is_max_down_right()
+
     def _enforce_boundary_policy(self, force: bool = False) -> bool:
         """
         Check if the coordinates violate the boundary policy. If they do, move the coordinates according to the policy.
