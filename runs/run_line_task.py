@@ -8,6 +8,8 @@ import torch
 from codetiming import Timer
 from torch.utils.data import Dataset
 
+from circuit_simulation.analog_tester import test_analog
+from circuit_simulation.circuit_simulator import CircuitSimulator
 from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
 from datasets.qdsd import QDSDLines
@@ -25,8 +27,6 @@ from utils.metrics import network_metrics
 from utils.output import init_out_directory, save_results, save_timers, set_plot_style
 from utils.settings import settings
 from utils.timer import SectionTimer
-from circuit_simulation.analog_tester import test_analog
-from circuit_simulation.circuit_simulator import CircuitSimulator
 
 
 def preparation() -> None:
@@ -175,7 +175,8 @@ def tune_confidence_thresholds(network, dataset, device) -> List[float]:
     max_size = nb_per_case.max()
     confidence_padded = np.array([[c + [np.nan] * (max_size - len(c)) for c in pred] for pred in confidence_per_case])
 
-    thresholds = [t / 400 for t in range(400)]
+    # 200 steps between confidence 0.5 and 1.0
+    thresholds = [t / 400 for t in range(200, 400)]
     scores_history = []
 
     best_scores = [max_size] * nb_classes

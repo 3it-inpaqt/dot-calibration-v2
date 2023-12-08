@@ -17,8 +17,8 @@ cnns_hidden_size = [200, 100]
 ffs_lr = 0.0005
 cnns_lr = 0.001
 ff_update = 15_000
-cnn_update = 10_000
-bcnn_update = 10_000
+cnn_update = 30_000
+bcnn_update = 30_000
 ff_dropout = cnn_dropout = 0.6
 bcnn_dropout = 0
 ffs_batch_norm = [False] * len(ffs_hidden_size)
@@ -140,7 +140,7 @@ datasets_planner = ParallelPlanner([
     Planner('label_offset_x', [6, 7, 6]),
     Planner('label_offset_y', [6, 7, 6]),
     Planner('conv_layers_channel', [[12, 24], [6, 12], [6, 12]]),
-    Planner('validate_left_line', [False, True, False]),
+    Planner('validate_left_line', [False, True, True]),
     Planner('test_diagram', ['', '', ''])
 ])
 

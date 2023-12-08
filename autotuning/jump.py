@@ -285,14 +285,14 @@ class Jump(AutotuningProcedure):
                         return
                     self.move_to_coord(direction.last_x, direction.last_y)  # Go to the last position of this direction
                     # Step distance relative to the line distance
-                    direction.move(round(line_distance * 2))
+                    direction.move(round(line_distance * 2), False)
                     direction.last_x, direction.last_y = self.x, self.y  # Save current position for next time
                     direction.is_stuck = direction.check_stuck()
                     if direction.is_stuck:
                         break  # We don't scan if we have reached the border
 
                     # Skip half-line distance left
-                    self._move_left_perpendicular_to_line(ceil(line_distance / 2))
+                    self._move_left_perpendicular_to_line(ceil(line_distance / 2), False)
                     self._record_line(None)  # We assume there is no line in this skipped section
 
                     # Go left for 2x the line distance (total 2.5x the line distance)
@@ -418,8 +418,8 @@ class Jump(AutotuningProcedure):
                     self.x = init_x + distance_x  # Go right
                 else:
                     self.x = init_x - distance_x  # Go left
-        else:
-            self._enforce_boundary_policy()
+
+        self._enforce_boundary_policy()
 
     def _move_left_perpendicular_to_line(self, step_size: Optional[int] = None, avoid_small_steps=True) -> None:
         """
