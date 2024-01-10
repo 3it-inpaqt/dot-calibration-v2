@@ -1,5 +1,5 @@
 from runs.planner_presets import full_scan_all, full_scan_cross_valid, run_tasks_planner, tune_all, \
-    tune_all_cross_valid, tune_oracle, uncertainty_study_all, uncertainty_study_cross_valid
+    tune_all_cross_valid, tune_oracle
 
 # Start a batch of runs with pre-defined settings to get every result for a specific seed.
 # It is possible to run multiple instances of this script in parallel with different seeds.
@@ -17,7 +17,7 @@ if __name__ == '__main__':
     run_tasks_planner(full_scan_all)
 
     # Uncertainty study
-    run_tasks_planner(uncertainty_study_all, tuning_task=False)
+    # run_tasks_planner(uncertainty_study_all, tuning_task=False)
 
     # ================== Cross-Validation ==================
 
@@ -28,4 +28,4 @@ if __name__ == '__main__':
     run_tasks_planner(full_scan_cross_valid)
 
     # Uncertainty study
-    run_tasks_planner(uncertainty_study_cross_valid, tuning_task=False)
+    # run_tasks_planner(uncertainty_study_cross_valid, tuning_task=False)
