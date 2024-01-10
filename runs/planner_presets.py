@@ -141,7 +141,8 @@ datasets_planner = ParallelPlanner([
     Planner('label_offset_y', [6, 7, 6]),
     Planner('conv_layers_channel', [[12, 24], [6, 12], [6, 12]]),
     Planner('validate_left_line', [False, True, True]),
-    Planner('test_diagram', ['', '', ''])
+    Planner('test_diagram', ['', '', '']),
+    Planner('test_ratio', [0.2, 0.2, 0.2]),
 ])
 
 # Default settings for each dataset (for code factorization)
