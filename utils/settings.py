@@ -91,7 +91,7 @@ class Settings:
     # Always skipped if patches are loaded from cache.
     plot_diagrams: bool = True
 
-    # If True, images are saved in a format adapted to latex format (vectorial and no title).
+    # If True, images are also saved in a format adapted to latex format (vectorial and transparent background).
     image_latex_format: bool = False
 
     # The number of results to plot for each procedure.

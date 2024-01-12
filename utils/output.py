@@ -262,12 +262,13 @@ def save_plot(file_name: str, allow_overwrite: bool = False, save_in_buffer: boo
 
     save_path = None
     if settings.is_named_run() and settings.save_images:
-        out_format = 'svg' if settings.image_latex_format else 'png'
-        save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, out_format, allow_overwrite)
+        out_formats = ['png', 'svg'] if settings.image_latex_format else ['png']
+        for out_format in out_formats:
+            save_path = get_save_path(Path(OUT_DIR, settings.run_name, 'img'), file_name, out_format, allow_overwrite)
 
-        # The tight bbox will remove white space around the image, the image "figsize" won't be respected.
-        figure.savefig(save_path, dpi=200, transparent=settings.image_latex_format, bbox_inches='tight')
-        logger.debug(f'Plot saved in {save_path}')
+            # The tight bbox will remove white space around the image, the image "figsize" won't be respected.
+            figure.savefig(save_path, dpi=200, transparent=out_format == 'svg', bbox_inches='tight')
+            logger.debug(f'Plot saved in {save_path}')
 
     # Plot image or close it
     figure.show(block=False) if settings.show_images else plt.close(figure)

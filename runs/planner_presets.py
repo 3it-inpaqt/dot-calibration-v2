@@ -351,6 +351,7 @@ tune_oracle = CombinatorPlanner([
     datasets_planner_cross_valid,
     # Setting for faster runs
     Planner('save_images', [False]),
+    Planner('save_gif', [False]),
     Planner('save_video', [False]),
     Planner('plot_diagrams', [False]),
 ], runs_name='tuning-{seed:02}-oracle-{research_group}-{test_diagram}')
@@ -394,7 +395,7 @@ tune_all = CombinatorPlanner([
     models_planner,
     datasets_planner,
     # Setting for faster runs
-    Planner('save_images', [False]),
+    # Planner('save_images', [False]),
     Planner('plot_diagrams', [False]),
     Planner('checkpoints_after_updates', [400]),
 ], runs_name='tuning-{seed:02}-{model_type}-{research_group}')
@@ -405,7 +406,7 @@ tune_all_cross_valid = CombinatorPlanner([
     models_planner,
     datasets_planner_cross_valid,
     # Setting for faster runs
-    Planner('save_images', [False]),
+    # Planner('save_images', [False]),
     Planner('plot_diagrams', [False]),
     Planner('checkpoints_after_updates', [400]),
 ], runs_name='tuning_cross_valid-{seed:02}-{model_type}-{research_group}-{test_diagram}')
