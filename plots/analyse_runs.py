@@ -1,3 +1,4 @@
+import math
 from collections import Counter
 from pathlib import Path
 from typing import List, Union
@@ -41,8 +42,12 @@ def load_runs_clean(patterns: Union[str, List[str]]) -> pd.DataFrame:
 
     # Move metrics results to root level
     for metric in ['recall', 'precision', 'accuracy', 'f1']:
-        data[metric.capitalize()] = data['results.final_classification_results'].map(lambda a: a[metric])
-        data['ct-' + metric.capitalize()] = data['results.threshold_classification_results'].map(lambda a: a[metric])
+        data[metric.capitalize()] = (data['results.final_classification_results']
+                                     .map(lambda a: None if isinstance(a, float) and math.isnan(a) else a[metric]))
+        data['ct-' + metric.capitalize()] = (data['results.threshold_classification_results']
+        .map(
+            lambda a: None if isinstance(a, float) and math.isnan(a) else a[metric])
+        )
 
     return data
 
@@ -452,8 +457,8 @@ def uncertainty_test_noise():
 
 
 def results_table():
-    data = load_runs_clean(['tuning-10*'])
-    oracle_baseline = load_runs(['tuning-oracle-*'])
+    data = load_runs_clean(['tuning-42000-*'])
+    oracle_baseline = load_runs(['tuning-42000-oracle-*'])
     data = pd.concat([data, oracle_baseline], ignore_index=True)
 
     # Make a dataframe with a line per tuning result
@@ -656,4 +661,4 @@ if __name__ == '__main__':
     # Set plot style
     set_plot_style()
 
-    process_online_experiment_results('20231104-095601_Map_P1_B1')
+    results_table()
