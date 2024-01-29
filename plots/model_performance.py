@@ -1,16 +1,15 @@
-from pathlib import Path
-from typing import Literal
 import math
+from typing import Literal
 
+import numpy as np
 import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
 from pandas import DataFrame
 from torchmetrics.classification import BinaryConfusionMatrix
-import numpy as np
 
-from utils.output import save_plot
 from utils.misc import short_number
+from utils.output import save_plot
 
 
 def plot_confusion_matrix(cm: BinaryConfusionMatrix, title: str, file_name: str,

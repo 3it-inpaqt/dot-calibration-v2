@@ -72,7 +72,6 @@ def plot_train_progress(loss_evolution: List[float],
                 ax2.plot(checkpoint_batches, valid_main_metric, label=f'validation {settings.main_metric}',
                          color='green')
 
-
                 # Star marker for best validation metric
                 if best_checkpoint and best_checkpoint['batch_num'] is not None:
                     ax2.plot(best_checkpoint['batch_num'], best_checkpoint['score'], color='green',
@@ -299,6 +298,7 @@ def plot_confidence_threshold_tuning(thresholds: List, scores_history: List, sam
               f'{sample_size} samples from {dataset_role} dataset')
 
     save_plot(f'threshold_tuning_{dataset_role}')
+
 
 def plot_reliability_diagram(confidence_per_case: List[List[List[float]]], dataset_role: str,
                              bins: int = 10, adaptative_bins: bool = False) -> None:
