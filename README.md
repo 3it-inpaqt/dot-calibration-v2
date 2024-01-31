@@ -33,23 +33,49 @@ logger_console_level: info
 show_images: False
 model_type: CNN
 trained_network_cache_path: out/cnn/best_network.pt
-normalization_values_path: out/cnn/normalization.yaml
-nb_epoch: 300
+dropout: 0.6
+nb_train_update: 30000
 ```
 
 ## Start run
 
-### Line classification task
+### Line classification task (NN train & test)
 
 ```shell
 python3 start_lines.py
 ```
 
-### Charge state autotuning task
+> **Note**: The dataset should be downloaded and extracted in the `data` folder.
+
+### Offline charge autotuning
 
 ```shell
 python3 start_tuning_offline.py
 ```
+
+> **Note**: If the `trained_network_cache_path` setting is not set, the script will run the line classification task
+> first to train a new model.
+
+### Online charge autotuning
+
+```shell
+python3 start_tuning_online.py
+```
+
+> **Note**: The `trained_network_cache_path` need to be set.
+>
+> A `connectors` need to be implemented to communicate with the experimental equipment.
+> See [connectors/py_hegel.py](connectors/py_hegel.py) for an example.
+
+### Reproduce the results of the paper
+
+```shell
+python3 start_full_exp.py --seed 42000
+```
+
+> **Note**: The `--seed` argument could be incremented to repeat the experiment with different random seeds.
+>
+> Running this script can take several days (3 days with a GPU 3070Ti).
 
 ## Files structure
 

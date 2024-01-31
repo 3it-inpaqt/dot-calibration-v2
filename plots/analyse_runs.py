@@ -457,8 +457,8 @@ def uncertainty_test_noise():
 
 
 def results_table():
-    data = load_runs_clean(['tuning-42000-*'])
-    oracle_baseline = load_runs(['tuning-42000-oracle-*'])
+    data = load_runs_clean(['tuning-42*'])
+    oracle_baseline = load_runs(['tuning-42*-oracle-*'])
     data = pd.concat([data, oracle_baseline], ignore_index=True)
 
     # Make a dataframe with a line per tuning result
@@ -563,7 +563,7 @@ def results_table():
     print('\n\n----------------------------------------------------\n\n')
     by_method_seed_var.columns = [col.replace('\n', r'\\') for col in by_method_seed_var.columns]
     print(tabulate(by_method_seed_var, headers='keys', tablefmt='fancy_grid', showindex=False,
-                   floatfmt=(None, None, '.1%', '.1%', None, '.0f', '.1%', '.1%')))
+                   floatfmt=(None, None, '.1%', '.2%', None, '.0f', '.1%', '.2%')))
 
 
 def process_online_experiment_results(offline_diagram: str):
