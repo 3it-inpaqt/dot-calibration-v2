@@ -1,0 +1,27 @@
+Version 4
+SymbolType BLOCK
+LINE Normal 0 -71 0 -80
+LINE Normal 0 72 0 81
+RECTANGLE Normal -64 -72 80 72
+TEXT -9 -66 Left 0 VDD
+TEXT -10 65 Left 0 VSS
+TEXT 0 -34 Left 2 Ip-In
+WINDOW 0 45 -56 Bottom 0
+PIN -64 -48 LEFT 8
+PINATTR PinName In
+PINATTR SpiceOrder 1
+PIN -64 -16 LEFT 8
+PINATTR PinName Ip
+PINATTR SpiceOrder 2
+PIN 0 -80 NONE 8
+PINATTR PinName VDD
+PINATTR SpiceOrder 3
+PIN 0 80 NONE 8
+PINATTR PinName VSS
+PINATTR SpiceOrder 4
+PIN 80 0 RIGHT 8
+PINATTR PinName Iout
+PINATTR SpiceOrder 5
+PIN -64 48 LEFT 8
+PINATTR PinName Vref
+PINATTR SpiceOrder 6

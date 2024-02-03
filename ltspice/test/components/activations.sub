@@ -1,0 +1,408 @@
+.SUBCKT ReLU IN OUT
+
+Ve        Ve       0    3
+Vcc-      Vcc-     0    -5
+Vcc+      Vcc+     0    5
+
+RReLU_l1    IN         ReLU_in  40
+XUReLU		0          ReLU_in  Vcc+ Vcc- ReLU_out MAX4223
+DReLU_fb	ReLU_out   ReLU_in  D_BAV74_1
+DReLU_o		ReLU_inter ReLU_out D_BAV74_1
+RReLU_fb	ReLU_inter ReLU_in  40
+
+RReLU_l2     ReLU_inter ReLU_inv_in 1000
+XUReLU_inv   0          ReLU_inv_in Vcc+ Vcc- OUT Ve OPA684_0
+RReLU_inv_fb OUT        ReLU_inv_in 1000
+
+.MODEL D_BAV74_1 D( IS=2.073F N=1 BV=50 IBV=100N RS=1.336
++      CJO=2P VJ=750M M=330M FC=500M TT=5.771N
++      EG=1.11 XTI=3 KF=0 AF=1 )
+
+.ENDS ReLU
+
+.SUBCKT HardTanh IN OUT PARAMS: V_clip=-500m
+
+Vb	      Vbias    0   {V_clip}
+Ve        Ve       0    3
+Vcc-      Vcc-     0    -5
+Vcc+      Vcc+     0    5
+
+RReLU_l1     	 IN         ReLU_in  40
+XUReLU		     0          ReLU_in  Vcc+ Vcc- ReLU_out MAX4223
+DReLU_fb	     ReLU_out   ReLU_in  D_BAV74_1
+DReLU_o		     ReLU_inter ReLU_out D_BAV74_1
+RReLU_fb	     ReLU_inter ReLU_in  40
+
+RReLU_l2     ReLU_inter ReLU_inv_in 1000
+XUReLU_inv   0          ReLU_inv_in Vcc+ Vcc- OUT_ReLU Ve OPA684_0
+RReLU_inv_fb OUT_ReLU   ReLU_inv_in 1000
+Rclip	     OUT_ReLU   OUT         1000
+Dclip	     OUT Vbias  D_BAV74_1
+Dclip2       0  OUT     D_BAV74_1
+
+.MODEL D_BAV74_1 D( IS=2.073F N=1 BV=50 IBV=100N RS=1.336
++      CJO=2P VJ=750M M=330M FC=500M TT=5.771N
++      EG=1.11 XTI=3 KF=0 AF=1 )
+.ENDS HardTanh
+
+.SUBCKT OPA684_0  + -  V+ V- OUT DISA
+C_C8         0 DISA  1P  
+R_RP2        2NDPOLE 0  1K
+Q_Q1         12 13 13 PNP8 .25
+G_G1         11 0 POLY(1) 10 0 -2.468230611E-06 1.370624256E-06 0 0
+D_D1         L 10 DX 1
+D_D2         10 H DX 1
+D_D4         37 2NDPOLE DX 1
+R_R1         DISA 10  5.625K  
+R_R3         0 13  1436895674  
+Q_Q3         17 17 + PNP8 .375 
+Q_Q2         16 16 + NPN8 .375
+X_F1         13 14 15 16 OPA684_F1
+R_R7         V- 24  1000  
+C_C4         0 V-  1P  
+R_R5         V- 18  3000  
+G_G2         0 2NDPOLE ZO 0 .001
+R_R9         V- 29  1K  
+Q_Q4         21 16 2 NPN8 .375
+X_F3         19 20 25 26 OPA684_F3
+R_R8         25 V+  1K  
+R_R6         19 V+  1000  
+R_R4         15 V+  3000  
+C_C7         V+ 0  1P  
+R_R2         12 V+  1160  
+Q_Q13        V- 41 OUT PNP8 9
+Q_Q12        V+ 39 OUT NPN8 9
+Q_Q5         22 17 2 PNP8 .375
+R_R3A        2 2A  72
+R_R11        V- 35  100
+Q_Q8         32 26 2A NPN8 .25
+R_R10         30 V+  100  
+Q_Q6         22 22 23 NPN8 .125
+Q_Q7         21 21 20 PNP8 .125
+Q_Q7A         28 27 26 PNP8 .25
+Q_Q6A         26 27 28 NPN8 .25
+Q_Q10A         40 40 39 PNP8 4
+Q_Q11A         40 40 41 NPN8 4
+Q_Q10         32 32 31 PNP8 .25
+X_F2    14 11 17 18 OPA684_F2 
+E_E3         38 39 POLY(2) 0 2NDPOLE  V+ V- -781.98M 1 0.5
+E_E4         41 42 POLY(2) 2NDPOLE 0  V+ V- -789.07M 1 0.5
+R_RZ         0 ZO  495K  
+Q_Q11         33 33 34 NPN8 .25
+Q_Q9         33 28 2A PNP8 .25
+X_F4    23 24 28 29 OPA684_F4 
+C_CP2         0 2NDPOLE  .1F  
+R_R12         38 V+  190  
+R_R13         V- 42  190  
+C_C8B         0 +  1.5P  
+E_E2         36 0 POLY(1) V+ V- -1.55 .5 0 0
+E_E1         37 0 POLY(1) V- V+ 1.15 .5 0 0
+V_V2         H 0 2.616
+V_V1         L 0 2.2125
+D_U7         43 0 DN1 .25
+D_U8         0 44 DN1 
+I_I22         44 43 DC 5.9UA  
+G_G10         + 0 POLY(2) 43 0 44 0 0 .95M .95M
+D_D10         0 46 DN3 .25
+D_D9         45 0 DN3 .25
+G_G11         - 0 POLY(2) 45 0 46 0 0 1.79M 1.79M
+X_F5    30 31 V+ ZO OPA684_F5 
+X_F6    34 35 ZO V- OPA684_F6 
+D_D3         2NDPOLE 36 DX 1
+C_CZ         0 ZO  1.55P  
+L_L4         2A -  59NH  
+C_C9         0 OUT  1.8P  
+I_I24         46 45 DC 4.55UA   
+* DX D MODEL
+* UPDATED USING MODEL EDITOR RELEASE 9.2.1 ON 02/26/02 AT 11:51
+* THE MODEL EDITOR IS A PSPICE PRODUCT.
+.MODEL DX D
++ IS=1.0000E-15  
+*
+*MODEL DN1 IS FOR MACRO MODELS
+*CREATED BY REA SCHMID 9/23/01
+.MODEL DN1 D( IS=.1F AF=1.0 KF=29.2E-17) 
+*
+*MODEL DN3 USED FOR MACRO MODELS
+*CREATED BY REA SCHMID 9/23/01
+.MODEL DN3 D( IS=.1F AF=1.0 KF=39.0E-17) 
+*
+.MODEL D1 D(
++EG=0.831 CJO=2.32E-16 RS=12.0 IS=3.85E-16
++N=1.033  XTI=2.0 VJ=0.75 M=0.33)
+*
+.MODEL PNP8 PNP
++ IS = 7.999E-18 BF = 1.418E+02 NF = 1.000E+00 VAF= 4.158E+01
++ IKF= 1.085E-01 ISE= 2.233E-15 NE = 1.505E+00 BR = 3.252E+01
++ NR = 1.050E+00 VAR= 1.093E+00 IKR= 5.000E-05 ISC= 6.621E-16
++ NC = 1.150E+00 RB = 6.246E+01 IRB= 0.000E+00 RBM= 2.240E+00
++ RE = 2.537E+00 RC = 1.260E+02 CJE= 9.502E-14 VJE= 7.320E-01
++ MJE= 4.930E-01 TF = 1.303E-11 XTF= 3.500E+01 VTF= 3.259E+00
++ ITF= 2.639E-01 PTF= 0.000E+00 CJC= 1.080E-13 VJC= 7.743E-01
++ MJC= 5.000E-01 XCJC=8.504E-02 TR = 1.500E-10 CJS= 1.290E-13
++ VJS= 9.058E-01 MJS= 4.931E-01 XTB= 1.732E+00 EG = 1.120E+00
++ XTI= 2.000E+00 KF = 3.500E-16 AF = 1.000E+00 FC = 8.500E-01
+*
+.MODEL NPN8 NPN
++ IS = 7.604E-18 BF = 1.570E+02 NF = 1.000E+00 VAF= 7.871E+01
++ IKF= 3.975E-02 ISE= 3.219E-14 NE = 2.000E+00 BR = 7.614E-01
++ NR = 1.000E+00 VAR= 1.452E+00 IKR= 8.172E-02 ISC= 7.618E-21
++ NC = 1.847E+00 RB = 1.060E+02 IRB= 0.000E+00 RBM= 2.400E+00
++ RE = 2.520E+00 RC = 1.270E+02 CJE= 1.120E-13 VJE= 7.591E-01
++ MJE= 5.406E-01 TF = 1.213E-11 XTF= 2.049E+00 VTF= 1.813E+00
++ ITF= 4.293E-02 PTF= 0.000E+00 CJC= 8.208E-14 VJC= 6.666E-01
++ MJC= 4.509E-01 XCJC=8.450E-02 TR = 4.000E-11 CJS= 1.160E-13
++ VJS= 5.286E-01 MJS= 4.389E-01 XTB= 1.022E+00 EG = 1.120E+00
++ XTI= 1.780E+00 KF = 3.500E-16 AF = 1.000E+00 FC = 8.273E-01
+.ENDS    OPA684_0
+
+.subckt OPA684_F1 1 2 3 4  
+F_F1         3 4 VF_F1 67.332
+VF_F1         1 2 0V
+.ends OPA684_F1
+.subckt OPA684_F3 1 2 3 4  
+F_F3         3 4 VF_F3 .9818365
+VF_F3         1 2 0V
+.ends OPA684_F3
+.subckt OPA684_F5 1 2 3 4  
+F_F5         3 4 VF_F5 1.0461389
+VF_F5         1 2 0V
+.ends OPA684_F5
+.subckt OPA684_F2 1 2 3 4  
+F_F2         3 4 VF_F2 71.315
+VF_F2         1 2 0V
+.ends OPA684_F2
+.subckt OPA684_F4 1 2 3 4  
+F_F4         3 4 VF_F4 .9119088
+VF_F4         1 2 0V
+.ends OPA684_F4
+.subckt OPA684_F6 1 2 3 4  
+F_F6         3 4 VF_F6 1.2797389
+VF_F6         1 2 0V
+.ends OPA684_F6
+
+.SUBCKT  MAX4223    1   2  99  50  40
+ISUPP 99 0 3.73MA
+ISUPPN 50 0 -1.73MA
+*** INPUT STAGE
+I1 99  5 330U
+I2  4 50 330U
+*was 430ua
+Q1  50  3 5 QPN
+Q2  99  3 4 QNN 
+R1   5 6 633
+C1   6 99 .35P
+R2  4  7 633
+C2   7 50 .35P
+R3 99  8 633
+V1  99 10 .3
+RE1 10 30 130
+D1  30  8 DX
+R4 50  9 633
+V2  11 50 .3
+RE2 11 31 150
+D2   9 31 DX
+Q3   8  6 2 QNI
+Q4   9  7 2 QPI
+R6  1 99 20meg
+R7  1 50 20meg
+IB1 1 99 3.5UA
+IB2 99  2 3.5UA
+*was 3.5ua
+VOS 3 1 0V
+CIN1 1  0 .4P
+CIN2 2  0 .4P
+*
+**************SECOND STAGE**************
+*
+********************Isup  99 50 4.47M
+R8  99 49 1meg
+R9  49 50 1meg
+V3  99 16 1.755
+*pos swig
+D3  15 16 DX
+D4  17 15 DX
+V4  17 50 1.755
+*neg swing
+EH  99 98 99 49 1
+G1  98 15 POLY(2) 99 8 50 9 0 1.58E-3 1.58E-3
+R5  98 15 2.372MEG
+*** ***********************  1st pole here with r5, and c3
+C3 98 15 .176P 
+***************POLE STAGE*************** 
+*
+*Fp=250MHz
+G2  98 20 15 49 1E-3
+R14 98 20 1K
+*C4  98 20 .692P
+C4 98 20 .5P
+*
+***************POLE STAGE*************** 
+*
+*Fp=500 MHz
+G3  98 21 20 49 1E-3
+R15 98 21 1K
+*C5  98 21 .03P
+*
+***************POLE STAGE*************** 
+*
+*Fp=250 MHz
+G4  98 22 21 49 1E-3
+R16 98 22 1K
+*C6  98 22 .346P
+*
+***************POLE STAGE*************** 
+*
+*Fp=250 MHz
+G5  98 23 22 49 1E-3
+R17 98 23 1K
+*C7  98 23 .246P
+*
+**************OUTPUT STAGE**************
+*
+F6  99 50 VA7 1
+F5  99 35 VA8 1
+D7  36 35 DX
+VA7 99 36 0
+D8  35 99 DX
+E1  99 37 99 23 1
+VA8 37 38 0
+R35 38 40 12
+V5  33 40 7V
+D5  23 33 DX
+V6  40 34 7V
+D6  34 23 DX
+CF1 40  2 1.8P
+*** was 2.1pf
+*
+***************MODELS USED**************
+*
+.MODEL QNI NPN(IS=1E-14 BF=10E4 VAF=15 KF=6.7E-14)
+.MODEL QPI PNP(IS=1E-14 BF=10E4 VAF=15 KF=6.7E-14)
+.MODEL QNN NPN(IS=1E-14 BF=10E4 VAF=15 KF=4.13E-13)
+.MODEL QPN PNP(IS=1E-14 BF=10E4 VAF=15 KF=4.13E-13)
+.MODEL DX  D(IS=1E-15)
+.MODEL DY  D(IS=1E-17)
+.MODEL DN  D(KF=1.667E-9 AF=1 XTI=0 EG=.3)
+*
+.ENDS MAX4223
+
+
+*
+* Predictive Technology Model Beta Version
+* 180nm NMOS SPICE Parametersv (normal one)
+*
+
+.model nch_mac NMOS
++Level = 49
+
++Lint = 4.e-08 Tox = 4.e-09
++Vth0 = 0.3999 Rdsw = 250
+
++lmin=1.8e-7 lmax=1.8e-7 wmin=1.8e-7 wmax=1.0e-4 Tref=27.0 version =3.1
++Xj= 6.0000000E-08         Nch= 5.9500000E+17
++lln= 1.0000000            lwn= 1.0000000              wln= 0.00
++wwn= 0.00                 ll= 0.00
++lw= 0.00                  lwl= 0.00                   wint= 0.00
++wl= 0.00                  ww= 0.00                    wwl= 0.00
++Mobmod=  1                binunit= 2                  xl=  0
++xw=  0
++Dwg= 0.00                 Dwb= 0.00
+
++K1= 0.5613000               K2= 1.0000000E-02
++K3= 0.00                  Dvt0= 8.0000000             Dvt1= 0.7500000
++Dvt2= 8.0000000E-03       Dvt0w= 0.00                 Dvt1w= 0.00
++Dvt2w= 0.00               Nlx= 1.6500000E-07          W0= 0.00
++K3b= 0.00                 Ngate= 5.0000000E+20
+
++Vsat= 1.3800000E+05       Ua= -7.0000000E-10          Ub= 3.5000000E-18
++Uc= -5.2500000E-11        Prwb= 0.00
++Prwg= 0.00                Wr= 1.0000000               U0= 3.5000000E-02
++A0= 1.1000000             Keta= 4.0000000E-02         A1= 0.00
++A2= 1.0000000             Ags= -1.0000000E-02         B0= 0.00
++B1= 0.00
+
++Voff= -0.12350000          NFactor= 0.9000000          Cit= 0.00
++Cdsc= 0.00                Cdscb= 0.00                 Cdscd= 0.00
++Eta0= 0.2200000           Etab= 0.00                  Dsub= 0.8000000
+
++Pclm= 5.0000000E-02       Pdiblc1= 1.2000000E-02      Pdiblc2= 7.5000000E-03
++Pdiblcb= -1.3500000E-02   Drout= 1.7999999E-02        Pscbe1= 8.6600000E+08
++Pscbe2= 1.0000000E-20     Pvag= -0.2800000            Delta= 1.0000000E-02
++Alpha0= 0.00              Beta0= 30.0000000
+
++kt1= -0.3700000           kt2= -4.0000000E-02         At= 5.5000000E+04
++Ute= -1.4800000           Ua1= 9.5829000E-10          Ub1= -3.3473000E-19
++Uc1= 0.00                 Kt1l= 4.0000000E-09         Prt= 0.00
+
++Cj= 0.00365               Mj= 0.54                    Pb= 0.982
++Cjsw= 7.9E-10             Mjsw= 0.31                  Php= 0.841
++Cta= 0                    Ctp= 0                      Pta= 0
++Ptp= 0                    JS=1.50E-08                 JSW=2.50E-13
++N=1.0                     Xti=3.0                     Cgdo=2.786E-10
++Cgso=2.786E-10            Cgbo=0.0E+00                Capmod= 2
++NQSMOD= 0                 Elm= 5                      Xpart= 1
++Cgsl= 1.6E-10             Cgdl= 1.6E-10               Ckappa= 2.886
++Cf= 1.069e-10             Clc= 0.0000001              Cle= 0.6
++Dlc= 4E-08                Dwc= 0                      Vfbcv= -1
+
+
+*
+* Predictive Technology Model Beta Version
+* 180nm PMOS SPICE Parametersv (normal one)
+*
+
+.model pch_mac PMOS
++Level = 49
+
++Lint = 3.e-08 Tox = 4.2e-09
++Vth0 = -0.42 Rdsw = 450
+
++lmin=1.8e-7 lmax=1.8e-7 wmin=1.8e-7 wmax=1.0e-4 Tref=27.0 version =3.1
++Xj= 7.0000000E-08         Nch= 5.9200000E+17
++lln= 1.0000000            lwn= 1.0000000              wln= 0.00
++wwn= 0.00                 ll= 0.00
++lw= 0.00                  lwl= 0.00                   wint= 0.00
++wl= 0.00                  ww= 0.00                    wwl= 0.00
++Mobmod=  1                binunit= 2                  xl= 0.00
++xw= 0.00                  Dwg= 0.00                   Dwb= 0.00
+
++ACM= 0                    ldif=0.00                   hdif=0.00
++rsh= 0                    rd= 0                       rs= 0
+
++K1= 0.5560000             K2= 0.00
++K3= 0.00                  Dvt0= 11.2000000            Dvt1= 0.7200000
++Dvt2= -1.0000000E-02      Dvt0w= 0.00                 Dvt1w= 0.00
++Dvt2w= 0.00               Nlx= 9.5000000E-08          W0= 0.00
++K3b= 0.00                 Ngate= 5.0000000E+20
+
++Vsat= 1.0500000E+05       Ua= -1.2000000E-10          Ub= 1.0000000E-18
++Uc= -2.9999999E-11        Prwb= 0.00
++Prwg= 0.00                Wr= 1.0000000               U0= 8.0000000E-03
++A0= 2.1199999             Keta= 2.9999999E-02         A1= 0.00
++A2= 0.4000000             Ags= -0.1000000             B0= 0.00
++B1= 0.00
+
++Voff= -6.40000000E-02      NFactor= 1.4000000          Cit= 0.00
++Cdsc= 0.00                Cdscb= 0.00                 Cdscd= 0.00
++Eta0= 8.5000000           Etab= 0.00                  Dsub= 2.8000000
+
++Pclm= 2.0000000           Pdiblc1= 0.1200000          Pdiblc2= 8.0000000E-05
++Pdiblcb= 0.1450000        Drout= 5.0000000E-02        Pscbe1= 1.0000000E-20
++Pscbe2= 1.0000000E-20     Pvag= -6.0000000E-02        Delta= 1.0000000E-02
++Alpha0= 0.00              Beta0= 30.0000000
+
++kt1= -0.3700000           kt2= -4.0000000E-02         At= 5.5000000E+04
++Ute= -1.4800000           Ua1= 9.5829000E-10          Ub1= -3.3473000E-19
++Uc1= 0.00                 Kt1l= 4.0000000E-09         Prt= 0.00
+
++Cj= 0.00138               Mj= 1.05                    Pb= 1.24
++Cjsw= 1.44E-09            Mjsw= 0.43                  Php= 0.841
++Cta= 0.00093              Ctp= 0                      Pta= 0.00153
++Ptp= 0                    JS=1.50E-08                 JSW=2.50E-13
++N=1.0                     Xti=3.0                     Cgdo=2.786E-10
++Cgso=2.786E-10            Cgbo=0.0E+00                Capmod= 2
++NQSMOD= 0                 Elm= 5                      Xpart= 1
++Cgsl= 1.6E-10             Cgdl= 1.6E-10               Ckappa= 2.886
++Cf= 1.058e-10             Clc= 0.0000001              Cle= 0.6
++Dlc= 3E-08                Dwc= 0                      Vfbcv= -1

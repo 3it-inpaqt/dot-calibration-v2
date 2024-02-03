@@ -1,0 +1,297 @@
+* C:\Users\Hussein\UDeM\OneDrive - USherbrooke\circuits\XYCE\simulations\ActivationFunction\Sigmoid4_HA\LTspice-cli-master\LTspice-cli-master\spice\activ_v2\complete_circuit_generated.asc
+XX_cbar_26by10 Vin_cb26by10[0] Vin_cb26by10[1] Vin_cb26by10[2] Vin_cb26by10[3] Vin_cb26by10[4] Vin_cb26by10[5] Vin_cb26by10[6] Vin_cb26by10[7] Vin_cb26by10[8] Vin_cb26by10[9] Vin_cb26by10[10] Vin_cb26by10[11] Vin_cb26by10[12] Vin_cb26by10[13] Vin_cb26by10[14] Vin_cb26by10[15] Vin_cb26by10[16] Vin_cb26by10[17] Vin_cb26by10[18] Vin_cb26by10[19] Vin_cb26by10[20] Vin_cb26by10[21] Vin_cb26by10[22] Vin_cb26by10[23] Vin_cb26by10[24] Vin_cb26by10[25] Vout_cb26by10_+[0] Vout_cb26by10_+[1] Vout_cb26by10_+[2] Vout_cb26by10_+[3] Vout_cb26by10_+[4] Vout_cb26by10_-[0] Vout_cb26by10_-[1] Vout_cb26by10_-[2] Vout_cb26by10_-[3] Vout_cb26by10_-[4] x_cbar_26by10
+XX_aux_10by5 Vout_cb26by10_+[0] Vout_cb26by10_+[1] Vout_cb26by10_+[2] Vout_cb26by10_+[3] Vout_cb26by10_+[4] Vout_cb26by10_-[0] Vout_cb26by10_-[1] Vout_cb26by10_-[2] Vout_cb26by10_-[3] Vout_cb26by10_-[4] Vin_cb6by2[0] Vin_cb6by2[1] Vin_cb6by2[2] Vin_cb6by2[3] Vin_cb6by2[4] x_aux_10by5
+XX_cbar_6by2 Vin_cb6by2[0] Vin_cb6by2[1] Vin_cb6by2[2] Vin_cb6by2[3] Vin_cb6by2[4] Vin_cb6by2[5] Vout_cb6by2_+[0] Vout_cb6by2_-[0] x_cbar_6by2
+XX_aux_2by1 Vout_cb6by2_+[0] Vout_cb6by2_-[0] h_act_out[0] x_aux_2by1
+V0 Vin_cb26by10[0] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V1 Vin_cb26by10[1] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V2 Vin_cb26by10[2] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V3 Vin_cb26by10[3] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V4 Vin_cb26by10[4] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V5 Vin_cb26by10[5] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V6 Vin_cb26by10[6] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V7 Vin_cb26by10[7] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V8 Vin_cb26by10[8] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V9 Vin_cb26by10[9] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V10 Vin_cb26by10[10] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V11 Vin_cb26by10[11] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V12 Vin_cb26by10[12] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V13 Vin_cb26by10[13] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V14 Vin_cb26by10[14] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V15 Vin_cb26by10[15] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V16 Vin_cb26by10[16] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V17 Vin_cb26by10[17] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V18 Vin_cb26by10[18] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V19 Vin_cb26by10[19] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V20 Vin_cb26by10[20] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V21 Vin_cb26by10[21] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V22 Vin_cb26by10[22] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.200V 400.00ns 0.200V 401.00ns 0.000V
+V23 Vin_cb26by10[23] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V24 Vin_cb26by10[24] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 400.00ns 0.000V 401.00ns 0.000V
+V25 Vin_cb26by10[25] 0 PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.200V 400.00ns 0.200V 401.00ns 0.000V
+V26 Vin_cb6by2[5] 0 PWL 0.00ns 0.000V 11.00ns 0.000V 12.00ns 0.200V 410.00ns 0.200V 411.00ns 0.000V
+
+* block symbol definitions
+.subckt x_cbar_26by10 Vin[0] Vin[1] Vin[2] Vin[3] Vin[4] Vin[5] Vin[6] Vin[7] Vin[8] Vin[9] Vin[10] Vin[11] Vin[12] Vin[13] Vin[14] Vin[15] Vin[16] Vin[17] Vin[18] Vin[19] Vin[20] Vin[21] Vin[22] Vin[23] Vin[24] Vin[25] Vout_+[0] Vout_+[1] Vout_+[2] Vout_+[3] Vout_+[4] Vout_-[0] Vout_-[1] Vout_-[2] Vout_-[3] Vout_-[4]
+r_0_0 Vin[0] Vout_+[0] 15000.0
+r_0_1 Vin[0] Vout_-[0] 12488.0
+r_0_2 Vin[0] Vout_+[1] 15000.0
+r_0_3 Vin[0] Vout_-[1] 9078.0
+r_0_4 Vin[0] Vout_+[2] 15000.0
+r_0_5 Vin[0] Vout_-[2] 9425.0
+r_0_6 Vin[0] Vout_+[3] 13457.0
+r_0_7 Vin[0] Vout_-[3] 15000.0
+r_0_8 Vin[0] Vout_+[4] 15000.0
+r_0_9 Vin[0] Vout_-[4] 14856.0
+r_1_0 Vin[1] Vout_+[0] 15000.0
+r_1_1 Vin[1] Vout_-[0] 10890.0
+r_1_2 Vin[1] Vout_+[1] 15000.0
+r_1_3 Vin[1] Vout_-[1] 9589.0
+r_1_4 Vin[1] Vout_+[2] 15000.0
+r_1_5 Vin[1] Vout_-[2] 10070.0
+r_1_6 Vin[1] Vout_+[3] 15000.0
+r_1_7 Vin[1] Vout_-[3] 12997.0
+r_1_8 Vin[1] Vout_+[4] 9571.0
+r_1_9 Vin[1] Vout_-[4] 15000.0
+r_2_0 Vin[2] Vout_+[0] 15000.0
+r_2_1 Vin[2] Vout_-[0] 10897.0
+r_2_2 Vin[2] Vout_+[1] 15000.0
+r_2_3 Vin[2] Vout_-[1] 9539.0
+r_2_4 Vin[2] Vout_+[2] 15000.0
+r_2_5 Vin[2] Vout_-[2] 10130.0
+r_2_6 Vin[2] Vout_+[3] 15000.0
+r_2_7 Vin[2] Vout_-[3] 12632.0
+r_2_8 Vin[2] Vout_+[4] 9971.0
+r_2_9 Vin[2] Vout_-[4] 15000.0
+r_3_0 Vin[3] Vout_+[0] 15000.0
+r_3_1 Vin[3] Vout_-[0] 13122.0
+r_3_2 Vin[3] Vout_+[1] 15000.0
+r_3_3 Vin[3] Vout_-[1] 9676.0
+r_3_4 Vin[3] Vout_+[2] 15000.0
+r_3_5 Vin[3] Vout_-[2] 10130.0
+r_3_6 Vin[3] Vout_+[3] 14607.0
+r_3_7 Vin[3] Vout_-[3] 15000.0
+r_3_8 Vin[3] Vout_+[4] 9637.0
+r_3_9 Vin[3] Vout_-[4] 15000.0
+r_4_0 Vin[4] Vout_+[0] 15000.0
+r_4_1 Vin[4] Vout_-[0] 13804.0
+r_4_2 Vin[4] Vout_+[1] 15000.0
+r_4_3 Vin[4] Vout_-[1] 9301.0
+r_4_4 Vin[4] Vout_+[2] 15000.0
+r_4_5 Vin[4] Vout_-[2] 10221.0
+r_4_6 Vin[4] Vout_+[3] 15000.0
+r_4_7 Vin[4] Vout_-[3] 13271.0
+r_4_8 Vin[4] Vout_+[4] 9315.0
+r_4_9 Vin[4] Vout_-[4] 15000.0
+r_5_0 Vin[5] Vout_+[0] 15000.0
+r_5_1 Vin[5] Vout_-[0] 13176.0
+r_5_2 Vin[5] Vout_+[1] 15000.0
+r_5_3 Vin[5] Vout_-[1] 9436.0
+r_5_4 Vin[5] Vout_+[2] 15000.0
+r_5_5 Vin[5] Vout_-[2] 9853.0
+r_5_6 Vin[5] Vout_+[3] 13893.0
+r_5_7 Vin[5] Vout_-[3] 15000.0
+r_5_8 Vin[5] Vout_+[4] 10480.0
+r_5_9 Vin[5] Vout_-[4] 15000.0
+r_6_0 Vin[6] Vout_+[0] 15000.0
+r_6_1 Vin[6] Vout_-[0] 14611.0
+r_6_2 Vin[6] Vout_+[1] 15000.0
+r_6_3 Vin[6] Vout_-[1] 9505.0
+r_6_4 Vin[6] Vout_+[2] 15000.0
+r_6_5 Vin[6] Vout_-[2] 10038.0
+r_6_6 Vin[6] Vout_+[3] 15000.0
+r_6_7 Vin[6] Vout_-[3] 13958.0
+r_6_8 Vin[6] Vout_+[4] 7595.0
+r_6_9 Vin[6] Vout_-[4] 15000.0
+r_7_0 Vin[7] Vout_+[0] 15000.0
+r_7_1 Vin[7] Vout_-[0] 13908.0
+r_7_2 Vin[7] Vout_+[1] 15000.0
+r_7_3 Vin[7] Vout_-[1] 9602.0
+r_7_4 Vin[7] Vout_+[2] 15000.0
+r_7_5 Vin[7] Vout_-[2] 10175.0
+r_7_6 Vin[7] Vout_+[3] 14549.0
+r_7_7 Vin[7] Vout_-[3] 15000.0
+r_7_8 Vin[7] Vout_+[4] 8830.0
+r_7_9 Vin[7] Vout_-[4] 15000.0
+r_8_0 Vin[8] Vout_+[0] 15000.0
+r_8_1 Vin[8] Vout_-[0] 13680.0
+r_8_2 Vin[8] Vout_+[1] 15000.0
+r_8_3 Vin[8] Vout_-[1] 10011.0
+r_8_4 Vin[8] Vout_+[2] 15000.0
+r_8_5 Vin[8] Vout_-[2] 10304.0
+r_8_6 Vin[8] Vout_+[3] 15000.0
+r_8_7 Vin[8] Vout_-[3] 12174.0
+r_8_8 Vin[8] Vout_+[4] 8631.0
+r_8_9 Vin[8] Vout_-[4] 15000.0
+r_9_0 Vin[9] Vout_+[0] 15000.0
+r_9_1 Vin[9] Vout_-[0] 12903.0
+r_9_2 Vin[9] Vout_+[1] 15000.0
+r_9_3 Vin[9] Vout_-[1] 9476.0
+r_9_4 Vin[9] Vout_+[2] 15000.0
+r_9_5 Vin[9] Vout_-[2] 10291.0
+r_9_6 Vin[9] Vout_+[3] 15000.0
+r_9_7 Vin[9] Vout_-[3] 12874.0
+r_9_8 Vin[9] Vout_+[4] 9256.0
+r_9_9 Vin[9] Vout_-[4] 15000.0
+r_10_0 Vin[10] Vout_+[0] 15000.0
+r_10_1 Vin[10] Vout_-[0] 11045.0
+r_10_2 Vin[10] Vout_+[1] 15000.0
+r_10_3 Vin[10] Vout_-[1] 9372.0
+r_10_4 Vin[10] Vout_+[2] 15000.0
+r_10_5 Vin[10] Vout_-[2] 10506.0
+r_10_6 Vin[10] Vout_+[3] 15000.0
+r_10_7 Vin[10] Vout_-[3] 14527.0
+r_10_8 Vin[10] Vout_+[4] 7997.0
+r_10_9 Vin[10] Vout_-[4] 15000.0
+r_11_0 Vin[11] Vout_+[0] 15000.0
+r_11_1 Vin[11] Vout_-[0] 12559.0
+r_11_2 Vin[11] Vout_+[1] 15000.0
+r_11_3 Vin[11] Vout_-[1] 9462.0
+r_11_4 Vin[11] Vout_+[2] 15000.0
+r_11_5 Vin[11] Vout_-[2] 10234.0
+r_11_6 Vin[11] Vout_+[3] 14800.0
+r_11_7 Vin[11] Vout_-[3] 15000.0
+r_11_8 Vin[11] Vout_+[4] 9370.0
+r_11_9 Vin[11] Vout_-[4] 15000.0
+r_12_0 Vin[12] Vout_+[0] 15000.0
+r_12_1 Vin[12] Vout_-[0] 14041.0
+r_12_2 Vin[12] Vout_+[1] 15000.0
+r_12_3 Vin[12] Vout_-[1] 9497.0
+r_12_4 Vin[12] Vout_+[2] 15000.0
+r_12_5 Vin[12] Vout_-[2] 10558.0
+r_12_6 Vin[12] Vout_+[3] 15000.0
+r_12_7 Vin[12] Vout_-[3] 13328.0
+r_12_8 Vin[12] Vout_+[4] 9179.0
+r_12_9 Vin[12] Vout_-[4] 15000.0
+r_13_0 Vin[13] Vout_+[0] 15000.0
+r_13_1 Vin[13] Vout_-[0] 12246.0
+r_13_2 Vin[13] Vout_+[1] 15000.0
+r_13_3 Vin[13] Vout_-[1] 9618.0
+r_13_4 Vin[13] Vout_+[2] 15000.0
+r_13_5 Vin[13] Vout_-[2] 10156.0
+r_13_6 Vin[13] Vout_+[3] 13792.0
+r_13_7 Vin[13] Vout_-[3] 15000.0
+r_13_8 Vin[13] Vout_+[4] 9408.0
+r_13_9 Vin[13] Vout_-[4] 15000.0
+r_14_0 Vin[14] Vout_+[0] 15000.0
+r_14_1 Vin[14] Vout_-[0] 11312.0
+r_14_2 Vin[14] Vout_+[1] 15000.0
+r_14_3 Vin[14] Vout_-[1] 9797.0
+r_14_4 Vin[14] Vout_+[2] 15000.0
+r_14_5 Vin[14] Vout_-[2] 10194.0
+r_14_6 Vin[14] Vout_+[3] 13478.0
+r_14_7 Vin[14] Vout_-[3] 15000.0
+r_14_8 Vin[14] Vout_+[4] 7813.0
+r_14_9 Vin[14] Vout_-[4] 15000.0
+r_15_0 Vin[15] Vout_+[0] 15000.0
+r_15_1 Vin[15] Vout_-[0] 12751.0
+r_15_2 Vin[15] Vout_+[1] 15000.0
+r_15_3 Vin[15] Vout_-[1] 9665.0
+r_15_4 Vin[15] Vout_+[2] 15000.0
+r_15_5 Vin[15] Vout_-[2] 10311.0
+r_15_6 Vin[15] Vout_+[3] 15000.0
+r_15_7 Vin[15] Vout_-[3] 12571.0
+r_15_8 Vin[15] Vout_+[4] 8879.0
+r_15_9 Vin[15] Vout_-[4] 15000.0
+r_16_0 Vin[16] Vout_+[0] 15000.0
+r_16_1 Vin[16] Vout_-[0] 11724.0
+r_16_2 Vin[16] Vout_+[1] 15000.0
+r_16_3 Vin[16] Vout_-[1] 9408.0
+r_16_4 Vin[16] Vout_+[2] 15000.0
+r_16_5 Vin[16] Vout_-[2] 10608.0
+r_16_6 Vin[16] Vout_+[3] 15000.0
+r_16_7 Vin[16] Vout_-[3] 13070.0
+r_16_8 Vin[16] Vout_+[4] 8994.0
+r_16_9 Vin[16] Vout_-[4] 15000.0
+r_17_0 Vin[17] Vout_+[0] 15000.0
+r_17_1 Vin[17] Vout_-[0] 11368.0
+r_17_2 Vin[17] Vout_+[1] 15000.0
+r_17_3 Vin[17] Vout_-[1] 9533.0
+r_17_4 Vin[17] Vout_+[2] 15000.0
+r_17_5 Vin[17] Vout_-[2] 10280.0
+r_17_6 Vin[17] Vout_+[3] 13140.0
+r_17_7 Vin[17] Vout_-[3] 15000.0
+r_17_8 Vin[17] Vout_+[4] 9153.0
+r_17_9 Vin[17] Vout_-[4] 15000.0
+r_18_0 Vin[18] Vout_+[0] 15000.0
+r_18_1 Vin[18] Vout_-[0] 12228.0
+r_18_2 Vin[18] Vout_+[1] 15000.0
+r_18_3 Vin[18] Vout_-[1] 9452.0
+r_18_4 Vin[18] Vout_+[2] 15000.0
+r_18_5 Vin[18] Vout_-[2] 10236.0
+r_18_6 Vin[18] Vout_+[3] 15000.0
+r_18_7 Vin[18] Vout_-[3] 13434.0
+r_18_8 Vin[18] Vout_+[4] 8261.0
+r_18_9 Vin[18] Vout_-[4] 15000.0
+r_19_0 Vin[19] Vout_+[0] 15000.0
+r_19_1 Vin[19] Vout_-[0] 12546.0
+r_19_2 Vin[19] Vout_+[1] 15000.0
+r_19_3 Vin[19] Vout_-[1] 9352.0
+r_19_4 Vin[19] Vout_+[2] 15000.0
+r_19_5 Vin[19] Vout_-[2] 10059.0
+r_19_6 Vin[19] Vout_+[3] 15000.0
+r_19_7 Vin[19] Vout_-[3] 13561.0
+r_19_8 Vin[19] Vout_+[4] 10987.0
+r_19_9 Vin[19] Vout_-[4] 15000.0
+r_20_0 Vin[20] Vout_+[0] 15000.0
+r_20_1 Vin[20] Vout_-[0] 11168.0
+r_20_2 Vin[20] Vout_+[1] 15000.0
+r_20_3 Vin[20] Vout_-[1] 9297.0
+r_20_4 Vin[20] Vout_+[2] 15000.0
+r_20_5 Vin[20] Vout_-[2] 9911.0
+r_20_6 Vin[20] Vout_+[3] 15000.0
+r_20_7 Vin[20] Vout_-[3] 11906.0
+r_20_8 Vin[20] Vout_+[4] 9553.0
+r_20_9 Vin[20] Vout_-[4] 15000.0
+r_21_0 Vin[21] Vout_+[0] 15000.0
+r_21_1 Vin[21] Vout_-[0] 11641.0
+r_21_2 Vin[21] Vout_+[1] 15000.0
+r_21_3 Vin[21] Vout_-[1] 9434.0
+r_21_4 Vin[21] Vout_+[2] 15000.0
+r_21_5 Vin[21] Vout_-[2] 9952.0
+r_21_6 Vin[21] Vout_+[3] 15000.0
+r_21_7 Vin[21] Vout_-[3] 12878.0
+r_21_8 Vin[21] Vout_+[4] 9865.0
+r_21_9 Vin[21] Vout_-[4] 15000.0
+r_22_0 Vin[22] Vout_+[0] 15000.0
+r_22_1 Vin[22] Vout_-[0] 12108.0
+r_22_2 Vin[22] Vout_+[1] 15000.0
+r_22_3 Vin[22] Vout_-[1] 9238.0
+r_22_4 Vin[22] Vout_+[2] 15000.0
+r_22_5 Vin[22] Vout_-[2] 10227.0
+r_22_6 Vin[22] Vout_+[3] 15000.0
+r_22_7 Vin[22] Vout_-[3] 14969.0
+r_22_8 Vin[22] Vout_+[4] 9094.0
+r_22_9 Vin[22] Vout_-[4] 15000.0
+r_23_0 Vin[23] Vout_+[0] 15000.0
+r_23_1 Vin[23] Vout_-[0] 11903.0
+r_23_2 Vin[23] Vout_+[1] 15000.0
+r_23_3 Vin[23] Vout_-[1] 9216.0
+r_23_4 Vin[23] Vout_+[2] 15000.0
+r_23_5 Vin[23] Vout_-[2] 10168.0
+r_23_6 Vin[23] Vout_+[3] 15000.0
+r_23_7 Vin[23] Vout_-[3] 14183.0
+r_23_8 Vin[23] Vout_+[4] 9469.0
+r_23_9 Vin[23] Vout_-[4] 15000.0
+r_24_0 Vin[24] Vout_+[0] 15000.0
+r_24_1 Vin[24] Vout_-[0] 12139.0
+r_24_2 Vin[24] Vout_+[1] 15000.0
+r_24_3 Vin[24] Vout_-[1] 8930.0
+r_24_4 Vin[24] Vout_+[2] 15000.0
+r_24_5 Vin[24] Vout_-[2] 9709.0
+r_24_6 Vin[24] Vout_+[3] 15000.0
+r_24_7 Vin[24] Vout_-[3] 12559.0
+r_24_8 Vin[24] Vout_+[4] 13827.0
+r_24_9 Vin[24] Vout_-[4] 15000.0
+r_25_0 Vin[25] Vout_+[0] 8508.0
+r_25_1 Vin[25] Vout_-[0] 15000.0
+r_25_2 Vin[25] Vout_+[1] 5497.0
+r_25_3 Vin[25] Vout_-[1] 15000.0
+r_25_4 Vin[25] Vout_+[2] 6245.0
+r_25_5 Vin[25] Vout_-[2] 15000.0
+r_25_6 Vin[25] Vout_+[3] 15000.0
+r_25_7 Vin[25] Vout_-[3] 11427.0
+r_25_8 Vin[25] Vout_+[4] 15000.0
+r_25_9 Vin[25] Vout_-[4] 11053.0
+.ends x_cbar_26by10
+

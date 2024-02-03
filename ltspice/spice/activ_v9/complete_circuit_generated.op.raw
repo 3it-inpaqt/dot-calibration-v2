@@ -1,0 +1,300 @@
+Title: * C:\Users\Hussein\UDeM\OneDrive - USherbrooke\circuits\XYCE\simulations\ActivationFunction\Sigmoid4_HA\LTspice-cli-master\LTspice-cli-master\spice\activ_v9\complete_circuit_generated.asc
+Date: Tue Sep 26 16:36:14 2023
+Plotname: Operating Point
+Flags: real
+No. Variables: 128
+No. Points:            1
+Offset:    0.0000000000000000e+00
+Command: Linear Technology Corporation LTspice
+Backannotation: u1 + - v+ v- out disa
+Backannotation: u2 + - v+ v- out disa
+Backannotation: u3 1 2 99 50 40
+Backannotation: u4 in out
+Backannotation: u1:_f1 1 2 3 4
+Backannotation: u1:_f3 1 2 3 4
+Backannotation: u1:_f2 1 2 3 4
+Backannotation: u1:_f4 1 2 3 4
+Backannotation: u1:_f5 1 2 3 4
+Backannotation: u1:_f6 1 2 3 4
+Backannotation: u2:_f1 1 2 3 4
+Backannotation: u2:_f3 1 2 3 4
+Backannotation: u2:_f2 1 2 3 4
+Backannotation: u2:_f4 1 2 3 4
+Backannotation: u2:_f5 1 2 3 4
+Backannotation: u2:_f6 1 2 3 4
+Backannotation: u4:urelu 1 2 99 50 40
+Backannotation: u4:urelu_inv + - v+ v- out disa
+Backannotation: u4:urelu_inv:_f1 1 2 3 4
+Backannotation: u4:urelu_inv:_f3 1 2 3 4
+Backannotation: u4:urelu_inv:_f2 1 2 3 4
+Backannotation: u4:urelu_inv:_f4 1 2 3 4
+Backannotation: u4:urelu_inv:_f5 1 2 3 4
+Backannotation: u4:urelu_inv:_f6 1 2 3 4
+Backannotation: x_cbar_26by10 vin[0] vin[1] vin[2] vin[3] vin[4] vin[5] vin[6] vin[7] vin[8] vin[9] vin[10] vin[11] vin[12] vin[13] vin[14] vin[15] vin[16] vin[17] vin[18] vin[19] vin[20] vin[21] vin[22] vin[23] vin[24] vin[25] vout_+[0] vout_+[1] vout_+[2] vout_+[3] vout_+[4] vout_-[0] vout_-[1] vout_-[2] vout_-[3] vout_-[4]
+Backannotation: x_aux_10by5 tia_h_in_+[0] tia_h_in_+[1] tia_h_in_+[2] tia_h_in_+[3] tia_h_in_+[4] tia_h_in_-[0] tia_h_in_-[1] tia_h_in_-[2] tia_h_in_-[3] tia_h_in_-[4] h_act_out[0] h_act_out[1] h_act_out[2] h_act_out[3] h_act_out[4]
+Backannotation: x_cbar_6by2 vin[0] vin[1] vin[2] vin[3] vin[4] vin[5] vout_+[0] vout_-[0]
+Backannotation: x_aux_2by1 tia_h_in_+[0] tia_h_in_-[0] h_act_out[0]
+Backannotation: x_aux_10by5:x0 tia_h_in_+ tia_h_in_- sum_activ_out
+Backannotation: x_aux_10by5:x1 tia_h_in_+ tia_h_in_- sum_activ_out
+Backannotation: x_aux_10by5:x2 tia_h_in_+ tia_h_in_- sum_activ_out
+Backannotation: x_aux_10by5:x3 tia_h_in_+ tia_h_in_- sum_activ_out
+Backannotation: x_aux_10by5:x4 tia_h_in_+ tia_h_in_- sum_activ_out
+Backannotation: x_aux_2by1:x0 tia_h_in_+ tia_h_in_- sum_activ_out
+Variables:
+	0	V(vin_cb26by10[0])	voltage
+	1	V(vout_cb26by10_+[0])	voltage
+	2	V(vout_cb26by10_-[0])	voltage
+	3	V(vout_cb26by10_+[1])	voltage
+	4	V(vout_cb26by10_-[1])	voltage
+	5	V(vout_cb26by10_+[2])	voltage
+	6	V(vout_cb26by10_-[2])	voltage
+	7	V(vout_cb26by10_+[3])	voltage
+	8	V(vout_cb26by10_-[3])	voltage
+	9	V(vout_cb26by10_+[4])	voltage
+	10	V(vout_cb26by10_-[4])	voltage
+	11	V(vin_cb26by10[1])	voltage
+	12	V(vin_cb26by10[2])	voltage
+	13	V(vin_cb26by10[3])	voltage
+	14	V(vin_cb26by10[4])	voltage
+	15	V(vin_cb26by10[5])	voltage
+	16	V(vin_cb26by10[6])	voltage
+	17	V(vin_cb26by10[7])	voltage
+	18	V(vin_cb26by10[8])	voltage
+	19	V(vin_cb26by10[9])	voltage
+	20	V(vin_cb26by10[10])	voltage
+	21	V(vin_cb26by10[11])	voltage
+	22	V(vin_cb26by10[12])	voltage
+	23	V(vin_cb26by10[13])	voltage
+	24	V(vin_cb26by10[14])	voltage
+	25	V(vin_cb26by10[15])	voltage
+	26	V(vin_cb26by10[16])	voltage
+	27	V(vin_cb26by10[17])	voltage
+	28	V(vin_cb26by10[18])	voltage
+	29	V(vin_cb26by10[19])	voltage
+	30	V(vin_cb26by10[20])	voltage
+	31	V(vin_cb26by10[21])	voltage
+	32	V(vin_cb26by10[22])	voltage
+	33	V(vin_cb26by10[23])	voltage
+	34	V(vin_cb26by10[24])	voltage
+	35	V(vin_cb26by10[25])	voltage
+	36	V(vin_cb6by2[0])	voltage
+	37	V(vin_cb6by2[1])	voltage
+	38	V(vin_cb6by2[2])	voltage
+	39	V(vin_cb6by2[3])	voltage
+	40	V(vin_cb6by2[4])	voltage
+	41	V(vout_cb6by2_+[0])	voltage
+	42	V(vout_cb6by2_-[0])	voltage
+	43	V(vin_cb6by2[5])	voltage
+	44	V(h_act_out[0])	voltage
+	45	I(V0)	device_current
+	46	I(V1)	device_current
+	47	I(V2)	device_current
+	48	I(V3)	device_current
+	49	I(V4)	device_current
+	50	I(V5)	device_current
+	51	I(V6)	device_current
+	52	I(V7)	device_current
+	53	I(V8)	device_current
+	54	I(V9)	device_current
+	55	I(V10)	device_current
+	56	I(V11)	device_current
+	57	I(V12)	device_current
+	58	I(V13)	device_current
+	59	I(V14)	device_current
+	60	I(V15)	device_current
+	61	I(V16)	device_current
+	62	I(V17)	device_current
+	63	I(V18)	device_current
+	64	I(V19)	device_current
+	65	I(V20)	device_current
+	66	I(V21)	device_current
+	67	I(V22)	device_current
+	68	I(V23)	device_current
+	69	I(V24)	device_current
+	70	I(V25)	device_current
+	71	I(V26)	device_current
+	72	Ix(x_cbar_26by10:VIN[0])	subckt_current
+	73	Ix(x_cbar_26by10:VIN[1])	subckt_current
+	74	Ix(x_cbar_26by10:VIN[2])	subckt_current
+	75	Ix(x_cbar_26by10:VIN[3])	subckt_current
+	76	Ix(x_cbar_26by10:VIN[4])	subckt_current
+	77	Ix(x_cbar_26by10:VIN[5])	subckt_current
+	78	Ix(x_cbar_26by10:VIN[6])	subckt_current
+	79	Ix(x_cbar_26by10:VIN[7])	subckt_current
+	80	Ix(x_cbar_26by10:VIN[8])	subckt_current
+	81	Ix(x_cbar_26by10:VIN[9])	subckt_current
+	82	Ix(x_cbar_26by10:VIN[10])	subckt_current
+	83	Ix(x_cbar_26by10:VIN[11])	subckt_current
+	84	Ix(x_cbar_26by10:VIN[12])	subckt_current
+	85	Ix(x_cbar_26by10:VIN[13])	subckt_current
+	86	Ix(x_cbar_26by10:VIN[14])	subckt_current
+	87	Ix(x_cbar_26by10:VIN[15])	subckt_current
+	88	Ix(x_cbar_26by10:VIN[16])	subckt_current
+	89	Ix(x_cbar_26by10:VIN[17])	subckt_current
+	90	Ix(x_cbar_26by10:VIN[18])	subckt_current
+	91	Ix(x_cbar_26by10:VIN[19])	subckt_current
+	92	Ix(x_cbar_26by10:VIN[20])	subckt_current
+	93	Ix(x_cbar_26by10:VIN[21])	subckt_current
+	94	Ix(x_cbar_26by10:VIN[22])	subckt_current
+	95	Ix(x_cbar_26by10:VIN[23])	subckt_current
+	96	Ix(x_cbar_26by10:VIN[24])	subckt_current
+	97	Ix(x_cbar_26by10:VIN[25])	subckt_current
+	98	Ix(x_cbar_26by10:VOUT_+[0])	subckt_current
+	99	Ix(x_cbar_26by10:VOUT_+[1])	subckt_current
+	100	Ix(x_cbar_26by10:VOUT_+[2])	subckt_current
+	101	Ix(x_cbar_26by10:VOUT_+[3])	subckt_current
+	102	Ix(x_cbar_26by10:VOUT_+[4])	subckt_current
+	103	Ix(x_cbar_26by10:VOUT_-[0])	subckt_current
+	104	Ix(x_cbar_26by10:VOUT_-[1])	subckt_current
+	105	Ix(x_cbar_26by10:VOUT_-[2])	subckt_current
+	106	Ix(x_cbar_26by10:VOUT_-[3])	subckt_current
+	107	Ix(x_cbar_26by10:VOUT_-[4])	subckt_current
+	108	Ix(x_aux_10by5:TIA_H_IN_+[0])	subckt_current
+	109	Ix(x_aux_10by5:TIA_H_IN_+[1])	subckt_current
+	110	Ix(x_aux_10by5:TIA_H_IN_+[2])	subckt_current
+	111	Ix(x_aux_10by5:TIA_H_IN_+[3])	subckt_current
+	112	Ix(x_aux_10by5:TIA_H_IN_+[4])	subckt_current
+	113	Ix(x_aux_10by5:TIA_H_IN_-[0])	subckt_current
+	114	Ix(x_aux_10by5:TIA_H_IN_-[1])	subckt_current
+	115	Ix(x_aux_10by5:TIA_H_IN_-[2])	subckt_current
+	116	Ix(x_aux_10by5:TIA_H_IN_-[3])	subckt_current
+	117	Ix(x_aux_10by5:TIA_H_IN_-[4])	subckt_current
+	118	Ix(x_cbar_6by2:VIN[0])	subckt_current
+	119	Ix(x_cbar_6by2:VIN[1])	subckt_current
+	120	Ix(x_cbar_6by2:VIN[2])	subckt_current
+	121	Ix(x_cbar_6by2:VIN[3])	subckt_current
+	122	Ix(x_cbar_6by2:VIN[4])	subckt_current
+	123	Ix(x_cbar_6by2:VIN[5])	subckt_current
+	124	Ix(x_cbar_6by2:VOUT_+[0])	subckt_current
+	125	Ix(x_cbar_6by2:VOUT_-[0])	subckt_current
+	126	Ix(x_aux_2by1:TIA_H_IN_+[0])	subckt_current
+	127	Ix(x_aux_2by1:TIA_H_IN_-[0])	subckt_current
+Values:
+0		0.000000000000000e+00
+	-4.269015674953046e-04
+	-4.268947912546180e-04
+	-4.269018600122226e-04
+	-4.268831361314945e-04
+	-4.269018400979378e-04
+	-4.268865354583121e-04
+	-4.269012863391647e-04
+	-4.268982802308031e-04
+	-4.268802029380316e-04
+	-4.269011681739379e-04
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	3.034887832396180e-03
+	3.035043566677259e-03
+	3.034990389486993e-03
+	3.034825394027362e-03
+	3.256296622845857e-03
+	-4.268773461934231e-04
+	-4.268301656737451e-04
+	0.000000000000000e+00
+	3.035408775694374e-03
+	-3.292595423125514e-07
+	-3.458583825047835e-07
+	-3.449752934807866e-07
+	-3.346133842777933e-07
+	-3.388830040659290e-07
+	-3.347257575039134e-07
+	-3.457462638889120e-07
+	-3.370933012358046e-07
+	-3.421022327687289e-07
+	-3.411948748730532e-07
+	-3.498990189922212e-07
+	-3.375224352884403e-07
+	-3.366221022383185e-07
+	-3.399039557991918e-07
+	-3.517987385333022e-07
+	-3.433853374369539e-07
+	-3.444542141317716e-07
+	-3.452850457943343e-07
+	-3.475310635393939e-07
+	-3.347443964844440e-07
+	-3.500547403255452e-07
+	-3.435377721391404e-07
+	-3.409680577272640e-07
+	-3.416492644861091e-07
+	-3.341034832940987e-07
+	-4.144745880996565e-07
+	-7.648925303059839e-08
+	3.292595423125514e-07
+	3.458583825047834e-07
+	3.449752934807866e-07
+	3.346133842777933e-07
+	3.388830040659290e-07
+	3.347257575039134e-07
+	3.457462638889119e-07
+	3.370933012358046e-07
+	3.421022327687288e-07
+	3.411948748730531e-07
+	3.498990189922212e-07
+	3.375224352884403e-07
+	3.366221022383185e-07
+	3.399039557991917e-07
+	3.517987385333021e-07
+	3.433853374369538e-07
+	3.444542141317716e-07
+	3.452850457943343e-07
+	3.475310635393939e-07
+	3.347443964844440e-07
+	3.500547403255452e-07
+	3.435377721391403e-07
+	3.409680577272640e-07
+	3.416492644861091e-07
+	3.341034832940986e-07
+	4.144745880996565e-07
+	-7.616791013844294e-07
+	-7.891639805028567e-07
+	-7.798620484308470e-07
+	-7.572609337479667e-07
+	-1.164329930983790e-06
+	-8.942899362247729e-07
+	-1.157265387108905e-06
+	-1.080566791961366e-06
+	-8.155672248993985e-07
+	-7.504009159781097e-07
+	-3.077380366221497e-06
+	-3.049834733641940e-06
+	-3.059140815158009e-06
+	-3.081856910234845e-06
+	-2.679166060036861e-06
+	-2.946176677089472e-06
+	-2.685621509572968e-06
+	-2.761614206468009e-06
+	-3.024174881120368e-06
+	-3.088741447404707e-06
+	6.574195434239168e-07
+	8.426493992021608e-07
+	9.231552934108419e-07
+	5.782661854620630e-07
+	6.976313856360903e-07
+	7.648925303059839e-08
+	-1.423273946211231e-06
+	-2.352337113954440e-06
+	-2.420815278154505e-06
+	-1.501549337679213e-06

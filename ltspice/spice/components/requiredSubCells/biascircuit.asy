@@ -1,0 +1,20 @@
+Version 4
+SymbolType BLOCK
+RECTANGLE Normal 64 64 -64 -80
+TEXT 15 -76 Left 0 VDD
+TEXT 17 60 Left 0 VSS
+TEXT 21 -16 Left 0 Vbiasp2
+TEXT 27 16 Left 0 Vbiasp
+WINDOW 0 -30 -67 Bottom 0
+PIN 64 16 NONE 8
+PINATTR PinName Vbiasp
+PINATTR SpiceOrder 3
+PIN 16 -80 NONE 8
+PINATTR PinName VDD
+PINATTR SpiceOrder 1
+PIN 16 64 NONE 8
+PINATTR PinName VSS
+PINATTR SpiceOrder 2
+PIN 64 -16 NONE 8
+PINATTR PinName Vbiasp2
+PINATTR SpiceOrder 4
