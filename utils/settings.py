@@ -380,91 +380,91 @@ class Settings:
     # ==================================================================================================================
 
     # Whether the inference of the ML model should be simulated on a circuit or not.
-    simulate_circuit = False
+    simulate_circuit: bool = False
 
     # If simulate_circuit is True, then should the simulation be done with Xyce?
     # Only one simulation engine should be selected.
-    use_xyce = True
+    use_xyce: bool = True
 
     # If simulate_circuit is True, then should the simulation be done with LTspice?
     # Only one simulation engine should be selected.
-    use_ltspice = False
+    use_ltspice: bool = False
 
     # File path of the LTspice program installed on the system
-    ltspice_executable_path = ''
+    ltspice_executable_path: str = ''
 
     # Whether we should run the inference over the test-set with the simulated circuit.
     # Warning: the simulations can be long, you might want to avoid testing the circuits sometimes.
-    test_circuit = True
+    test_circuit: bool = True
 
     # Maximum number of test inferences to simulate on the circuit (0 means the whole test set).
-    sim_max_test_inference = 1000
+    sim_max_test_inference: int = 1000
 
     # If set and greater than 0, the model's parameters will be clipped between
     # [-parameters_clipping, parameters_clipping] after each training batch. Set to None if no parameter clipping
     # should be used
     # TODO: Move this setting to the training section and make it non-restrictive to the circuit simulation
-    parameters_clipping = 2
+    parameters_clipping: float = 2
 
     # If set to True, the training will take into account that memristors may be blocked with
     # xyce_memristor_blocked_prob.
     # TODO: Currently only implemented for FF NNs.
-    hardware_aware_training = False
+    hardware_aware_training: bool = False
 
     # The simulation step size for transient analysis (s)
-    sim_step_size = 3e-10
+    sim_step_size: float = 3e-10
 
     # The minimal resistance value that we consider for memristor programming (ohm)
-    sim_r_min = 5000
+    sim_r_min: int = 5000
 
     # The maximal resistance value that we consider for memristor programming (ohm)
-    sim_r_max = 15000
+    sim_r_max: int = 15000
 
     # The read standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.2%
     # TODO: Verify that this is correctly implemented before using it
-    sim_memristor_read_std = 0.0
+    sim_memristor_read_std: float = 0.0
 
     # The number of sample for the read variability study.
     # This setting have no effect if memristor_read_std is 0.
     # TODO: Verify that this is correctly implemented before using it
-    sim_var_sample_size = 0
+    sim_var_sample_size: int = 0
 
     # The write standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.8%
-    sim_memristor_write_std = 0.008
+    sim_memristor_write_std: float = 0.008
 
     # The probability that a memristor will be blocked to r_max when we try to write a value to it (% [0,1])
-    ratio_failure_HRS = 0.05
+    ratio_failure_HRS: float = 0.05
 
     # The probability that a memristor will be blocked to r_min when we try to write a value to it (% [0,1])
     # ratio_failure_HRS + ratio_failure_LRS should be around 10%
-    ratio_failure_LRS = 0.05
+    ratio_failure_LRS: float = 0.05
 
     # The pulse amplitude for the input encoding (V)
-    sim_pulse_amplitude = 0.2
+    sim_pulse_amplitude: float = 0.2
 
     # The pulse duration for the input encoding (s)
-    sim_pulse_width = 3e-7
+    sim_pulse_width: float = 3e-7
 
     # The resting time after a pulse (s)
-    sim_resting_time = 5e-8
+    sim_resting_time: float = 5e-8
 
     # Pulse delay from 0V to pulse_amplitude (s)
-    sim_pulse_rise_delay = 1e-9
+    sim_pulse_rise_delay: float = 1e-9
 
     # Pulse delay from pulse_amplitude to 0V (s)
-    sim_pulse_fall_delay = 1e-9
+    sim_pulse_fall_delay: float = 1e-9
 
     # Simulation initial latency before to start the first pulse (s)
-    sim_init_latency = 1e-9
+    sim_init_latency: float = 1e-9
 
     # The estimated delay between the input and the output of the activation function analog bloc.
     # Used to synchronize the pulse between layers.
-    sim_layer_latency = 1e-8
+    sim_layer_latency: float = 1e-8
 
     # Number of parallel processes to run (0 means the number of cpu cores)
-    sim_nb_process = 1
+    sim_nb_process: int = 1
 
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """
