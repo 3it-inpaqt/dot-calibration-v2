@@ -1,6 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="start_lines" type="PythonConfigurationType" factoryName="Python" singleton="true" nameIsGenerated="true">
     <module name="pytorch-boilerplate" />
+    <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <option name="SDK_HOME" value="" />

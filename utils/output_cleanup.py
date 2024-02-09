@@ -117,7 +117,7 @@ def main(operations: Set[Operation], pattern: str) -> None:
     # Warning
     if Operation.REMOVE in operations:
         print(f"\033[1;31m[WARNING] This action can't be undone! "
-              f"All {len(affected_dirs)} files will be definitely removed!\033[0m")
+              f"All {len(affected_dirs)} directories will be definitely removed!\033[0m")
     elif Operation.CLEAN_UP in operations:
         print("\033[0;33m[WARNING] This action can't be undone!\033[0m")
 
