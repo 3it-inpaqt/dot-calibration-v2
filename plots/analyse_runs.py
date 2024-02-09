@@ -467,16 +467,29 @@ def results_table():
     for _, row in data.iterrows():
         for tuning_result in row['results.tuning_results']:
             # Only consider Jump procedure
-            if not tuning_result['procedure_name'].startswith('Jump'):
+            if not (tuning_result['procedure_name'].startswith('Jump') or
+                    tuning_result['procedure_name'] == 'Random Baseline'):
                 continue
 
-            use_oracle = bool(row['settings.autotuning_use_oracle'])
+            # Is a baseline if the model is the oracle or the procedure is random
+            if bool(row['settings.autotuning_use_oracle']):
+                if tuning_result['procedure_name'] == 'Random Baseline':
+                    model_type = 'random'
+                    accuracy = f1 = 0
+                else:
+                    model_type = 'oracle'
+                    accuracy = f1 = 1
+            # Not a baseline, get the normal values
+            else:
+                model_type = row['settings.model_type']
+                accuracy = row['Accuracy']
+                f1 = row['F1']
 
             tuning_table.append([
                 row['settings.research_group'],  # Dataset
-                'oracle' if use_oracle else row['settings.model_type'],  # Model
-                1 if use_oracle else row['Accuracy'],  # Model accuracy
-                1 if use_oracle else row['F1'],  # Model F1 score
+                model_type,  # Model
+                accuracy,  # Model accuracy
+                f1,  # Model F1 score
                 'Uncertainty' in tuning_result['procedure_name'],  # Use uncertainty
                 tuning_result['diagram_name'],  # Diagram
                 tuning_result['nb_steps'],  # Nb scan
@@ -563,7 +576,7 @@ def results_table():
     print('\n\n----------------------------------------------------\n\n')
     by_method_seed_var.columns = [col.replace('\n', r'\\') for col in by_method_seed_var.columns]
     print(tabulate(by_method_seed_var, headers='keys', tablefmt='fancy_grid', showindex=False,
-                   floatfmt=(None, None, '.1%', '.2%', None, '.0f', '.1%', '.2%')))
+                   floatfmt=(None, None, '.2%', '.2%', None, '.0f', '.2%', '.2%')))
 
 
 def process_online_experiment_results(offline_diagram: str):
