@@ -6,10 +6,20 @@ from typing import Sequence
 ##########################################
 
 ########## Coded by HA ##########
+#################################
+# Settings found in utils/settings.py
+#################################
+# The pulse duration for the input encoding (s)
+sim_pulse_width: float = 3e-7
+# Simulation initial latency before to start the first pulse (s)
+sim_init_latency: float = 1e-9
+# Whether the inference of the ML model should be simulated on a circuit or not.
+simulate_circuit: bool = False
+#################################
 LTSpice_executable_path = 'C:\Program Files\ADI\LTspice\LTspice.exe'
 patch_size_x: int = 8
 patch_size_y: int = 8
-hidden_layers_size: Sequence  = [20, 10]
+hidden_layers_size: Sequence  = [20,10]
 ######## PATHs #######
 LTspice_working_directory: str = 'data/ltspice_tmp_files/'
 LTspice_spiceout_directory: str = LTspice_working_directory + 'spice/'
@@ -29,8 +39,8 @@ LTspice_avail_activation_fn = ['column_activ_cmos', 'column_activ_comparator', '
 LTspice_activation_fn_select: int = 5
 LTspice_final_activation_fn_select: int = 5 # # Specifies the AF for the final stage
 # Layers parameters 
-LTspice_num_of_layers: int = 3
-LTspice_layer_dims: Sequence = [[65,20], [21,10],[11,1]] # Sizes with biases 
+LTspice_num_of_layers: int = 3 # Should be len(hidden_layers_size) + 1, if hidden_layers_size has a depth of 2 -> LTspice_num_of_layers = 3
+LTspice_layer_dims: Sequence = [[65,20], [21,10],[11,1]] # Sizes with biases, will be modified in the code
 # Setting the minimum vertical spacing between blocks in the circuit
 LTspice_block_vspacing: int = 480 # should be multiple of 16
 # The measurements to be saved from the simulation. The appropriate numbers can be found in the .raw file generated at simulation.
@@ -42,7 +52,8 @@ LTspice_preffered_sorting = [0, 1]
 # Parameter names gives the files the name of the parameter that it is run with.
 # Assumes number by default. Set to 'parameter' or 'number'.
 LTspice_output_data_naming_convention = 'parameter'
-
+LTspice_simtime: str = '1u'
+LTspice_simtime_paramname: str = 'simtime'
 LTspice_overwrite_files = True
 #################################
 

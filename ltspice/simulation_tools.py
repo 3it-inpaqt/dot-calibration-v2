@@ -44,7 +44,8 @@ def run_simulations(parameter_set=None, numerical_name_start=0):
             simulate(spice_exe_path, file_path_generated)
             # Set header and cleanup the file
             output_header = 'SPICE simulation result. Parameters: ' + ', '.join(get_parameters(file_path_generated + '.' + config.LTSpice_asc_filetype)) + '\n' # Maybe not add the time variables
-            clean_raw_file(spice_exe_path, file_path_generated, output_path, output_header)
+            if config.simulate_circuit:
+                clean_raw_file(spice_exe_path, file_path_generated, output_path, output_header)
     else:
         # Run a simulation with the preset values of the file
         output_path = config.output_data_path + 'result.txt'
@@ -52,7 +53,8 @@ def run_simulations(parameter_set=None, numerical_name_start=0):
         simulate(spice_exe_path, file_path)
         # Set header and cleanup the file
         output_header = 'SPICE simulation result. Parameters: ' + ', '.join(get_parameters(file_path + '.' + config.LTSpice_asc_filetype)) + '\n' # Maybe not add the time variables
-        clean_raw_file(spice_exe_path, file_path, output_path, output_header)
+        if config.simulate_circuit:
+           clean_raw_file(spice_exe_path, file_path, output_path, output_header)
 
     # Return the list with names of the output filenames
     return output_filenames
@@ -67,13 +69,16 @@ def simulate(spice_exe_path, file_path):
         shutil.copyfile(file_path + '.net',config.LTspice_output_directory + file_name1 + '.net')
         xyceTranslate.translate_netlist2xyce(config.LTspice_output_directory + file_name1 + '.net')
         runcmd = '"' + spice_exe_path + '" -b -ascii "' + file_path + '.net"'
-        call(runcmd)
+        if config.simulate_circuit:
+           call(runcmd)
     else:
         runcmd = '"' + spice_exe_path + '" -b -ascii "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
         call(runcmd)
-    size = os.path.getsize(file_path + '.raw')
-    print('Simulation finished: ' + file_name + '.raw created (' + str(size/1000) + ' kB)')
-
+    if config.simulate_circuit:
+        size = os.path.getsize(file_path + '.raw')
+        print('Simulation finished: ' + file_name + '.raw created (' + str(size/1000) + ' kB)')
+    else: 
+        print('Finished processing files without simulation ')
 def clean_raw_file(spice_exe_path, file_path, output_path, output_header):
     # Try to open the requested file
     file_name = file_path
@@ -177,7 +182,10 @@ def set_parameters(file_path, param, param_val, overwrite=False):
                 if line_list[0] == 'TEXT':
                     for element_num, element in enumerate(line_list):
                         if element.split('=')[0] == param:
-                            line_list[element_num] = param + '=' + str(param_val)
+                            if param == config.LTspice_simtime_paramname:
+                                line_list[element_num] = param + '=' + str(config.LTspice_simtime)
+                            else:
+                                line_list[element_num] = param + '=' + str(param_val)
                     if line_list[-1][-1] != '\n':
                         line_list[-1] = line_list[-1] + '\n'
                     new_file.write(' '.join(line_list))

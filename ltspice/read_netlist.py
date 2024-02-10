@@ -1,7 +1,9 @@
+from tkinter import simpledialog
 from typing import Sequence
 import numpy as np
 import csv
 import config as config
+import shutil
 
 def generate_CSVs_from_netlist(netlist_path: str = 'circuit_simulation/netlist.CIR', CSV_out_directory: str = 'ltspice_tmp_files/data/'):
     input_lyrs = []
@@ -43,6 +45,8 @@ def read_PWL_voltages_from_netlist(input_size:int,
             address = row[0].split('_')
             addr_row = int(address[1])
             voltages[addr_row-1] = row[3]
+            if addr_row == 1:
+                config.LTspice_simtime = row[3].split(' ')[-2]
             itr += 1
         if x.startswith("Vb_") and itr <= num_of_res:
             row = x.split('    ')
@@ -111,4 +115,7 @@ def read_layer_resistances_from_netlist(
                 #print(this_line_counter)
                 return this_line_counter
     return this_line_counter
+
+def copy_params_file(in_file: str, out_file: str):
+    return
 
