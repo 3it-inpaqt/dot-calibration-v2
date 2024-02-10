@@ -19,3 +19,5 @@ To run the circuit simulator:
 	LTspice_num_of_layers 	# make sure it equals len(hidden_layers_size) + 1
 							# if not the system will exit
 3- run "run.py"
+
+Simulation output can be found in "LTspice_output_directory"
