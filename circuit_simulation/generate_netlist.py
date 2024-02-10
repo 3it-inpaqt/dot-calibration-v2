@@ -132,7 +132,8 @@ class NetlistGenerator:
 
 
     def convert_inputs_to_pulses(self, inputs: Union[List[List[float]], List[float]],
-                                 offset: float = 0) -> List[List[Tuple[float, float]]]:
+                                 offset: float = 0,
+                                 voltage_offset: float = 0) -> List[List[Tuple[float, float]]]:
         """
         Convert multiple inputs sequences into multiple pulse trains.
 
@@ -150,16 +151,16 @@ class NetlistGenerator:
         pulses = []
         for input_value in inputs:
             time = offset + settings.sim_init_latency
-            pulse = [(0, 0)]  # Start at 0V
+            pulse = [(0, voltage_offset)]  # Start at 0V
             pulse.extend(
                 [
                     # Start pulse
-                    (time, 0),
-                    (time + settings.sim_pulse_rise_delay, input_value * settings.sim_pulse_amplitude),
+                    (time, voltage_offset),
+                    (time + settings.sim_pulse_rise_delay, voltage_offset + (input_value * settings.sim_pulse_amplitude)),
                     # End pulse
                     (time + settings.sim_pulse_width - settings.sim_pulse_fall_delay,
-                     input_value * settings.sim_pulse_amplitude),
-                    (time + settings.sim_pulse_width, 0)
+                     voltage_offset + (input_value * settings.sim_pulse_amplitude)),
+                    (time + settings.sim_pulse_width, voltage_offset)
                 ])
 
             pulses.append(pulse)
@@ -182,12 +183,12 @@ class NetlistGenerator:
             The Xyce netlist as a string.
         """
         # Convert input pulses
-        inputs_pulses = self.convert_inputs_to_pulses(inputs)
+        inputs_pulses = self.convert_inputs_to_pulses(inputs,voltage_offset=settings.sim_voltage_offset)
         # Create bias pulse train (will be used only if model have bias enable)
         bias_pulses = {}
         for i in range(self.nb_layers):
             if self.layers['bias_' + str(i)] is not None:
-                bias_pulses['bias_' + str(i)] = self.convert_inputs_to_pulses([1], offset=i * settings.sim_layer_latency)[0]
+                bias_pulses['bias_' + str(i)] = self.convert_inputs_to_pulses([1], offset=i * settings.sim_layer_latency, voltage_offset=settings.sim_voltage_offset)[0]
 
         # xyce_matrix_mul(layers, inputs_pulses, bias_pulses['bias_0'])
 

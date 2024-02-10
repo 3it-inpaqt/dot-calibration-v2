@@ -34,7 +34,7 @@ def build_crossbar (num_of_rows=16,num_of_cols=10, resistances = None):
         posX = 0
         
     asc_file_name = file_name + '_' + str(num_of_rows) + 'by' + str(num_of_cols)
-    with open(config.spice_directory + asc_file_name + '.asc','w') as nf :
+    with open(config.LTspice_spiceout_directory + asc_file_name + '.asc','w') as nf :
         nf.write(stment)
 
     create_asy(num_of_rows,num_of_cols)
@@ -113,7 +113,7 @@ def create_asy(num_of_rows=16,num_of_cols=10):
     stment += 'PINATTR PinName Vout_' + '-[0:' + str(output_len-1) + ']\n'
     stment += 'PINATTR SpiceOrder 3\n'
     asy_file_name = file_name + '_' + str(num_of_rows) + 'by' + str(num_of_cols)
-    with open(config.spice_directory + asy_file_name + '.asy','w') as nf :
+    with open(config.LTspice_spiceout_directory + asy_file_name + '.asy','w') as nf :
         nf.write(stment)
     return asy_file_name
 
@@ -123,7 +123,7 @@ class cross_bar():
     diffy = 160
     border_hedge = 300
     border_vedge = 40
-    working_directory = config.spice_directory
+    working_directory = config.LTspice_spiceout_directory
     block_file_name = 'X_cb'
     num_of_rows=16
     num_of_cols=10

@@ -1,3 +1,4 @@
+from typing import List
 from classes.classifier import Classifier
 from classes.classifier_nn import ClassifierNN
 from datasets.qdsd import QDSDLines
@@ -6,7 +7,9 @@ from runs.run_line_task import clean_up, init_model, preparation, run_train_test
 from utils.logger import logger
 from utils.settings import settings
 from utils.timer import SectionTimer
-
+#import os, sys
+#sys.path.append(os.path.dirname(__file__))
+import ltspice as lts
 
 def start_line_task() -> Classifier:
     """
@@ -15,6 +18,9 @@ def start_line_task() -> Classifier:
 
     :return: The trained classifier model.
     """
+    ltsArgv = ['r']
+    lts.main(ltsArgv)
+    
 
     with SectionTimer('datasets loading', 'debug'):
         # If some test diagrams are defined in settings, use them for the test set, otherwise use the test ratio

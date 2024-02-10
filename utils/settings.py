@@ -1,4 +1,5 @@
 import argparse
+from ast import List
 import re
 from dataclasses import asdict, dataclass
 from math import isnan
@@ -393,6 +394,40 @@ class Settings:
     # File path of the LTspice program installed on the system
     ltspice_executable_path: str = ''
 
+
+    ########## Coded by HA ##########
+    # The name of the circuit to be used in simulations
+    # It is important to set this parameter
+    # The best practice is to keep its default value  
+    LTSpice_asc_filetype : str = 'asc'
+    LTspice_working_directory: str = 'data/ltspice/'
+    LTspice_out_directory: str = LTspice_working_directory + 'spice/'
+    LTspice_data_directory: str = LTspice_working_directory + 'data/'
+    LTspice_wd_prefix: str = 'activ_v'   # Specifies the name prefix for the WD
+    LTSpice_asc_filename: str = LTspice_out_directory + 'complete_circuit.asc'   # Specifies the circuit file name
+    # required components directory
+    LTspice_required_directory: str = 'ltspice/spice/components/requiredSubCells'
+    LTspice_avail_activation_fn = ['column_activ_cmos', 'column_activ_comparator', 'column_activ_relu', 'column_activ_tia_relu', 'column_activ_cmos_v2', 'column_activ_cmos_v3']
+    LTspice_activation_fn_select: int = 5
+    LTspice_final_activation_fn_select: int = 5 # # Specifies the AF for the final stage
+    # Layers parameters 
+    LTspice_num_of_layers: int = 3
+    LTspice_layer_dims = [[65,20], [21,10],[11,1]] # Sizes with biases 
+    # Setting the minimum vertical spacing between blocks in the circuit
+    LTspice_block_vspacing: int = 480 # should be multiple of 16
+    # The measurements to be saved from the simulation. The appropriate numbers can be found in the .raw file generated at simulation.
+    LTspice_variable_numbering = {'time': 0, 'final_out': 45}
+    # The ordering of the measurements to be saved in the output csv files can be changed below, by changing how the numbers are ordered.
+    # E.g. switch place of 0 and 1 if you want V_c to be placed left of time in the output csv files.
+    LTspice_preffered_sorting = [0, 1]
+    # Leave blank if output should be writtten to root folder. The folder specified must be created manually if it doesn't exist.
+    LTspice_output_data_path = 'ltspice/simulation_results/'
+    # Naming convention for output files. Can be numerical names, increasing in value as output is created.
+    # Parameter names gives the files the name of the parameter that it is run with.
+    # Assumes number by default. Set to 'parameter' or 'number'.
+    LTspice_output_data_naming_convention = 'parameter'
+    #################################
+
     # Whether we should run the inference over the test-set with the simulated circuit.
     # Warning: the simulations can be long, you might want to avoid testing the circuits sometimes.
     test_circuit: bool = True
@@ -465,6 +500,9 @@ class Settings:
 
     # Number of parallel processes to run (0 means the number of cpu cores)
     sim_nb_process: int = 1
+
+    # Voltage OFFSET added to the pulses
+    sim_voltage_offset: float = 0.95
 
     def is_named_run(self) -> bool:
         """ Return True only if the name of the run is set (could be a temporary name). """

@@ -1,0 +1,11 @@
+#### Differences b/w LTspice & XYCE ###
+1- Remove the following lines: from LTSPICE netlist:
+	.model NMOS NMOS
+	.model PMOS PMOS
+	.lib C:\Users\usherbrooke\AppData\Local\LTspice\lib\cmp\standard.mos
+	.lib UniversalOpAmp1.lib
+2- Add the following lines to XYCE netlist:
+	.print tran format=csv file=<output_filename>.csv  v(*) i(*)
+3- Check for the following in the netlist: 
+	syntax of the sine wave (SIN for XYCE and SINE for ltspice)
+4- Remove subcircuits with long array of inputs to simulate in XYCE

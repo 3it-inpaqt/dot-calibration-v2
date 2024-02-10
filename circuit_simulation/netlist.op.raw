@@ -1,0 +1,392 @@
+Title: * Netlist that describe the physical circuit (components and connexions between them) to simulate, in Xyce formalism.
+Date: Wed Feb  7 22:37:00 2024
+Plotname: Operating Point
+Flags: real
+No. Variables: 191
+No. Points:            1
+Offset:    0.0000000000000000e+00
+Command: Linear Technology Corporation LTspice
+Variables:
+	0	V(i_001)	voltage
+	1	V(i_002)	voltage
+	2	V(i_003)	voltage
+	3	V(i_004)	voltage
+	4	V(i_005)	voltage
+	5	V(i_006)	voltage
+	6	V(i_007)	voltage
+	7	V(i_008)	voltage
+	8	V(i_009)	voltage
+	9	V(i_010)	voltage
+	10	V(i_011)	voltage
+	11	V(i_012)	voltage
+	12	V(i_013)	voltage
+	13	V(i_014)	voltage
+	14	V(i_015)	voltage
+	15	V(i_016)	voltage
+	16	V(i_017)	voltage
+	17	V(i_018)	voltage
+	18	V(i_019)	voltage
+	19	V(i_020)	voltage
+	20	V(i_021)	voltage
+	21	V(i_022)	voltage
+	22	V(i_023)	voltage
+	23	V(i_024)	voltage
+	24	V(i_025)	voltage
+	25	V(i_026)	voltage
+	26	V(i_027)	voltage
+	27	V(i_028)	voltage
+	28	V(i_029)	voltage
+	29	V(i_030)	voltage
+	30	V(i_031)	voltage
+	31	V(i_032)	voltage
+	32	V(i_033)	voltage
+	33	V(i_034)	voltage
+	34	V(i_035)	voltage
+	35	V(i_036)	voltage
+	36	V(i_037)	voltage
+	37	V(i_038)	voltage
+	38	V(i_039)	voltage
+	39	V(i_040)	voltage
+	40	V(i_041)	voltage
+	41	V(i_042)	voltage
+	42	V(i_043)	voltage
+	43	V(i_044)	voltage
+	44	V(i_045)	voltage
+	45	V(i_046)	voltage
+	46	V(i_047)	voltage
+	47	V(i_048)	voltage
+	48	V(i_049)	voltage
+	49	V(i_050)	voltage
+	50	V(i_051)	voltage
+	51	V(i_052)	voltage
+	52	V(i_053)	voltage
+	53	V(i_054)	voltage
+	54	V(i_055)	voltage
+	55	V(i_056)	voltage
+	56	V(i_057)	voltage
+	57	V(i_058)	voltage
+	58	V(i_059)	voltage
+	59	V(i_060)	voltage
+	60	V(i_061)	voltage
+	61	V(i_062)	voltage
+	62	V(i_063)	voltage
+	63	V(i_064)	voltage
+	64	V(b_001)	voltage
+	65	V(b_002)	voltage
+	66	V(b_003)	voltage
+	67	V(hidden_activ_out_h001_001)	voltage
+	68	V(hidden_activ_out_h001_002)	voltage
+	69	V(hidden_activ_out_h001_003)	voltage
+	70	V(hidden_activ_out_h001_004)	voltage
+	71	V(hidden_activ_out_h001_005)	voltage
+	72	V(hidden_activ_out_h001_006)	voltage
+	73	V(hidden_activ_out_h001_007)	voltage
+	74	V(hidden_activ_out_h001_008)	voltage
+	75	V(hidden_activ_out_h001_009)	voltage
+	76	V(hidden_activ_out_h001_010)	voltage
+	77	V(hidden_activ_out_h001_011)	voltage
+	78	V(hidden_activ_out_h001_012)	voltage
+	79	V(hidden_activ_out_h001_013)	voltage
+	80	V(hidden_activ_out_h001_014)	voltage
+	81	V(hidden_activ_out_h001_015)	voltage
+	82	V(hidden_activ_out_h001_016)	voltage
+	83	V(hidden_activ_out_h001_017)	voltage
+	84	V(hidden_activ_out_h001_018)	voltage
+	85	V(hidden_activ_out_h001_019)	voltage
+	86	V(hidden_activ_out_h001_020)	voltage
+	87	V(hidden_activ_out_h002_001)	voltage
+	88	V(hidden_activ_out_h002_002)	voltage
+	89	V(hidden_activ_out_h002_003)	voltage
+	90	V(hidden_activ_out_h002_004)	voltage
+	91	V(hidden_activ_out_h002_005)	voltage
+	92	V(hidden_activ_out_h002_006)	voltage
+	93	V(hidden_activ_out_h002_007)	voltage
+	94	V(hidden_activ_out_h002_008)	voltage
+	95	V(hidden_activ_out_h002_009)	voltage
+	96	V(hidden_activ_out_h002_010)	voltage
+	97	V(tia_h_out_001_001+)	voltage
+	98	V(tia_h_out_001_001-)	voltage
+	99	V(sum_h_out_001_001)	voltage
+	100	V(tia_h_out_001_002+)	voltage
+	101	V(tia_h_out_001_002-)	voltage
+	102	V(sum_h_out_001_002)	voltage
+	103	V(tia_h_out_001_003+)	voltage
+	104	V(tia_h_out_001_003-)	voltage
+	105	V(sum_h_out_001_003)	voltage
+	106	V(tia_h_out_001_004+)	voltage
+	107	V(tia_h_out_001_004-)	voltage
+	108	V(sum_h_out_001_004)	voltage
+	109	V(tia_h_out_001_005+)	voltage
+	110	V(tia_h_out_001_005-)	voltage
+	111	V(sum_h_out_001_005)	voltage
+	112	V(tia_h_out_001_006+)	voltage
+	113	V(tia_h_out_001_006-)	voltage
+	114	V(sum_h_out_001_006)	voltage
+	115	V(tia_h_out_001_007+)	voltage
+	116	V(tia_h_out_001_007-)	voltage
+	117	V(sum_h_out_001_007)	voltage
+	118	V(tia_h_out_001_008+)	voltage
+	119	V(tia_h_out_001_008-)	voltage
+	120	V(sum_h_out_001_008)	voltage
+	121	V(tia_h_out_001_009+)	voltage
+	122	V(tia_h_out_001_009-)	voltage
+	123	V(sum_h_out_001_009)	voltage
+	124	V(tia_h_out_001_010+)	voltage
+	125	V(tia_h_out_001_010-)	voltage
+	126	V(sum_h_out_001_010)	voltage
+	127	V(tia_h_out_001_011+)	voltage
+	128	V(tia_h_out_001_011-)	voltage
+	129	V(sum_h_out_001_011)	voltage
+	130	V(tia_h_out_001_012+)	voltage
+	131	V(tia_h_out_001_012-)	voltage
+	132	V(sum_h_out_001_012)	voltage
+	133	V(tia_h_out_001_013+)	voltage
+	134	V(tia_h_out_001_013-)	voltage
+	135	V(sum_h_out_001_013)	voltage
+	136	V(tia_h_out_001_014+)	voltage
+	137	V(tia_h_out_001_014-)	voltage
+	138	V(sum_h_out_001_014)	voltage
+	139	V(tia_h_out_001_015+)	voltage
+	140	V(tia_h_out_001_015-)	voltage
+	141	V(sum_h_out_001_015)	voltage
+	142	V(tia_h_out_001_016+)	voltage
+	143	V(tia_h_out_001_016-)	voltage
+	144	V(sum_h_out_001_016)	voltage
+	145	V(tia_h_out_001_017+)	voltage
+	146	V(tia_h_out_001_017-)	voltage
+	147	V(sum_h_out_001_017)	voltage
+	148	V(tia_h_out_001_018+)	voltage
+	149	V(tia_h_out_001_018-)	voltage
+	150	V(sum_h_out_001_018)	voltage
+	151	V(tia_h_out_001_019+)	voltage
+	152	V(tia_h_out_001_019-)	voltage
+	153	V(sum_h_out_001_019)	voltage
+	154	V(tia_h_out_001_020+)	voltage
+	155	V(tia_h_out_001_020-)	voltage
+	156	V(sum_h_out_001_020)	voltage
+	157	V(tia_h_out_002_001+)	voltage
+	158	V(tia_h_out_002_001-)	voltage
+	159	V(sum_h_out_002_001)	voltage
+	160	V(tia_h_out_002_002+)	voltage
+	161	V(tia_h_out_002_002-)	voltage
+	162	V(sum_h_out_002_002)	voltage
+	163	V(tia_h_out_002_003+)	voltage
+	164	V(tia_h_out_002_003-)	voltage
+	165	V(sum_h_out_002_003)	voltage
+	166	V(tia_h_out_002_004+)	voltage
+	167	V(tia_h_out_002_004-)	voltage
+	168	V(sum_h_out_002_004)	voltage
+	169	V(tia_h_out_002_005+)	voltage
+	170	V(tia_h_out_002_005-)	voltage
+	171	V(sum_h_out_002_005)	voltage
+	172	V(tia_h_out_002_006+)	voltage
+	173	V(tia_h_out_002_006-)	voltage
+	174	V(sum_h_out_002_006)	voltage
+	175	V(tia_h_out_002_007+)	voltage
+	176	V(tia_h_out_002_007-)	voltage
+	177	V(sum_h_out_002_007)	voltage
+	178	V(tia_h_out_002_008+)	voltage
+	179	V(tia_h_out_002_008-)	voltage
+	180	V(sum_h_out_002_008)	voltage
+	181	V(tia_h_out_002_009+)	voltage
+	182	V(tia_h_out_002_009-)	voltage
+	183	V(sum_h_out_002_009)	voltage
+	184	V(tia_h_out_002_010+)	voltage
+	185	V(tia_h_out_002_010-)	voltage
+	186	V(sum_h_out_002_010)	voltage
+	187	V(tia_h_out_003_001+)	voltage
+	188	V(tia_h_out_003_001-)	voltage
+	189	V(sum_h_out_003_001)	voltage
+	190	V(hidden_activ_out_h003_001)	voltage
+Values:
+0		0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	0.000000000000000e+00
+	3.034238498435108e-03
+	3.034407801635742e-03
+	3.034139329993091e-03
+	3.034275589427006e-03
+	3.034114261235041e-03
+	3.034510656761997e-03
+	3.034238222723726e-03
+	3.034079935728264e-03
+	3.034157341892597e-03
+	3.033498851001876e-03
+	3.034344696721088e-03
+	3.033813314340273e-03
+	3.034209298461614e-03
+	3.034043748459466e-03
+	3.034326272944463e-03
+	3.034120543537641e-03
+	3.034195943402665e-03
+	3.034068060523141e-03
+	3.034038088343077e-03
+	3.034271331524696e-03
+	9.688884982845012e-03
+	3.035786057899446e-03
+	3.035836516498721e-03
+	3.611795569215719e-03
+	3.035291250064275e-03
+	8.234014479932722e-03
+	3.035659306409580e-03
+	3.035975830576321e-03
+	3.035542934717217e-03
+	3.035823461977160e-03
+	9.199967917429490e-03
+	9.239690802747906e-03
+	-5.163518652663512e-03
+	1.034448368521729e-02
+	8.931410973155730e-03
+	-9.323105081756822e-03
+	1.017816209156139e-02
+	1.056279465739338e-02
+	-4.185503906072974e-03
+	1.033369364900977e-02
+	1.010548147506377e-02
+	-5.937684696081469e-03
+	9.372826106225852e-03
+	9.679758147659786e-03
+	-4.401375013872943e-03
+	1.101214479113713e-02
+	1.011705838303524e-02
+	-7.848218017842967e-03
+	9.272869379433328e-03
+	9.317980138678499e-03
+	-5.148679699905401e-03
+	1.052124147531881e-02
+	1.081307070173038e-02
+	-4.453270281264743e-03
+	9.627687679241586e-03
+	9.920535262990629e-03
+	-4.443557114488961e-03
+	8.670485411618335e-03
+	1.017583081981638e-02
+	-9.719664492431335e-04
+	1.029857966169057e-02
+	9.545995817423381e-03
+	-7.435632026714600e-03
+	9.365558739306057e-03
+	1.028152653658075e-02
+	-2.661205988086834e-03
+	9.033405845731302e-03
+	9.007298363887754e-03
+	-5.350338451094672e-03
+	9.358400671472689e-03
+	1.018980882153736e-02
+	-2.902752080409243e-03
+	9.673849874097265e-03
+	9.825656489154276e-03
+	-4.846885460579209e-03
+	9.552086688672278e-03
+	1.011945306458749e-02
+	-3.658636883041133e-03
+	9.705996646644240e-03
+	9.733773580372003e-03
+	-5.201503092257198e-03
+	9.341137735697093e-03
+	9.957301696848796e-03
+	-3.517608113091875e-03
+	9.841203398598529e-03
+	1.021986520585556e-02
+	-4.199997712035497e-03
+	9.672628921532431e-03
+	9.652815656090146e-03
+	-5.337221927050884e-03
+	-2.101893147133265e-02
+	-1.694643534362403e-02
+	6.588857309006713e-03
+	-7.218558937362589e-03
+	-1.780657888029972e-02
+	-3.540368769537849e-02
+	-7.109232300662911e-03
+	-1.771502018887021e-02
+	-3.545528600676651e-02
+	-1.296277357272726e-02
+	-1.100137679902259e-02
+	4.957649291279509e-04
+	-7.571445862700324e-03
+	-1.065750483990897e-02
+	-1.396668485805019e-02
+	-1.478099827025345e-02
+	-1.120230074439009e-02
+	5.130498930936866e-03
+	-6.976032386868005e-03
+	-1.484722516538488e-02
+	-2.764311964672750e-02
+	-6.660034646744502e-03
+	-2.113675860603807e-02
+	-4.651859668846825e-02
+	-1.221700042960336e-02
+	-1.843807101018290e-02
+	-2.288854866091672e-02
+	-1.137678089160923e-02
+	-2.209689958228511e-02
+	-3.574945429725496e-02
+	-1.572655384702465e-02
+	-9.076019000048683e-03
+	1.391443458672192e-02
+	1.699892113792270e-02

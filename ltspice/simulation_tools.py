@@ -3,9 +3,10 @@ import os
 from tempfile import mkstemp
 from shutil import move
 import numpy as np
+import shutil
+import xyceTranslate
 
-import config
-
+import config as config
 
 # ----------- Simulation controls ----------- #
 
@@ -30,12 +31,12 @@ def run_simulations(parameter_set=None, numerical_name_start=0):
         # Run a simulation for each parameter value in the parameter set
         for i, parameter_value in enumerate(parameter_value_list):
             # Set specified parameters
-            if config.output_data_naming_convention == 'number':
+            if config.LTspice_output_data_naming_convention == 'number':
                 file_num = str(i + numerical_name_start)
                 output_name = '0'*(3-len(file_num)) + file_num
-                output_path = config.output_data_path + output_name + '.txt'
+                output_path = config.LTspice_output_directory + output_name + '.txt'
             else:
-                output_path = config.output_data_path + parameter + '=' + str(parameter_value) + '.txt'
+                output_path = config.LTspice_output_directory + parameter + '=' + str(parameter_value) + '.txt'
             output_filenames.append(output_path)
             set_parameters(file_path + '.' + config.LTSpice_asc_filetype , parameter, parameter_value)
             print('Starting simulation with the specified parameter: ' + parameter + '=' + str(parameter_value))
@@ -58,10 +59,13 @@ def run_simulations(parameter_set=None, numerical_name_start=0):
 
 def simulate(spice_exe_path, file_path):
     file_name = str(file_path.split('\\')[-1])
+    file_name1 = str(file_path.split('/')[-1])
     print('Simulation starting: ' + file_name + '.' + config.LTSpice_asc_filetype)
     if config.LTSpice_asc_filetype == 'asc':
         runcmd = '"' + spice_exe_path + '" -netlist "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
         call(runcmd)
+        shutil.copyfile(file_path + '.net',config.LTspice_output_directory + file_name1 + '.net')
+        xyceTranslate.translate_netlist2xyce(config.LTspice_output_directory + file_name1 + '.net')
         runcmd = '"' + spice_exe_path + '" -b -ascii "' + file_path + '.net"'
         call(runcmd)
     else:
@@ -73,7 +77,10 @@ def simulate(spice_exe_path, file_path):
 def clean_raw_file(spice_exe_path, file_path, output_path, output_header):
     # Try to open the requested file
     file_name = file_path
+    file_name1 = str(file_path.split('/')[-1])
     try:
+        shutil.copyfile(file_path + '.raw',config.LTspice_output_directory + file_name1 + '.raw')
+        shutil.copyfile(file_path + '.op.raw',config.LTspice_output_directory + file_name1 + '.op.raw')
         f = open(file_path + '.raw', 'r')
     except IOError:
         # If the requested raw file is not found, simulations will be run,
@@ -101,7 +108,7 @@ def clean_raw_file(spice_exe_path, file_path, output_path, output_header):
                 continue
         else:
             data_line_num = (line_num - header_length) % number_of_vars
-            if data_line_num in config.variable_numbering.values():
+            if data_line_num in config.LTspice_variable_numbering.values():
                 data_line.append(line.split('\t')[-1].split('\n')[0])
             if data_line_num == number_of_vars - 1:
                 data.append(data_line)
@@ -110,15 +117,15 @@ def clean_raw_file(spice_exe_path, file_path, output_path, output_header):
     f.close()
 
     # Rearrange data
-    variables = sorted(config.variable_numbering, key=config.variable_numbering.__getitem__)
-    variables = np.array(variables)[config.preffered_sorting].tolist()
-    data = np.array(data)[:, config.preffered_sorting]
+    variables = sorted(config.LTspice_variable_numbering, key=config.LTspice_variable_numbering.__getitem__)
+    variables = np.array(variables)[config.LTspice_preffered_sorting].tolist()
+    data = np.array(data)[:, config.LTspice_preffered_sorting]
 
     # Write data to file
     try:
         f = open(output_path, 'w+')
     except IOError:
-        print('\nThe path specified for saving output data, \'' + config.output_data_path + '\', doesn\'t appear to exist.\nPlease check if the filepath set in \'config.py\' is correct.')
+        print('\nThe path specified for saving output data, \'' + config.LTspice_output_directory + '\', doesn\'t appear to exist.\nPlease check if the filepath set in \'config.py\' is correct.')
         exit(0)
     #//////////////////////f.write(output_header)
     f.write('\t'.join(variables) + '\n')

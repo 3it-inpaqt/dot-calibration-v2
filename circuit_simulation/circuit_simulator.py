@@ -161,7 +161,8 @@ class CircuitSimulator(Classifier):
         with open(save_path, 'w') as f:
             f.write(netlist)
 
-        runcmd = f'{settings.ltspice_executable_path} -b -ascii netlist.CIR'
+        
+        runcmd = f'{settings.ltspice_executable_path} -b -ascii netlist.CIR ' + str(save_path)
         logging.debug(f'Run command: "{runcmd}"')
 
         try:

@@ -20,16 +20,16 @@ def build_circuit (num_of_rows=16,num_of_cols=10, hasNext = False):
     stment += connect_wires(num_of_cols)
     stment += place_io_pins(num_of_cols)
     if hasNext:
-        activationFn = config.activation_fn_select
+        activationFn = config.LTspice_activation_fn_select
     else:
-        activationFn = config.final_activation_fn_select
+        activationFn = config.LTspice_final_activation_fn_select
 
     for row in list(range(0, num_of_cols)) :    
-        stment += 'SYMBOL {activ} 240 {posY} R0\n'.format(activ = config.activation_fn[activationFn], posY = int((row*128) + 96))
+        stment += 'SYMBOL {activ} 240 {posY} R0\n'.format(activ = config.LTspice_avail_activation_fn[activationFn], posY = int((row*128) + 96))
         stment += 'SYMATTR InstName X{row}\n'.format(row = row)
         
     asc_file_name = file_name + '_' + str(num_of_rows) + 'by' + str(num_of_cols)
-    with open(config.spice_directory + asc_file_name + '.asc','w') as nf :
+    with open(config.LTspice_spiceout_directory + asc_file_name + '.asc','w') as nf :
         nf.write(stment)
 
     create_asy(num_of_rows,num_of_cols)
@@ -75,13 +75,13 @@ def create_asy(num_of_rows=16,num_of_cols=10):
     stment += 'PINATTR PinName h_act_out[0:{end}]\n'.format(end = num_of_cols - 1)
     stment += 'PINATTR SpiceOrder 3\n'
     asy_file_name = file_name + '_' + str(num_of_rows) + 'by' + str(num_of_cols)
-    with open(config.spice_directory + asy_file_name + '.asy','w') as nf :
+    with open(config.LTspice_spiceout_directory + asy_file_name + '.asy','w') as nf :
         nf.write(stment)
     return asy_file_name
 
 
 class aux_circuit():
-    working_directory = config.spice_directory
+    working_directory = config.LTspice_spiceout_directory
     block_file_name = 'X_aux'
     num_of_rows=16
     num_of_cols=10
