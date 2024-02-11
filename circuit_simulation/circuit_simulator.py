@@ -1,3 +1,4 @@
+import csv
 import logging
 import subprocess
 import time
@@ -16,6 +17,15 @@ from utils.settings import settings
 from utils.output import save_netlist, save_xyce_output, save_xyce_results
 from circuit_simulation.generate_netlist import NetlistGenerator
 from plots.simulation_output import plot_simulation_state_evolution
+import circuit_simulation.ltspice_local.read_netlist as read_netlist
+import circuit_simulation.ltspice_local.generate_crossbar_asc as gasc
+import circuit_simulation.ltspice_local.generate_circuit_asc as cir
+import circuit_simulation.ltspice_local.run as sim_spice
+import shutil
+import matplotlib.pyplot as plt 
+
+from utils.misc import debugger_is_active as is_in_debug
+import os
 
 
 class CircuitSimulator(Classifier):
@@ -83,6 +93,14 @@ class CircuitSimulator(Classifier):
         netlist_file = NamedTemporaryFile(mode='w', delete=False, prefix='xyce-netlist_', suffix='.CIR')
         netlist_file.write(netlist)
         netlist_file.flush()
+
+        ################# Coded by HA
+        # setup CSVs
+        read_netlist.generate_CSVs_from_netlist(netlist_path = netlist_file.name,
+                                               CSV_out_directory = settings.LTspice_data_directory)
+        asc_file=cir.build_circuit()
+        sim_spice.simulate(filename=settings.LTspice_data_directory + "simulation_parameters.txt")
+        shutil.copyfile(settings.LTspice_output_directory + 'complete_circuit_generated_xyce.net',netlist_file.name)
 
         # We assume "Xyce" binary to be in the user $PATH
         # TODO add seed from global config
@@ -262,9 +280,18 @@ class CircuitSimulator(Classifier):
             The binary output value after threshold (0 or 1)
 
         """
-        output_signal = sim_results[f'V(SUM_H_OUT_{nb_layers:03}_001)']
-        output_threshold = sim_results[f'V(HIDDEN_ACTIV_OUT_H{nb_layers:03}_001)']
-        t = sim_results['TIME']
+        output_signal = sim_results[f'V(h_act_out[0])'.upper()] # SUM_H_OUT_{nb_layers:03}_001)']
+        # output_threshold = sim_results[f'V(h_act_out[0])'.upper()]
+        t = sim_results['TIME'] 
+        if is_in_debug():
+            print(sim_results.head())
+            plt.plot(t*1e9,output_signal)
+            plt.xlabel('Time (ns)')
+            plt.xticks(rotation=45, ha='right')
+            plt.ylabel('Voltage (V)')
+            plt.savefig ('out/foo_' + str(settings.imgitr) + '.png')
+            settings.imgitr += 1
+            # plt.show() 
 
         t_min_v_out = nb_layers * settings.sim_layer_latency + settings.sim_init_latency + settings.sim_pulse_rise_delay
         # Make sure that we let the chance to the current to stabilize (that's why we add 8e-8)
@@ -275,8 +302,8 @@ class CircuitSimulator(Classifier):
         i_min = np.where(t > t_min_v_out)[0][0]
         i_max = np.where(t > t_max_v_out)[0][0]
 
-        output = output_signal[i_min:i_max].min()
-        v_out_threshold = 0
+        output = output_signal[i_min:i_max].max()
+        v_out_threshold = 0.01 + output_signal[len(output_signal)-1]
         if output > v_out_threshold:
             prediction = 1
         else:

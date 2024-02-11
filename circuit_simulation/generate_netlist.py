@@ -160,7 +160,8 @@ class NetlistGenerator:
                     # End pulse
                     (time + settings.sim_pulse_width - settings.sim_pulse_fall_delay,
                      voltage_offset + (input_value * settings.sim_pulse_amplitude)),
-                    (time + settings.sim_pulse_width, voltage_offset)
+                    (time + settings.sim_pulse_width, voltage_offset)#,
+                    #(time + (settings.LTspice_num_of_layers + 1)*settings.sim_layer_latency, voltage_offset)
                 ])
 
             pulses.append(pulse)

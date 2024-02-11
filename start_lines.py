@@ -9,7 +9,8 @@ from utils.settings import settings
 from utils.timer import SectionTimer
 #import os, sys
 #sys.path.append(os.path.dirname(__file__))
-#import ltspice as lts
+from circuit_simulation.ltspice_local.run import main as lts
+
 
 def start_line_task() -> Classifier:
     """
@@ -18,8 +19,6 @@ def start_line_task() -> Classifier:
 
     :return: The trained classifier model.
     """
- #   ltsArgv = ['r']
- #   lts.main(ltsArgv)
     
 
     with SectionTimer('datasets loading', 'debug'):

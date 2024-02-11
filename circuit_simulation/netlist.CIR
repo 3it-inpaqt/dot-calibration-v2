@@ -14,18 +14,9 @@
 * NLMIN, NLMAX:  lower and upper bound for the desired number of nonlinear iterations
 * DELMAX: The maximum time step-size used
 * This additional line allows to fix convergence problem but increases the simulation time
+.OPTIONS TIMEINT ERROPTION=1 METHOD=GEAR NLMIN=3 NLMAX=8 DELMAX=1.0e-10
 * List variables to save in the result table
-.PRINT TRAN V(sum_h_out_003_001) V(hidden_activ_out_h003_001)
-+ V(i_001) V(i_002) V(i_003) V(i_004) V(i_005) V(i_006) V(i_007) V(i_008) V(i_009) V(i_010) V(i_011) V(i_012) V(i_013) V(i_014) V(i_015) V(i_016) V(i_017) V(i_018) V(i_019) V(i_020) V(i_021) V(i_022) V(i_023) V(i_024) V(i_025) V(i_026) V(i_027) V(i_028) V(i_029) V(i_030) V(i_031) V(i_032) V(i_033) V(i_034) V(i_035) V(i_036) V(i_037) V(i_038) V(i_039) V(i_040) V(i_041) V(i_042) V(i_043) V(i_044) V(i_045) V(i_046) V(i_047) V(i_048) V(i_049) V(i_050) V(i_051) V(i_052) V(i_053) V(i_054) V(i_055) V(i_056) V(i_057) V(i_058) V(i_059) V(i_060) V(i_061) V(i_062) V(i_063) V(i_064)
-+ V(sum_h_out_001_001) V(hidden_activ_out_h001_001) V(sum_h_out_001_002) V(hidden_activ_out_h001_002) V(sum_h_out_001_003) V(hidden_activ_out_h001_003) V(sum_h_out_001_004) V(hidden_activ_out_h001_004) V(sum_h_out_001_005) V(hidden_activ_out_h001_005) V(sum_h_out_001_006) V(hidden_activ_out_h001_006) V(sum_h_out_001_007) V(hidden_activ_out_h001_007) V(sum_h_out_001_008) V(hidden_activ_out_h001_008) V(sum_h_out_001_009) V(hidden_activ_out_h001_009) V(sum_h_out_001_010) V(hidden_activ_out_h001_010) V(sum_h_out_001_011) V(hidden_activ_out_h001_011) V(sum_h_out_001_012) V(hidden_activ_out_h001_012) V(sum_h_out_001_013) V(hidden_activ_out_h001_013) V(sum_h_out_001_014) V(hidden_activ_out_h001_014) V(sum_h_out_001_015) V(hidden_activ_out_h001_015) V(sum_h_out_001_016) V(hidden_activ_out_h001_016) V(sum_h_out_001_017) V(hidden_activ_out_h001_017) V(sum_h_out_001_018) V(hidden_activ_out_h001_018) V(sum_h_out_001_019) V(hidden_activ_out_h001_019) V(sum_h_out_001_020) V(hidden_activ_out_h001_020)
-+ V(tia_h_out_001_001+) V(tia_h_out_001_001-) V(tia_h_out_001_002+) V(tia_h_out_001_002-) V(tia_h_out_001_003+) V(tia_h_out_001_003-) V(tia_h_out_001_004+) V(tia_h_out_001_004-) V(tia_h_out_001_005+) V(tia_h_out_001_005-) V(tia_h_out_001_006+) V(tia_h_out_001_006-) V(tia_h_out_001_007+) V(tia_h_out_001_007-) V(tia_h_out_001_008+) V(tia_h_out_001_008-) V(tia_h_out_001_009+) V(tia_h_out_001_009-) V(tia_h_out_001_010+) V(tia_h_out_001_010-) V(tia_h_out_001_011+) V(tia_h_out_001_011-) V(tia_h_out_001_012+) V(tia_h_out_001_012-) V(tia_h_out_001_013+) V(tia_h_out_001_013-) V(tia_h_out_001_014+) V(tia_h_out_001_014-) V(tia_h_out_001_015+) V(tia_h_out_001_015-) V(tia_h_out_001_016+) V(tia_h_out_001_016-) V(tia_h_out_001_017+) V(tia_h_out_001_017-) V(tia_h_out_001_018+) V(tia_h_out_001_018-) V(tia_h_out_001_019+) V(tia_h_out_001_019-) V(tia_h_out_001_020+) V(tia_h_out_001_020-)
-+ V(b_001)
-+ V(sum_h_out_002_001) V(hidden_activ_out_h002_001) V(sum_h_out_002_002) V(hidden_activ_out_h002_002) V(sum_h_out_002_003) V(hidden_activ_out_h002_003) V(sum_h_out_002_004) V(hidden_activ_out_h002_004) V(sum_h_out_002_005) V(hidden_activ_out_h002_005) V(sum_h_out_002_006) V(hidden_activ_out_h002_006) V(sum_h_out_002_007) V(hidden_activ_out_h002_007) V(sum_h_out_002_008) V(hidden_activ_out_h002_008) V(sum_h_out_002_009) V(hidden_activ_out_h002_009) V(sum_h_out_002_010) V(hidden_activ_out_h002_010)
-+ V(tia_h_out_002_001+) V(tia_h_out_002_001-) V(tia_h_out_002_002+) V(tia_h_out_002_002-) V(tia_h_out_002_003+) V(tia_h_out_002_003-) V(tia_h_out_002_004+) V(tia_h_out_002_004-) V(tia_h_out_002_005+) V(tia_h_out_002_005-) V(tia_h_out_002_006+) V(tia_h_out_002_006-) V(tia_h_out_002_007+) V(tia_h_out_002_007-) V(tia_h_out_002_008+) V(tia_h_out_002_008-) V(tia_h_out_002_009+) V(tia_h_out_002_009-) V(tia_h_out_002_010+) V(tia_h_out_002_010-)
-+ V(b_002)
-+ V(sum_h_out_003_001) V(hidden_activ_out_h003_001)
-+ V(tia_h_out_003_001+) V(tia_h_out_003_001-)
-+ V(b_003)
+.PRINT TRAN V(*)
 
 * =============================== Models ==================================
 
@@ -48,76 +39,76 @@
 
 * ----- Input pulses
 * Vi_num: The input voltage as pulse sequences
-Vi_001    i_001    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.083V 300.00ns 1.083V 301.00ns 0.950V
-Vi_002    i_002    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.035V 300.00ns 1.035V 301.00ns 0.950V
-Vi_003    i_003    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.000V 300.00ns 1.000V 301.00ns 0.950V
-Vi_004    i_004    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 0.972V 300.00ns 0.972V 301.00ns 0.950V
-Vi_005    i_005    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.009V 300.00ns 1.009V 301.00ns 0.950V
-Vi_006    i_006    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 0.995V 300.00ns 0.995V 301.00ns 0.950V
-Vi_007    i_007    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.042V 300.00ns 1.042V 301.00ns 0.950V
-Vi_008    i_008    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 0.950V 300.00ns 0.950V 301.00ns 0.950V
-Vi_009    i_009    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.080V 300.00ns 1.080V 301.00ns 0.950V
-Vi_010    i_010    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.039V 300.00ns 1.039V 301.00ns 0.950V
-Vi_011    i_011    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 0.995V 300.00ns 0.995V 301.00ns 0.950V
-Vi_012    i_012    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.005V 300.00ns 1.005V 301.00ns 0.950V
-Vi_013    i_013    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.010V 300.00ns 1.010V 301.00ns 0.950V
-Vi_014    i_014    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.038V 300.00ns 1.038V 301.00ns 0.950V
-Vi_015    i_015    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.053V 300.00ns 1.053V 301.00ns 0.950V
-Vi_016    i_016    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 0.960V 300.00ns 0.960V 301.00ns 0.950V
-Vi_017    i_017    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.073V 300.00ns 1.073V 301.00ns 0.950V
-Vi_018    i_018    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.050V 300.00ns 1.050V 301.00ns 0.950V
-Vi_019    i_019    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 0.992V 300.00ns 0.992V 301.00ns 0.950V
-Vi_020    i_020    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.025V 300.00ns 1.025V 301.00ns 0.950V
-Vi_021    i_021    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.072V 300.00ns 1.072V 301.00ns 0.950V
-Vi_022    i_022    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.035V 300.00ns 1.035V 301.00ns 0.950V
-Vi_023    i_023    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.081V 300.00ns 1.081V 301.00ns 0.950V
-Vi_024    i_024    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 0.996V 300.00ns 0.996V 301.00ns 0.950V
-Vi_025    i_025    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.104V 300.00ns 1.104V 301.00ns 0.950V
-Vi_026    i_026    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.054V 300.00ns 1.054V 301.00ns 0.950V
-Vi_027    i_027    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.019V 300.00ns 1.019V 301.00ns 0.950V
-Vi_028    i_028    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.028V 300.00ns 1.028V 301.00ns 0.950V
-Vi_029    i_029    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.034V 300.00ns 1.034V 301.00ns 0.950V
-Vi_030    i_030    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.049V 300.00ns 1.049V 301.00ns 0.950V
-Vi_031    i_031    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.072V 300.00ns 1.072V 301.00ns 0.950V
-Vi_032    i_032    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 0.995V 300.00ns 0.995V 301.00ns 0.950V
-Vi_033    i_033    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.130V 300.00ns 1.130V 301.00ns 0.950V
-Vi_034    i_034    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.073V 300.00ns 1.073V 301.00ns 0.950V
-Vi_035    i_035    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.030V 300.00ns 1.030V 301.00ns 0.950V
-Vi_036    i_036    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.023V 300.00ns 1.023V 301.00ns 0.950V
-Vi_037    i_037    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.087V 300.00ns 1.087V 301.00ns 0.950V
-Vi_038    i_038    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.066V 300.00ns 1.066V 301.00ns 0.950V
-Vi_039    i_039    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.086V 300.00ns 1.086V 301.00ns 0.950V
-Vi_040    i_040    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.019V 300.00ns 1.019V 301.00ns 0.950V
-Vi_041    i_041    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.150V 300.00ns 1.150V 301.00ns 0.950V
-Vi_042    i_042    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.091V 300.00ns 1.091V 301.00ns 0.950V
-Vi_043    i_043    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.036V 300.00ns 1.036V 301.00ns 0.950V
-Vi_044    i_044    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.042V 300.00ns 1.042V 301.00ns 0.950V
-Vi_045    i_045    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.094V 300.00ns 1.094V 301.00ns 0.950V
-Vi_046    i_046    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.075V 300.00ns 1.075V 301.00ns 0.950V
-Vi_047    i_047    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.103V 300.00ns 1.103V 301.00ns 0.950V
-Vi_048    i_048    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.023V 300.00ns 1.023V 301.00ns 0.950V
-Vi_049    i_049    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.136V 300.00ns 1.136V 301.00ns 0.950V
-Vi_050    i_050    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.109V 300.00ns 1.109V 301.00ns 0.950V
-Vi_051    i_051    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.062V 300.00ns 1.062V 301.00ns 0.950V
-Vi_052    i_052    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.044V 300.00ns 1.044V 301.00ns 0.950V
-Vi_053    i_053    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.100V 300.00ns 1.100V 301.00ns 0.950V
-Vi_054    i_054    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.085V 300.00ns 1.085V 301.00ns 0.950V
-Vi_055    i_055    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.091V 300.00ns 1.091V 301.00ns 0.950V
-Vi_056    i_056    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.020V 300.00ns 1.020V 301.00ns 0.950V
-Vi_057    i_057    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.133V 300.00ns 1.133V 301.00ns 0.950V
-Vi_058    i_058    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.107V 300.00ns 1.107V 301.00ns 0.950V
-Vi_059    i_059    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.074V 300.00ns 1.074V 301.00ns 0.950V
-Vi_060    i_060    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.045V 300.00ns 1.045V 301.00ns 0.950V
-Vi_061    i_061    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.115V 300.00ns 1.115V 301.00ns 0.950V
-Vi_062    i_062    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.057V 300.00ns 1.057V 301.00ns 0.950V
-Vi_063    i_063    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.135V 300.00ns 1.135V 301.00ns 0.950V
-Vi_064    i_064    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.033V 300.00ns 1.033V 301.00ns 0.950V
+Vi_001    i_001    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.133V 300.00ns 0.133V 301.00ns 0.000V
+Vi_002    i_002    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.085V 300.00ns 0.085V 301.00ns 0.000V
+Vi_003    i_003    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.050V 300.00ns 0.050V 301.00ns 0.000V
+Vi_004    i_004    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.022V 300.00ns 0.022V 301.00ns 0.000V
+Vi_005    i_005    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.059V 300.00ns 0.059V 301.00ns 0.000V
+Vi_006    i_006    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.045V 300.00ns 0.045V 301.00ns 0.000V
+Vi_007    i_007    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.092V 300.00ns 0.092V 301.00ns 0.000V
+Vi_008    i_008    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.000V 300.00ns 0.000V 301.00ns 0.000V
+Vi_009    i_009    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.130V 300.00ns 0.130V 301.00ns 0.000V
+Vi_010    i_010    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.089V 300.00ns 0.089V 301.00ns 0.000V
+Vi_011    i_011    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.045V 300.00ns 0.045V 301.00ns 0.000V
+Vi_012    i_012    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.055V 300.00ns 0.055V 301.00ns 0.000V
+Vi_013    i_013    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.060V 300.00ns 0.060V 301.00ns 0.000V
+Vi_014    i_014    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.088V 300.00ns 0.088V 301.00ns 0.000V
+Vi_015    i_015    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.103V 300.00ns 0.103V 301.00ns 0.000V
+Vi_016    i_016    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.010V 300.00ns 0.010V 301.00ns 0.000V
+Vi_017    i_017    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.123V 300.00ns 0.123V 301.00ns 0.000V
+Vi_018    i_018    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.100V 300.00ns 0.100V 301.00ns 0.000V
+Vi_019    i_019    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.042V 300.00ns 0.042V 301.00ns 0.000V
+Vi_020    i_020    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.075V 300.00ns 0.075V 301.00ns 0.000V
+Vi_021    i_021    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.122V 300.00ns 0.122V 301.00ns 0.000V
+Vi_022    i_022    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.085V 300.00ns 0.085V 301.00ns 0.000V
+Vi_023    i_023    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.131V 300.00ns 0.131V 301.00ns 0.000V
+Vi_024    i_024    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.046V 300.00ns 0.046V 301.00ns 0.000V
+Vi_025    i_025    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.154V 300.00ns 0.154V 301.00ns 0.000V
+Vi_026    i_026    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.104V 300.00ns 0.104V 301.00ns 0.000V
+Vi_027    i_027    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.069V 300.00ns 0.069V 301.00ns 0.000V
+Vi_028    i_028    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.078V 300.00ns 0.078V 301.00ns 0.000V
+Vi_029    i_029    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.084V 300.00ns 0.084V 301.00ns 0.000V
+Vi_030    i_030    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.099V 300.00ns 0.099V 301.00ns 0.000V
+Vi_031    i_031    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.122V 300.00ns 0.122V 301.00ns 0.000V
+Vi_032    i_032    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.045V 300.00ns 0.045V 301.00ns 0.000V
+Vi_033    i_033    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.180V 300.00ns 0.180V 301.00ns 0.000V
+Vi_034    i_034    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.123V 300.00ns 0.123V 301.00ns 0.000V
+Vi_035    i_035    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.080V 300.00ns 0.080V 301.00ns 0.000V
+Vi_036    i_036    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.073V 300.00ns 0.073V 301.00ns 0.000V
+Vi_037    i_037    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.137V 300.00ns 0.137V 301.00ns 0.000V
+Vi_038    i_038    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.116V 300.00ns 0.116V 301.00ns 0.000V
+Vi_039    i_039    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.136V 300.00ns 0.136V 301.00ns 0.000V
+Vi_040    i_040    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.069V 300.00ns 0.069V 301.00ns 0.000V
+Vi_041    i_041    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.200V 300.00ns 0.200V 301.00ns 0.000V
+Vi_042    i_042    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.141V 300.00ns 0.141V 301.00ns 0.000V
+Vi_043    i_043    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.086V 300.00ns 0.086V 301.00ns 0.000V
+Vi_044    i_044    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.092V 300.00ns 0.092V 301.00ns 0.000V
+Vi_045    i_045    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.144V 300.00ns 0.144V 301.00ns 0.000V
+Vi_046    i_046    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.125V 300.00ns 0.125V 301.00ns 0.000V
+Vi_047    i_047    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.153V 300.00ns 0.153V 301.00ns 0.000V
+Vi_048    i_048    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.073V 300.00ns 0.073V 301.00ns 0.000V
+Vi_049    i_049    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.186V 300.00ns 0.186V 301.00ns 0.000V
+Vi_050    i_050    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.159V 300.00ns 0.159V 301.00ns 0.000V
+Vi_051    i_051    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.112V 300.00ns 0.112V 301.00ns 0.000V
+Vi_052    i_052    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.094V 300.00ns 0.094V 301.00ns 0.000V
+Vi_053    i_053    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.150V 300.00ns 0.150V 301.00ns 0.000V
+Vi_054    i_054    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.135V 300.00ns 0.135V 301.00ns 0.000V
+Vi_055    i_055    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.141V 300.00ns 0.141V 301.00ns 0.000V
+Vi_056    i_056    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.070V 300.00ns 0.070V 301.00ns 0.000V
+Vi_057    i_057    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.183V 300.00ns 0.183V 301.00ns 0.000V
+Vi_058    i_058    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.157V 300.00ns 0.157V 301.00ns 0.000V
+Vi_059    i_059    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.124V 300.00ns 0.124V 301.00ns 0.000V
+Vi_060    i_060    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.095V 300.00ns 0.095V 301.00ns 0.000V
+Vi_061    i_061    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.165V 300.00ns 0.165V 301.00ns 0.000V
+Vi_062    i_062    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.107V 300.00ns 0.107V 301.00ns 0.000V
+Vi_063    i_063    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.185V 300.00ns 0.185V 301.00ns 0.000V
+Vi_064    i_064    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.083V 300.00ns 0.083V 301.00ns 0.000V
 
 * Vb_num: The bias voltage as pulse sequences
 
-Vb_001    b_001    0    PWL 0.00ns 0.950V 1.00ns 0.950V 2.00ns 1.150V 300.00ns 1.150V 301.00ns 0.950V
-Vb_002    b_002    0    PWL 0.00ns 0.950V 11.00ns 0.950V 12.00ns 1.150V 310.00ns 1.150V 311.00ns 0.950V
-Vb_003    b_003    0    PWL 0.00ns 0.950V 21.00ns 0.950V 22.00ns 1.150V 320.00ns 1.150V 321.00ns 0.950V
+Vb_001    b_001    0    PWL 0.00ns 0.000V 1.00ns 0.000V 2.00ns 0.200V 300.00ns 0.200V 301.00ns 0.000V
+Vb_002    b_002    0    PWL 0.00ns 0.000V 11.00ns 0.000V 12.00ns 0.200V 310.00ns 0.200V 311.00ns 0.000V
+Vb_003    b_003    0    PWL 0.00ns 0.000V 21.00ns 0.000V 22.00ns 0.200V 320.00ns 0.200V 321.00ns 0.000V
 
 Ve        Ve       0    3
 Vcc-      Vcc-     0    -5
@@ -3697,20 +3688,7 @@ XReLU_002_007 sum_h_out_002_007 hidden_activ_out_h002_007 ReLU
 * XHardTanh_h002_008 sum_h_out_002_008 hidden_activ_out_h002_008 HardTanh PARAMS: V_clip=-0.39999999999999997
 XReLU_002_008 sum_h_out_002_008 hidden_activ_out_h002_008 ReLU
 *XSigmoid_002_008 sum_h_out_002_008 hidden_activ_out_h002_008 RNN_Sigmoid3_HA
-* Neuron 9
-* XHardTanh_h002_009 sum_h_out_002_009 hidden_activ_out_h002_009 HardTanh PARAMS: V_clip=-0.39999999999999997
-XReLU_002_009 sum_h_out_002_009 hidden_activ_out_h002_009 ReLU
-*XSigmoid_002_009 sum_h_out_002_009 hidden_activ_out_h002_009 RNN_Sigmoid3_HA
-* Neuron 10
-* XHardTanh_h002_010 sum_h_out_002_010 hidden_activ_out_h002_010 HardTanh PARAMS: V_clip=-0.39999999999999997
-XReLU_002_010 sum_h_out_002_010 hidden_activ_out_h002_010 ReLU
-*XSigmoid_002_010 sum_h_out_002_010 hidden_activ_out_h002_010 RNN_Sigmoid3_HA
 
-* Layer 002
-* Neuron 1
-* XHardTanh_h003_001 sum_h_out_003_001 hidden_activ_out_h003_001 HardTanh PARAMS: V_clip=-0.39999999999999997
-XReLU_003_001 sum_h_out_003_001 hidden_activ_out_h003_001 ReLU
-*XSigmoid_003_001 sum_h_out_003_001 hidden_activ_out_h003_001 RNN_Sigmoid3_HA
 
 
 .END

@@ -1,8 +1,0 @@
-# This a comment
-
-# First simulation run
-# set load 15000
-# run C 1n 2n 3n
-run simtime 1u
-# Second simulation run
-# run C 1n 2n 3n

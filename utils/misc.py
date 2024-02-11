@@ -10,6 +10,11 @@ from blitz.modules import BayesianConv2d
 from torch import nn
 
 from utils.settings import settings
+import sys 
+
+def debugger_is_active() -> bool:
+    """Return if the debugger is currently active"""
+    return hasattr(sys, 'gettrace') and sys.gettrace() is not None
 
 
 def get_nb_loader_workers(device: torch.device = None) -> int:

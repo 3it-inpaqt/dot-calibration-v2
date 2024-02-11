@@ -27,6 +27,7 @@ from utils.metrics import network_metrics
 from utils.output import init_out_directory, save_results, save_timers, set_plot_style
 from utils.settings import settings
 from utils.timer import SectionTimer
+from circuit_simulation.ltspice_local.run import initialize as setup_spice
 
 
 def preparation() -> None:
@@ -42,6 +43,8 @@ def preparation() -> None:
 
     # Create the output directory to save results and plots
     init_out_directory()
+    if settings.simulate_circuit:
+        setup_spice()
 
     if settings.run_name:
         logger.info(f'Run name: {settings.run_name}')
@@ -277,7 +280,7 @@ def run_train_test(train_dataset: Dataset, test_dataset: Dataset, validation_dat
     save_results(confidence_thresholds=network.confidence_thresholds)
 
     # Start normal test
-    # test(network, test_dataset, device, final=True)
+    test(network, test_dataset, device, final=True)
 
     # Arrived to the end successfully (no error)
     save_results(success_run=True)
