@@ -8,6 +8,7 @@ import circuit_simulation.ltspice_local.xyceTranslate as xyceTranslate
 from utils.logger import logger as logging
 from utils.settings import settings as config
 import time
+import psutil
 
 # ----------- Simulation controls ----------- #
 
@@ -65,7 +66,10 @@ def simulate(spice_exe_path, file_path):
     file_name1 = str(file_path.split('/')[-1])
     logging.debug('Simulation starting: ' + file_name + '.' + config.LTSpice_asc_filetype)
     if config.LTSpice_asc_filetype == 'asc':
-        runcmd = '"' + spice_exe_path + '" -netlist "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
+        if psutil.WINDOWS:
+           runcmd = '"' + spice_exe_path + '" -netlist "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
+        elif psutil.LINUX:
+            runcmd = '' + spice_exe_path + ' -netlist "' + file_path + '.' + config.LTSpice_asc_filetype + ''
         call(runcmd)
         while os.path.exists(file_path + '.net') == False:
             print('Waiting for "{file_path}" + .net to be created')
