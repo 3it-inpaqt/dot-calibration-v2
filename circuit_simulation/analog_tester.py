@@ -15,6 +15,7 @@ from utils.settings import settings
 from utils.timer import duration_to_str
 from utils.output import save_inferences
 from utils.progress_bar import ProgressBar
+import numpy as np
 
 
 def test_analog(model: ClassifierNN, test_dataset: Dataset):
@@ -41,6 +42,7 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
     job_args = []
     outputs_table = []
     start_time = time.perf_counter()
+    labels = []
 
     circuit_simulator = CircuitSimulator(model)
 
@@ -56,6 +58,7 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
             else:
                 # Single thread mode, so just run it now
                 outputs_table.append(inference_job(input_values, label, circuit_simulator, i==0))
+                labels.append(label.int().item())
                 progress_bar.incr()
 
         # Start multi-thread pool
@@ -91,7 +94,10 @@ def test_analog(model: ClassifierNN, test_dataset: Dataset):
 
     plot_analog_before_threshold_hist(outputs_table['analog_before_th'])
 
+
     save_inferences(outputs_table)
+    labels = np.asarray(labels)
+    np.savetxt('out/labels.csv', labels,delimiter=',')
 
 
 def inference_job(inputs: torch.tensor, label: torch.tensor, circuit_simulator: CircuitSimulator,

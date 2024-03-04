@@ -280,7 +280,7 @@ class CircuitSimulator(Classifier):
             The binary output value after threshold (0 or 1)
 
         """
-        output_signal = sim_results[f'V(h_act_out[0])'.upper()] # SUM_H_OUT_{nb_layers:03}_001)']
+        output_signal = sim_results[f'V(Vout_cb65by40_-[0])'.upper()] # SUM_H_OUT_{nb_layers:03}_001)']
         # output_threshold = sim_results[f'V(h_act_out[0])'.upper()]
         t = sim_results['TIME'] 
         if is_in_debug():

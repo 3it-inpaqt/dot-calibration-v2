@@ -1,0 +1,75 @@
+.SUBCKT delay_line 31 VF4 PARAMS: C_val1=15.33p L_val1=38.33n
+
+C3 VF1 0 C_val1
+C4 VF2 0 C_val1
+C5 VF3 0 C_val1
+XU 31 VF1 lumped PARAMS: C_val=C_val1 L_val=L_val1
+
+XU1 VF1 VF2 lumped PARAMS: C_val=C_val1 L_val=L_val1
+
+XU2 VF2 VF3 lumped PARAMS: C_val=C_val1 L_val=L_val1
+
+XU4 VF3 VF4 lumped PARAMS: C_val=C_val1 L_val=L_val1
+.ends delay_line
+
+.SUBCKT lumped 31 VF1 PARAMS: C_val=15.33p L_val=38.33n
+C31         2 0 C_val 
+C30         3 0 C_val 
+C29         4 0 C_val
+C28         5 0 C_val
+C27         6 0 C_val
+C26         7 0 C_val
+C25         8 0 C_val
+C24         9 0 C_val
+C23         10 0 C_val
+L30         2 VF1 L_val IC=0 
+L29         3 2 L_val IC=0 
+L28         4 3 L_val IC=0 
+L27         5 4 L_val IC=0 
+L26         6 5 L_val IC=0 
+L25         7 6 L_val IC=0 
+L24         8 7 L_val IC=0 
+L23         9 8 L_val IC=0 
+L22         10 9 L_val IC=0 
+L21         11 10 L_val IC=0 
+C11         11 0 C_val 
+C21         12 0 C_val
+C20         13 0 C_val
+C19         14 0 C_val
+C18         15 0 C_val
+C17         16 0 C_val
+C16         17 0 C_val
+C15         18 0 C_val
+C14         19 0 C_val
+C13         20 0 C_val
+L20         12 11 L_val IC=0 
+L19         13 12 L_val IC=0 
+L18         14 13 L_val IC=0 
+L17         15 14 L_val IC=0 
+L16         16 15 L_val IC=0 
+L15         17 16 L_val IC=0 
+L14         18 17 L_val IC=0 
+L13         19 18 L_val IC=0 
+L12         20 19 L_val IC=0 
+L11         21 20 L_val IC=0 
+C12         21 0 C_val
+C10         22 0 C_val
+C9          23 0 C_val
+C8          24 0 C_val
+C7          25 0 C_val
+C6          26 0 C_val
+C5          27 0 C_val
+C4          28 0 C_val
+C3          29 0 C_val
+C2          30 0 C_val
+L10         22 21 L_val IC=0 
+L9          23 22 L_val IC=0 
+L8          24 23 L_val IC=0 
+L7          25 24 L_val IC=0 
+L6          26 25 L_val IC=0 
+L5          27 26 L_val IC=0 
+L4          28 27 L_val IC=0 
+L3          29 28 L_val IC=0 
+L2          30 29 L_val IC=0 
+L1          31 30 L_val IC=0
+.ENDS lumped

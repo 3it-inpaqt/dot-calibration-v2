@@ -432,7 +432,7 @@ class Settings:
     LTspice_output_data_naming_convention = 'parameter'
     LTspice_simtime: str = '1u'
     LTspice_simtime_paramname: str = 'simtime'
-    LTspice_overwrite_files = True
+    LTspice_overwrite_files: bool = True
     imgitr: int = 0
     #################################
 
@@ -461,7 +461,7 @@ class Settings:
     sim_r_min: int = 5000
 
     # The maximal resistance value that we consider for memristor programming (ohm)
-    sim_r_max: int = 15000
+    sim_r_max: int = 120000
 
     # The read standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.2%

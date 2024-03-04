@@ -1,0 +1,15 @@
+*.GLOBAL gnd!
+
+V1 VDD VSS 1.8
+V0 VSS 0 0
+V4 Vb 0 1.2
+R0 out VSS 50k
+V2 Vp 0 PWL(0 -0.5 400u -0.5 800u 1 1.2m 1)
+V5 Vn 0 0
+XI4 VDD VSS Vb Vn out Vp RNN_Sigmoid3_HA
+
+.include "activations.sub"
+.include "Sigmoid3_HA.spice"
+.op
+.tran 0 1.2m uic
+.print tran format=csv file=Test_RNN_Sigmoid3_HA_xyce.csv v(Vp) v(out)

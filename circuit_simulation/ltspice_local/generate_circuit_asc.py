@@ -156,16 +156,22 @@ def write_to_ascfile(stment):
 def create_directory(overwrite: bool = False):
      if overwrite:
          if 'activ_v' in config.LTspice_spiceout_directory:
-             print(config.LTspice_spiceout_directory.find('activ_v'))
+             # print(config.LTspice_spiceout_directory.find(config.LTspice_wd_prefix))
              wd = '{parent}'.format(parent = config.LTspice_spiceout_directory)
          else:
              wd = '{parent}{gwd}/'.format(parent = config.LTspice_spiceout_directory, gwd = config.LTspice_wd_prefix)
          if os.path.exists(wd):
             shutil.rmtree(wd,ignore_errors= True)
      else:
-        subfolders= [f.path for f in os.scandir(config.LTspice_spiceout_directory) if f.is_dir() and f.name.startswith(config.LTspice_wd_prefix) ]
+        parent_dir = '{parent}'.format(parent = config.LTspice_spiceout_directory)
+        if config.LTspice_wd_prefix in parent_dir:
+             #print(config.LTspice_spiceout_directory.find(config.LTspice_wd_prefix))
+             wd = parent_dir.find(config.LTspice_wd_prefix)
+             parent_dir = parent_dir[:int(wd)]
+             wd = '{parent}'.format(parent = parent_dir)
+        subfolders= [f.path for f in os.scandir(parent_dir) if f.is_dir() and f.name.startswith(config.LTspice_wd_prefix) ]
         gwd = '{wdp}{idx}'.format(wdp = config.LTspice_wd_prefix, idx = len(subfolders))
-        wd = '{parent}{gwd}/'.format(parent = config.LTspice_spiceout_directory, gwd = gwd)
+        wd = '{parent}{gwd}/'.format(parent = parent_dir, gwd = gwd)
      #os.mkdir(wd)
      config.LTspice_spiceout_directory = wd
      config.LTSpice_asc_filename = config.LTspice_spiceout_directory + 'complete_circuit.asc'
