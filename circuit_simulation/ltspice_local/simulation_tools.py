@@ -43,6 +43,8 @@ def run_simulations(parameter_set=None, numerical_name_start=0):
             set_parameters(file_path + '.' + config.LTSpice_asc_filetype , parameter, parameter_value)
             logging.debug('Starting simulation with the specified parameter: ' + parameter + '=' + str(parameter_value))
             # Run simulation
+            if psutil.LINUX:
+                file_path_generated = os.path.join(os.getcwd(), file_path) + '_generated'
             simulate(spice_exe_path, file_path_generated)
             # Set header and cleanup the file
             output_header = 'SPICE simulation result. Parameters: ' + ', '.join(get_parameters(file_path_generated + '.' + config.LTSpice_asc_filetype)) + '\n' # Maybe not add the time variables
@@ -66,10 +68,8 @@ def simulate(spice_exe_path, file_path):
     file_name1 = str(file_path.split('/')[-1])
     logging.debug('Simulation starting: ' + file_name + '.' + config.LTSpice_asc_filetype)
     if config.LTSpice_asc_filetype == 'asc':
-        if psutil.WINDOWS:
-           runcmd = '"' + spice_exe_path + '" -netlist "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
-        elif psutil.LINUX:
-            file_path_generated = os.path.join(os.getcwd(), file_path) + '_generated'
+        runcmd = '"' + spice_exe_path + '" -netlist "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
+        if psutil.LINUX:
             runcmd = '' + spice_exe_path + ' -netlist ' + file_path + '.' + config.LTSpice_asc_filetype + ''
         call(runcmd)
         while os.path.exists(file_path + '.net') == False:
