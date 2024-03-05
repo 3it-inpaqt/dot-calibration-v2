@@ -9,6 +9,7 @@ from utils.logger import logger as logging
 from utils.settings import settings as config
 import time
 import psutil
+import subprocess
 
 # ----------- Simulation controls ----------- #
 
@@ -71,7 +72,8 @@ def simulate(spice_exe_path, file_path):
         runcmd = '"' + spice_exe_path + '" -netlist "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
         if psutil.LINUX:
             runcmd = '' + spice_exe_path + ' -netlist ' + file_path + '.' + config.LTSpice_asc_filetype + ''
-        call(runcmd)
+        subprocess.run(runcmd, check=True, capture_output=True,
+                                     encoding='utf-8')
         while os.path.exists(file_path + '.net') == False:
             print('Waiting for "{file_path}" + .net to be created')
             time.sleep(0.001)
@@ -79,10 +81,12 @@ def simulate(spice_exe_path, file_path):
         xyceTranslate.translate_netlist2xyce(config.LTspice_output_directory + file_name1 + '.net')
         runcmd = '"' + spice_exe_path + '" -b -ascii "' + file_path + '.net"'
         if config.use_ltspice:
-           call(runcmd)
+            if psutil.LINUX:
+                runcmd = '' + spice_exe_path + ' -b -ascii ' + file_path + '.net' 
+            subprocess.run(runcmd, check=True, capture_output=True, encoding='utf-8')
     else:
         runcmd = '"' + spice_exe_path + '" -b -ascii "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
-        call(runcmd)
+        subprocess.run(runcmd, check=True, capture_output=True, encoding='utf-8')
     if config.use_ltspice:
         size = os.path.getsize(file_path + '.raw')
         logging.debug('Simulation finished: ' + file_name + '.raw created (' + str(size/1000) + ' kB)')
