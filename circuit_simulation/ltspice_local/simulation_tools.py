@@ -72,8 +72,7 @@ def simulate(spice_exe_path, file_path):
         runcmd = '"' + spice_exe_path + '" -netlist "' + file_path + '.' + config.LTSpice_asc_filetype + '"'
         if psutil.LINUX:
             runcmd = '' + spice_exe_path + ' -netlist ' + file_path + '.' + config.LTSpice_asc_filetype + ''
-        subprocess.run(runcmd, check=True, capture_output=True,
-                                     encoding='utf-8')
+        subprocess.run(runcmd, shell= True, check=True, capture_output=True, encoding='utf-8')
         while os.path.exists(file_path + '.net') == False:
             print('Waiting for "{file_path}" + .net to be created')
             time.sleep(0.001)
