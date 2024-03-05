@@ -62,7 +62,7 @@ def run_simulations(parameter_set=None, numerical_name_start=0):
     return output_filenames
 
 def simulate(spice_exe_path, file_path):
-    file_name = str(file_path.split('\\')[-1])
+    file_name = os.path.join(os.getcwd(), file_path)
     file_name1 = str(file_path.split('/')[-1])
     logging.debug('Simulation starting: ' + file_name + '.' + config.LTSpice_asc_filetype)
     if config.LTSpice_asc_filetype == 'asc':
