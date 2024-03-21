@@ -456,8 +456,107 @@ def uncertainty_test_noise():
     plt.show(block=False)
 
 
+def models_result_table():
+    data = load_runs_clean(['tuning_cross_valid-42*'])
+
+    # Filter columns
+    data = data[['settings.research_group', 'settings.model_type', 'Accuracy', 'ct-Accuracy', 'F1', 'ct-F1',
+                 'results.unknown_threshold_rate', 'settings.seed']]
+
+    # Rename columns
+    data.rename(columns={'settings.research_group': 'Dataset',
+                         'settings.model_type': 'Model',
+                         'Accuracy': 'Accuracy',
+                         'ct-Accuracy': 'Th. Accuracy',
+                         'F1': 'F1',
+                         'ct-F1': 'Th. F1',
+                         'results.unknown_threshold_rate': 'Unknown rate',
+                         'settings.seed': 'Seed'}, inplace=True)
+
+    # Compute classification error difference
+    data['acc_err_diff'] = ((1 - data['Accuracy']) - (1 - data['Th. Accuracy'])) / (1 - data['Accuracy'])
+    data['f1_err_diff'] = ((1 - data['F1']) - (1 - data['Th. F1'])) / (1 - data['F1'])
+
+    # ================================ Result for each seed (average on diagrams)
+    result_by_seed = data.groupby(['Dataset', 'Model', 'Seed']).agg(
+        acc=('Accuracy', 'mean'),
+        acc_std=('Accuracy', 'std'),
+        th_acc=('Th. Accuracy', 'mean'),
+        th_acc_std=('Th. Accuracy', 'std'),
+        acc_err_diff=('acc_err_diff', 'mean'),
+        acc_err_diff_std=('acc_err_diff', 'std'),
+        f1=('F1', 'mean'),
+        f1_std=('F1', 'std'),
+        th_f1=('Th. F1', 'mean'),
+        th_f1_std=('Th. F1', 'std'),
+        unknown_rate=('Unknown rate', 'mean'),
+        unknown_rate_std=('Unknown rate', 'std'),
+    )
+
+    # ================================ Result grouped by method (variability by seed)
+    results = result_by_seed.groupby(['Dataset', 'Model']).agg(
+        acc=('acc', 'mean'),
+        acc_std=('acc', 'std'),
+        th_acc=('th_acc', 'mean'),
+        th_acc_std=('th_acc', 'std'),
+        acc_err_diff=('acc_err_diff', 'mean'),
+        acc_err_diff_std=('acc_err_diff', 'std'),
+        f1=('f1', 'mean'),
+        f1_std=('f1', 'std'),
+        th_f1=('th_f1', 'mean'),
+        th_f1_std=('th_f1', 'std'),
+        unknown_rate=('unknown_rate', 'mean'),
+        unknown_rate_std=('unknown_rate', 'std'),
+    )
+
+    # Sorting rows
+    results.sort_values(by=['Dataset', 'Model'], ascending=[False, True], inplace=True)
+
+    print('\n\n----------------------------------------------------\n')
+    print('Model results\n')
+    print(results.to_string())
+
+    print('\n\n----------------------------------------------------\n')
+    print('Average benefit\n')
+
+    # Compute the average accuracy difference with and without the threshold
+    acc_diff = (results['th_acc'] - results['acc']).mean()
+    acc_diff_std = (results['th_acc'] - results['acc']).std()
+
+    # results['error_diff_all'] = ((1 - results['acc']) - (1 - results['th_acc'])) / (1 - results['acc'])
+    error_diff = results['acc_err_diff'].mean()
+    error_diff_std = results['acc_err_diff'].std()
+
+    unknown_rate_diff = results['unknown_rate'].mean()
+    unknown_rate_diff_std = results['unknown_rate'].std()
+
+    print(f'Average accuracy difference: {acc_diff:.2%} (std: {acc_diff_std:.2%})')
+    print(f'Which is {error_diff:.2%} error reduction (std: {error_diff_std:.2%})')
+    print(f'Average unknown rate: {unknown_rate_diff:.2%} (std: {unknown_rate_diff_std:.2%})')
+
+    # Remove the 'group by' index and compact rename columns
+    results.reset_index(inplace=True)
+
+    # Merge the mean and std in the same column as string
+    for metric_name in ['acc', 'th_acc', 'acc_err_diff', 'f1', 'th_f1', 'unknown_rate']:
+        results[metric_name] = (results[metric_name].map('{:.1%}'.format) +
+                                results[metric_name + '_std'].map(lambda s: ' ±{:.1f}'.format(s * 100)))
+        del results[metric_name + '_std']
+
+    results.columns = ['Dataset', 'Model', 'Accuracy', r'Accuracy above\\threshold',
+                       r'Error reduction\\using threshold', 'F1', r'F1 above\\threshold', r'Rate below\\threshold']
+
+    # Show the latex version for paper
+    print('\n\n----------------------------------------------------\n\n')
+    print(tabulate(results, headers='keys', tablefmt='latex', showindex=False))
+    # Show the same in pretty table
+    print('\n\n----------------------------------------------------\n\n')
+    results.columns = [col.replace(r'\\', '\n') for col in results.columns]
+    print(tabulate(results, headers='keys', tablefmt='fancy_grid', showindex=False))
+
+
 def results_table():
-    data = load_runs_clean(['tuning-42*'])
+    data = load_runs_clean(['tuning_cross_valid-42*'])
     oracle_baseline = load_runs(['tuning-42*-oracle-*'])
     data = pd.concat([data, oracle_baseline], ignore_index=True)
 
@@ -565,8 +664,8 @@ def results_table():
         'dataset', 'model', 'model_test_acc|mean', 'model_test_acc|std',
         'use_uncertainty', 'mean_scan|mean', 'tuning_success|mean', 'tuning_success|std'
     ]]
-    by_method_seed_var.columns = ['Dataset', 'Model', 'Model test accuracy', 'STD',
-                                  'Tuning with uncertainty', 'Average steps', 'Tuning success', 'STD']
+    by_method_seed_var.columns = ['Dataset', 'Model', 'Line detection\\accuracy', 'STD',
+                                  'Uncertainty-based\\Tuning', 'Average steps', 'Tuning success', 'STD']
 
     # Show latex version for paper
     print('\n\n----------------------------------------------------\n\n')
@@ -574,7 +673,7 @@ def results_table():
                    floatfmt=(None, None, '.1%', '.1%', None, '.0f', '.1%', '.1%')))
     # Show the same in pretty table
     print('\n\n----------------------------------------------------\n\n')
-    by_method_seed_var.columns = [col.replace('\n', r'\\') for col in by_method_seed_var.columns]
+    by_method_seed_var.columns = [col.replace(r'\\', '\n') for col in by_method_seed_var.columns]
     print(tabulate(by_method_seed_var, headers='keys', tablefmt='fancy_grid', showindex=False,
                    floatfmt=(None, None, '.2%', '.2%', None, '.0f', '.2%', '.2%')))
 

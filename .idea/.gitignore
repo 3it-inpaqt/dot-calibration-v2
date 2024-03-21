@@ -9,3 +9,5 @@
 # Useless plugin
 /csv-plugin.xml
 /iscratchTreeViewState.xml
+# GitHub Copilot persisted chat sessions
+/copilot/chatSessions
