@@ -636,7 +636,7 @@ def results_table():
                           'mean_scan', 'tuning_success']].to_string())
 
     # ================================ Result grouped by tuning method (variability by seed)
-    by_method_seed_var = result_by_seed.groupby(['dataset', 'model', 'use_uncertainty']).agg({
+    results = result_by_seed.groupby(['dataset', 'model', 'use_uncertainty']).agg({
         'mean_scan': ['mean', 'std'],  # Number of scan during the tuning
         'model_test_acc': ['mean', 'std'],  # Model accuracy on test set
         'model_test_f1': ['mean', 'std'],  # Model f1 score on test set
@@ -645,37 +645,38 @@ def results_table():
     })
 
     # Sorting row
-    by_method_seed_var.sort_values(by=['dataset', 'model', 'use_uncertainty'], ascending=[False, True, False],
-                                   inplace=True)
+    results.sort_values(by=['dataset', 'model', 'use_uncertainty'], ascending=[False, True, False], inplace=True)
 
     print('\n\n----------------------------------------------------\n')
     print('Result by method (variability by seed)\n')
-    print(by_method_seed_var.to_string())
+    print(results.to_string())
 
     # Remove the 'group by' index and compact rename columns
-    by_method_seed_var.reset_index(inplace=True)
-    by_method_seed_var.columns = [f'{i}|{j}' if j != '' else f'{i}' for i, j in by_method_seed_var.columns]
+    results.reset_index(inplace=True)
+    results.columns = [f'{i}|{j}' if j != '' else f'{i}' for i, j in results.columns]
 
     # Convert boolean values
-    by_method_seed_var['use_uncertainty'] = by_method_seed_var['use_uncertainty'].map({True: 'Yes', False: 'No'})
+    results['use_uncertainty'] = results['use_uncertainty'].map({True: 'Yes', False: 'No'})
+
+    # Merge the mean and std in the same column as string
+    for metric_name in ['model_test_acc', 'tuning_success']:
+        results[metric_name] = (results[metric_name + '|mean'].map('{:.1%}'.format) +
+                                results[metric_name + '|std'].map(lambda s: ' ±{:2.1f}'.format(s * 100)))
+        del results[metric_name + '|mean']
+        del results[metric_name + '|std']
 
     # Filter and rename columns
-    by_method_seed_var = by_method_seed_var[[
-        'dataset', 'model', 'model_test_acc|mean', 'model_test_acc|std',
-        'use_uncertainty', 'mean_scan|mean', 'tuning_success|mean', 'tuning_success|std'
-    ]]
-    by_method_seed_var.columns = ['Dataset', 'Model', 'Line detection\\accuracy', 'STD',
-                                  'Uncertainty-based\\Tuning', 'Average steps', 'Tuning success', 'STD']
+    results = results[['dataset', 'model', 'model_test_acc', 'use_uncertainty', 'mean_scan|mean', 'tuning_success']]
+    results.columns = ['Dataset', 'Model', 'Line detection\naccuracy',
+                       'Uncertainty-based\nTuning', 'Average steps', 'Tuning success']
 
     # Show latex version for paper
     print('\n\n----------------------------------------------------\n\n')
-    print(tabulate(by_method_seed_var, headers='keys', tablefmt='latex', showindex=False,
-                   floatfmt=(None, None, '.1%', '.1%', None, '.0f', '.1%', '.1%')))
+    print(tabulate(results, headers='keys', tablefmt='latex', showindex=False, floatfmt='.0f'))
+
     # Show the same in pretty table
     print('\n\n----------------------------------------------------\n\n')
-    by_method_seed_var.columns = [col.replace(r'\\', '\n') for col in by_method_seed_var.columns]
-    print(tabulate(by_method_seed_var, headers='keys', tablefmt='fancy_grid', showindex=False,
-                   floatfmt=(None, None, '.2%', '.2%', None, '.0f', '.2%', '.2%')))
+    print(tabulate(results, headers='keys', tablefmt='fancy_grid', showindex=False, floatfmt='.0f'))
 
 
 def process_online_experiment_results(offline_diagram: str):
