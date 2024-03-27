@@ -631,6 +631,8 @@ def results_table():
         nb_scan=('nb_scan', 'sum'),
         mean_scan=('nb_scan', 'mean'),
         nb_good=('nb_good_inference', 'sum'),
+        tuning_success_count=('tuning_success', 'sum'),
+        tuning_count=('tuning_success', 'count'),
         tuning_success=('tuning_success', lambda x: x.sum() / x.count()),
     )
     result_by_seed['model_tuning_acc'] = result_by_seed['nb_good'] / result_by_seed['nb_scan']
@@ -641,11 +643,13 @@ def results_table():
 
     # ================================ Result grouped by tuning method (variability by seed)
     results = result_by_seed.groupby(['dataset', 'model', 'use_uncertainty']).agg({
-        'mean_scan': ['mean', 'std'],  # Number of scan during the tuning
-        'model_test_acc': ['mean', 'std'],  # Model accuracy on test set
-        'model_test_f1': ['mean', 'std'],  # Model f1 score on test set
+        'mean_scan': ['mean', 'std'],  # Number of scans during the tuning
+        'model_test_acc': ['mean', 'std'],  # Model accuracy on testset
+        'model_test_f1': ['mean', 'std'],  # Model f1 score on testset
         'model_tuning_acc': ['mean', 'std'],  # Model accuracy during the tuning procedure
-        'tuning_success': ['mean', 'std']  # Tuning procedure that successfully found the 1 electron regime
+        'tuning_count': 'sum',  # Number of tuning procedures
+        'tuning_success_count': 'sum',  # Number of successful tuning procedures
+        'tuning_success': ['mean', 'std']  # Tuning procedure that successfully found the 1-electron regime
     })
 
     # Sorting row
