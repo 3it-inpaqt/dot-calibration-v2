@@ -557,8 +557,8 @@ def models_result_table():
 
 def results_table():
     data = load_runs_clean(['tuning_cross_valid-42*'])
-    oracle_baseline = load_runs(['tuning-42*-oracle-*'])
-    data = pd.concat([data, oracle_baseline], ignore_index=True)
+    # oracle_baseline = load_runs(['tuning-42*-oracle-*'])
+    # data = pd.concat([data, oracle_baseline], ignore_index=True)
 
     # Make a dataframe with a line per tuning result
     tuning_table = []
@@ -602,6 +602,11 @@ def results_table():
                                 columns=['dataset', 'model', 'model_test_acc', 'model_test_f1', 'use_uncertainty',
                                          'diagram', 'nb_scan', 'nb_good_inference', 'tuning_success', 'seed'])
 
+    # Print the number of runs
+    print(f'Number of runs: {len(tuning_table)}')
+    # Print the total number of steps
+    print(f'Total number of steps: {tuning_table["nb_scan"].sum()}')
+
     # ================================ Result for each seed and each diagram
     result_by_diagram = tuning_table.groupby(['dataset', 'model', 'use_uncertainty', 'diagram', 'seed']).agg(
         model_test_acc=('model_test_acc', 'mean'),  # The accuracy should be the same for each diagram (same model)
@@ -632,8 +637,7 @@ def results_table():
 
     print('\n\n----------------------------------------------------\n')
     print('Result by seed\n')
-    print(result_by_seed[['model_test_acc', 'model_test_acc_std', 'model_test_f1', 'model_test_f1_std',
-                          'mean_scan', 'tuning_success']].to_string())
+    print(result_by_seed[['model_test_acc', 'model_test_acc_std', 'mean_scan', 'tuning_success']].to_string())
 
     # ================================ Result grouped by tuning method (variability by seed)
     results = result_by_seed.groupby(['dataset', 'model', 'use_uncertainty']).agg({
@@ -654,6 +658,28 @@ def results_table():
     # Remove the 'group by' index and compact rename columns
     results.reset_index(inplace=True)
     results.columns = [f'{i}|{j}' if j != '' else f'{i}' for i, j in results.columns]
+
+    # Print the average success rate difference with and without using the uncertainty
+    tuning_no_uncertainty_fail_rates = 1 - results[results['use_uncertainty'] == False]['tuning_success|mean'].values
+    tuning_uncertainty_fail_rates = 1 - results[results['use_uncertainty'] == True]['tuning_success|mean'].values
+    tuning_improvements = ((tuning_no_uncertainty_fail_rates - tuning_uncertainty_fail_rates) /
+                           tuning_no_uncertainty_fail_rates)
+
+    print('\n\n----------------------------------------------------')
+    print(f"\nAverage improvement rates (global average: {tuning_improvements.mean():.2%})")
+    print(', '.join(f'{t:.2%}' for t in tuning_improvements))
+
+    # Print the average difference of number of steps with and without using the uncertainty
+    tuning_no_uncertainty_steps = results[results['use_uncertainty'] == False]['mean_scan|mean'].values
+    tuning_uncertainty_steps = results[results['use_uncertainty'] == True]['mean_scan|mean'].values
+    tuning_steps_diff = tuning_uncertainty_steps - tuning_no_uncertainty_steps
+    tuning_steps_rates = tuning_steps_diff / tuning_no_uncertainty_steps
+
+    print(f"\nAverage steps difference (global average: {tuning_steps_diff.mean():.1f})")
+    print(', '.join(f'{t:.1f}' for t in tuning_steps_diff))
+
+    print(f"\nAverage step increase (global average: {tuning_steps_rates.mean():.2%})")
+    print(', '.join(f'{t:.2%}' for t in tuning_steps_rates))
 
     # Convert boolean values
     results['use_uncertainty'] = results['use_uncertainty'].map({True: 'Yes', False: 'No'})
