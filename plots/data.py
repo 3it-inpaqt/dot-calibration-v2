@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 from matplotlib import patches
-from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.image import AxesImage
 from matplotlib.legend_handler import HandlerBase
 from matplotlib.text import Text
@@ -132,8 +133,9 @@ def plot_diagram(x_i: Sequence[float],
     axes_matching = [x_i[0] - half_p, x_i[-1] + half_p, y_i[0] - half_p, y_i[-1] + half_p]
 
     # Build the main diagram subplot
-    _plot_diagram_ax(diagram_ax, x_i, y_i, pixels, title, scan_history, fog_of_war, scale_bars, vmin, vmax,
-                     axes_matching, diagram_boundaries)
+    _plot_diagram_ax(diagram_ax, x_i, y_i, pixels, title, scan_history, fog_of_war, scale_bars,
+                     scan_history_alpha == 'uncertainty', scan_history_mode,
+                     vmin, vmax, axes_matching, diagram_boundaries)
 
     # Show labels if provided
     if charge_regions or transition_lines:
@@ -210,8 +212,9 @@ def _get_layout(show_focus_area_ax, show_text_ax, show_legend_ax):
 
 
 def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Optional[Tensor], title: Optional[str],
-                     scan_history: List["StepHistoryEntry"], fog_of_war: bool, scale_bar: bool, vmin: float,
-                     vmax: float, axes_matching: List[float],
+                     scan_history: List["StepHistoryEntry"], fog_of_war: bool, scale_bar: bool,
+                     scale_bar_uncertainty: bool, history_mode: str, vmin: float, vmax: float,
+                     axes_matching: List[float],
                      diagram_boundaries: Optional[Tuple[float, float, float, float]]) -> None:
     # Subplot title
     if title:
@@ -227,6 +230,11 @@ def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Opt
     if pixels is None:
         cmap = LinearSegmentedColormap.from_list('', ['white', 'white'])
         ax.imshow(np.zeros((len(x_i), len(y_i))), cmap=cmap, extent=axes_matching)
+
+        # Add uncertainty scalebar if needed
+        if scale_bar and scale_bar_uncertainty:
+            _add_uncertainty_scale_bar(ax, history_mode)
+
         return
 
     # If the fog of war is enabled, mask the pixels that have not been scanned yet according to the scan history
@@ -241,7 +249,7 @@ def _plot_diagram_ax(ax, x_i: Sequence[float], y_i: Sequence[float], pixels: Opt
     im = ax.imshow(pixels, interpolation='none', cmap=PIXELS_CMAP, extent=axes_matching, vmin=vmin, vmax=vmax,
                    origin='lower')
 
-    # Add the scale bar
+    # Add the pixel current scale bar
     if scale_bar:
         _add_scale_bar(im, ax)
 
@@ -271,14 +279,14 @@ def _plot_focus_area_ax(focus_ax, diagram_ax, pixels, title, focus_area, scale_b
     focus_ax.set_ylim(y_start, y_end)
 
     # Show the location of the current focus area in the main diagram using a black rectangle
-    loc = patches.Rectangle((x_start, y_start), x_end - x_start, y_end - y_start, linewidth=1, zorder=99999,
+    loc = patches.Rectangle((x_start, y_start), x_end - x_start, y_end - y_start, linewidth=1, zorder=9999999,
                             edgecolor='black', label=title, facecolor='none', alpha=0.8)
     diagram_ax.add_patch(loc)
 
 
 def _plot_labels(ax, charge_regions: List[Tuple["ChargeRegime", Polygon]], transition_lines: List[LineString]):
     labels_handlers = []
-    z = 9999  # Z order placed between pixels focus area
+    z = 999999  # Z order placed between pixels and focus area
 
     if charge_regions:
         for i, (regime, polygon) in enumerate(charge_regions):
@@ -470,6 +478,7 @@ def _add_scale_bar(im: AxesImage, ax, pad: float = 0.02) -> None:
 
     :param im: The axe image (output of the imshow function)
     :param ax: The axe used to plot the image
+    :param pad: The padding of the scale bar
     """
     if settings.research_group in MEASURE_UNIT:
         measuring = MEASURE_UNIT[settings.research_group]
@@ -485,6 +494,59 @@ def _add_scale_bar(im: AxesImage, ax, pad: float = 0.02) -> None:
 
     # Add the scale bar that way because we already are inside a subplot
     cbar = plt.colorbar(im, ax=ax, shrink=0.85, pad=pad, label=f'{measuring} (A)', format=formatter)
+    cbar.ax.yaxis.set_offset_position('left')
+
+
+def _add_uncertainty_scale_bar(ax, history_mode: str, pad: float = 0.02) -> None:
+    """
+    Add a scale bar to an imshow plot to represent the model uncertainty.
+
+    :param ax: The axe used to plot the image
+    :param history_mode: The mode of the scan history (classes or error)
+    :param pad: The padding of the scale bar
+    """
+    formatter = ScalarFormatter(useMathText=True)
+
+    if history_mode == 'error':
+        # 3-colors gradient (green, white, red) for the errors uncertainty scale bar
+        cmap = LinearSegmentedColormap.from_list('', [GOOD_COLOR, 'white', ERROR_COLOR])
+    else:
+        # 3-colors gradient (blue, white, red) for the classification uncertainty scale bar
+        cmap = LinearSegmentedColormap.from_list('', [CLASS_COLORS[1], 'white', CLASS_COLORS[0]])
+    norm = Normalize(vmin=-1, vmax=1)
+    cbar = plt.colorbar(ScalarMappable(cmap=cmap, norm=norm),
+                        ax=ax, shrink=0.85, pad=pad, format=formatter)
+    cbar.outline.set_edgecolor('0.15')
+    cbar.set_ticks([-1, 0, 1])
+
+    # Bayesian uncertainty
+    if settings.model_type.upper() in ['BCNN', 'BFF']:
+        metric_map = {  # This plot is not compatible with not normalized uncertainty
+            'norm_std': 'Normalized STD',
+            'norm_entropy': 'Normalized entropy'
+        }
+        uncertainty_label = metric_map[settings.bayesian_confidence_metric]
+        min_uncertainty_correct = min_uncertainty_line = min_uncertainty_no_line = 0
+        max_uncertainty = 1
+
+    # Heuristic uncertainty
+    else:
+        uncertainty_label = 'Model output'
+        min_uncertainty_line = 1
+        min_uncertainty_no_line = 0
+        min_uncertainty_correct = f'{min_uncertainty_line} or {min_uncertainty_no_line}'
+        max_uncertainty = 0.5
+
+    if history_mode == 'error':
+        cbar.set_ticklabels(
+            [f'Good class\n{uncertainty_label}: {min_uncertainty_correct}\n(High confidence)',
+             f'{uncertainty_label}: {max_uncertainty}\n(Low confidence)',
+             f'Bad class\n{uncertainty_label}: {min_uncertainty_correct}\n(High confidence)'])
+    else:
+        cbar.set_ticklabels([f'Infer line\n{uncertainty_label}: {min_uncertainty_line}\n(High confidence)',
+                             f'{uncertainty_label}: {max_uncertainty}\n(Low confidence)',
+                             f'Infer no-line\n{uncertainty_label}: {min_uncertainty_no_line}\n(High confidence)'])
+
     cbar.ax.yaxis.set_offset_position('left')
 
 

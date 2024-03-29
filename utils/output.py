@@ -90,6 +90,7 @@ def remove_out_directory(directory: Path) -> None:
         # Remove every image or video files
         for image_file in chain(img_dir.glob('*.png'),
                                 img_dir.glob('*.svg'),
+                                img_dir.glob('*.pdf'),
                                 img_dir.glob('*.gif'),
                                 img_dir.glob('*.mp4')):
             image_file.unlink()
