@@ -1,0 +1,61 @@
+#run_name: tmp
+#research_group: louis_gaudreau
+#model_type: FF
+#trained_network_cache_path: 'out/best_network_50_20.pt'
+#batch_norm_layers: [False,False]
+#hidden_layers_size: [50, 20]
+#label_offset_x: 7
+#label_offset_y: 7
+#learning_rate: 0.0005
+#nb_train_update: 15000
+#dropout: 0
+# sim_nb_process: 1
+# Circuit settings to check
+# simulate_circuit: False
+# use_xyce: False 
+# use_ltspice: True
+# ltspice_executable_path:
+
+run_name: tmp
+seed: 42
+
+# Dataset
+research_group: louis_gaudreau
+pixel_size: 0.0025
+test_ratio: 0.2
+validation_ratio: 0.1
+
+trained_network_cache_path: 'out/best_network_20_10.pt'
+
+# Patch settings
+patch_size_x: 8
+patch_size_y: 8
+label_offset_x: 2
+label_offset_y: 2
+patch_overlap_x: 4
+patch_overlap_y: 4
+
+# Model
+model_type: FF
+hidden_layers_size: [20, 10]
+LTspice_num_of_layers: 3
+batch_norm_layers: [False, False]
+
+# Training (you shouldn't need it)
+dropout: 0.2
+learning_rate: 0.0005
+nb_train_update: 30000
+
+ltspice_executable_path: 'C:\Program Files\ADI\LTspice\LTspice.exe'
+use_xyce: True
+use_ltspice: False
+sim_voltage_offset: 0.95
+simulate_circuit: True
+
+sim_layer_latency: 1e-8
+sim_max_test_inference: 200
+LTspice_overwrite_files: True
+sim_pulse_amplitude: 0.2
+
+# to bypass testing 
+# test(network, test_dataset, device, final=True) in run_line_task

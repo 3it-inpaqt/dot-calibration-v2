@@ -413,16 +413,22 @@ class Settings:
     xyce_output_filetype: str='prn' # set to csv if needed
     LTspice_wd_prefix: str = 'activ_v'   # Specifies the name prefix for the WD
     LTSpice_asc_filename: str = LTspice_spiceout_directory + 'complete_circuit.asc'   # Specifies the circuit file name
-    LTspice_avail_activation_fn = ['column_activ_cmos', 'column_activ_comparator', 'column_activ_relu', 'column_activ_tia_relu', 'column_activ_cmos_v2', 'column_activ_cmos_v3']
-    LTspice_activation_fn_select: int = 5
-    LTspice_final_activation_fn_select: int = 5 # # Specifies the AF for the final stage
+    LTspice_avail_activation_fn = ['column_activ_cmos', 
+                                   'column_activ_comparator', 
+                                   'column_activ_relu', 
+                                   'column_activ_tia_relu', 
+                                   'column_activ_cmos_v2', 
+                                   'column_activ_cmos_v3', 
+                                   'column_activ_cmos_v4']
+    LTspice_activation_fn_select: int = 6
+    LTspice_final_activation_fn_select: int = 6 # # Specifies the AF for the final stage
     # Layers parameters 
     LTspice_num_of_layers: int = 3 # Should be len(hidden_layers_size) + 1, if hidden_layers_size has a depth of 2 -> LTspice_num_of_layers = 3
     LTspice_layer_dims: Sequence = ((65,20), (21,10),(11,1)) # Sizes with biases, will be modified in the code
     # Setting the minimum vertical spacing between blocks in the circuit
     LTspice_block_vspacing: int = 480 # should be multiple of 16
     # The measurements to be saved from the simulation. The appropriate numbers can be found in the .raw file generated at simulation.
-    LTspice_variable_numbering = {'time': 0, 'final_out': 45}
+    LTspice_variable_numbering = {'time': 0, 'final_out': 160}
     # The ordering of the measurements to be saved in the output csv files can be changed below, by changing how the numbers are ordered.
     # E.g. switch place of 0 and 1 if you want V_c to be placed left of time in the output csv files.
     LTspice_preffered_sorting = [0, 1]
@@ -434,6 +440,9 @@ class Settings:
     LTspice_simtime_paramname: str = 'simtime'
     LTspice_overwrite_files: bool = True
     imgitr: int = 0
+    pulses_voltage_multiplier: float = 0.0
+    LTspice_halt_at_run: int = -1
+    LTspice_run_counter: int = 0
     #################################
 
     # Whether we should run the inference over the test-set with the simulated circuit.
@@ -458,10 +467,10 @@ class Settings:
     sim_step_size: float = 3e-10
 
     # The minimal resistance value that we consider for memristor programming (ohm)
-    sim_r_min: int = 5000
+    sim_r_min: Sequence = (int(5000),int(5000),int(5000))
 
     # The maximal resistance value that we consider for memristor programming (ohm)
-    sim_r_max: int = 120000
+    sim_r_max: Sequence = (int(120000),int(120000),int(120000))
 
     # The read standard deviation of the memristor resistance (% [0,1])
     # Should be around 0.2%

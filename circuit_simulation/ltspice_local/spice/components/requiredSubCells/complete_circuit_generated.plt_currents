@@ -1,0 +1,22 @@
+[Transient Analysis]
+{
+   Npanes: 2
+   {
+      traces: 20 {524297,0,"Ix(x_cbar_65by40:VOUT_+[0])-Ix(x_cbar_65by40:VOUT_-[0])"} {524298,0,"Ix(x_cbar_65by40:VOUT_+[1])-Ix(x_cbar_65by40:VOUT_-[1])"} {524299,0,"Ix(x_cbar_65by40:VOUT_+[2])-Ix(x_cbar_65by40:VOUT_-[2])"} {524300,0,"Ix(x_cbar_65by40:VOUT_+[3])-Ix(x_cbar_65by40:VOUT_-[3])"} {524290,0,"Ix(x_cbar_65by40:VOUT_+[4])-Ix(x_cbar_65by40:VOUT_-[4])"} {524291,0,"Ix(x_cbar_65by40:VOUT_+[5])-Ix(x_cbar_65by40:VOUT_-[5])"} {524292,0,"Ix(x_cbar_65by40:VOUT_+[6])-Ix(x_cbar_65by40:VOUT_-[6])"} {524293,0,"Ix(x_cbar_65by40:VOUT_+[7])-Ix(x_cbar_65by40:VOUT_-[7])"} {524294,0,"Ix(x_cbar_65by40:VOUT_+[8])-Ix(x_cbar_65by40:VOUT_-[8])"} {524295,0,"Ix(x_cbar_65by40:VOUT_+[9])-Ix(x_cbar_65by40:VOUT_-[9])"} {524296,0,"Ix(x_cbar_65by40:VOUT_+[10])-Ix(x_cbar_65by40:VOUT_-[10])"} {524297,0,"Ix(x_cbar_65by40:VOUT_+[11])-Ix(x_cbar_65by40:VOUT_-[11])"} {524298,0,"Ix(x_cbar_65by40:VOUT_+[12])-Ix(x_cbar_65by40:VOUT_-[12])"} {524299,0,"Ix(x_cbar_65by40:VOUT_+[13])-Ix(x_cbar_65by40:VOUT_-[13])"} {524300,0,"Ix(x_cbar_65by40:VOUT_+[14])-Ix(x_cbar_65by40:VOUT_-[14])"} {524301,0,"Ix(x_cbar_65by40:VOUT_+[15])-Ix(x_cbar_65by40:VOUT_-[15])"} {524290,0,"Ix(x_cbar_65by40:VOUT_+[16])-Ix(x_cbar_65by40:VOUT_-[16])"} {524291,0,"Ix(x_cbar_65by40:VOUT_+[17])-Ix(x_cbar_65by40:VOUT_-[17])"} {524292,0,"Ix(x_cbar_65by40:VOUT_+[18])-Ix(x_cbar_65by40:VOUT_-[18])"} {524293,0,"Ix(x_cbar_65by40:VOUT_+[19])-Ix(x_cbar_65by40:VOUT_-[19])"}
+      X: ('n',0,0,4e-08,3.81e-07)
+      Y[0]: ('µ',1,-3.5e-06,7e-07,4.2e-06)
+      Y[1]: ('µ',0,1e+308,3e-06,-1e+308)
+      Amps: ('µ',0,0,1,-3.5e-06,7e-07,4.2e-06)
+      Log: 0 0 0
+      GridStyle: 1
+   },
+   {
+      traces: 20 {524301,0,"V(vin_cb21by20[0])"} {524290,0,"V(vin_cb21by20[1])"} {524291,0,"V(vin_cb21by20[2])"} {524292,0,"V(vin_cb21by20[3])"} {524293,0,"V(vin_cb21by20[4])"} {524294,0,"V(vin_cb21by20[5])"} {524295,0,"V(vin_cb21by20[6])"} {524296,0,"V(vin_cb21by20[7])"} {524297,0,"V(vin_cb21by20[8])"} {524298,0,"V(vin_cb21by20[9])"} {524299,0,"V(vin_cb21by20[10])"} {524300,0,"V(vin_cb21by20[11])"} {524301,0,"V(vin_cb21by20[12])"} {524290,0,"V(vin_cb21by20[13])"} {524291,0,"V(vin_cb21by20[14])"} {524292,0,"V(vin_cb21by20[15])"} {524293,0,"V(vin_cb21by20[16])"} {524294,0,"V(vin_cb21by20[17])"} {524295,0,"V(vin_cb21by20[18])"} {524296,0,"V(vin_cb21by20[19])"}
+      X: ('n',0,0,4e-08,3.81e-07)
+      Y[0]: ('m',0,0.791,0.001,0.804)
+      Y[1]: ('_',0,1e+308,0,-1e+308)
+      Volts: ('m',0,0,0,0.791,0.001,0.804)
+      Log: 0 0 0
+      GridStyle: 1
+   }
+}

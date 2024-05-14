@@ -136,7 +136,7 @@ def main(argv):
     if parameter_file is not None:
         simulate(parameter_file, do_analysis)
 
-def main_local(argv: Sequence = ('r')):
+def main_local(argv: Sequence = ('-r'), halt_at_run: int=-1):
     initialize()
     # setup CSVs
     read_netlist.generate_CSVs_from_netlist(CSV_out_directory = config.LTspice_data_directory)
@@ -156,12 +156,8 @@ def main_local(argv: Sequence = ('r')):
             do_analysis = True
         elif opt.startswith('-r'):
             simulate()
-            sys.exit()
-
-    # Run simulations based on arguments
-    parameter_file = config.LTspice_data_directory + parameter_file
-    if parameter_file is not None:
-        simulate(parameter_file, do_analysis)
-
+            if config.LTspice_run_counter == halt_at_run:
+                sys.exit()
+    config.LTspice_run_counter += 1
 if __name__ == '__main__':
     main(sys.argv[1:])

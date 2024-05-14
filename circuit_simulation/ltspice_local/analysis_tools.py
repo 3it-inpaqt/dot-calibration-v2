@@ -3,7 +3,7 @@ from utils.settings import settings as config
 # ------- Control functions ------- #
 
 def make_report(file_paths):
-    out = open(config.output_data_path + config.output_data_summary_filename, 'w+')
+    out = open(config.LTspice_output_directory + config.output_data_summary_filename, 'w+')
     for file_path in file_paths:
         file_path = file_path[:-4] + '_analysis.txt'
         f = open(file_path)

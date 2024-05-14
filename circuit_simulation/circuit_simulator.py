@@ -1,5 +1,6 @@
 import csv
 import logging
+from logging import config
 import subprocess
 import time
 from argparse import Namespace
@@ -152,7 +153,7 @@ class CircuitSimulator(Classifier):
         return sim_results, model_output_before_threshold, model_output
 
 
-    def run_ltspice_simulation(self, inputs: List, is_first_run: bool):
+    def run_ltspice_simulation_HA(self, inputs: List, is_first_run: bool):
         """
         Generate a netlist according to the model size and parameters, then run the circuit simulation with LTspice as a
         subprocess.
@@ -179,14 +180,18 @@ class CircuitSimulator(Classifier):
         with open(save_path, 'w') as f:
             f.write(netlist)
 
-        
-        runcmd = f'{settings.ltspice_executable_path} -b -ascii netlist.CIR ' + str(save_path)
-        logging.debug(f'Run command: "{runcmd}"')
+        ################# Coded by HA
+        # Create netlist in a temporary file
+        netlist_file = NamedTemporaryFile(mode='w', delete=False, prefix='xyce-netlist_', suffix='.CIR')
+        netlist_file.write(netlist)
+        netlist_file.flush()
 
+        sim_spice.main_local(argv=['-r'], halt_at_run=settings.LTspice_halt_at_run)
+                
         try:
-            subprocess.run(runcmd, cwd='./circuit_simulation', check=True, capture_output=True,
-                                     encoding='utf-8')
-            sim_results = self.parse_raw_file(".\\circuit_simulation\\netlist")
+            file = settings.LTspice_output_directory + str(settings.LTSpice_asc_filename.split('/')[-1])
+            file = file[:-4] + '_generated'
+            sim_results = self.parse_raw_file(file)
             if is_first_run:
                 save_xyce_results(sim_results)
 
@@ -280,7 +285,7 @@ class CircuitSimulator(Classifier):
             The binary output value after threshold (0 or 1)
 
         """
-        output_signal = sim_results[f'V(Vout_cb65by40_-[0])'.upper()] # SUM_H_OUT_{nb_layers:03}_001)']
+        output_signal = sim_results[f'V(h_act_out[0])'.upper()] # SUM_H_OUT_{nb_layers:03}_001)']
         # output_threshold = sim_results[f'V(h_act_out[0])'.upper()]
         t = sim_results['TIME'] 
         if is_in_debug():
@@ -289,7 +294,10 @@ class CircuitSimulator(Classifier):
             plt.xlabel('Time (ns)')
             plt.xticks(rotation=45, ha='right')
             plt.ylabel('Voltage (V)')
-            plt.savefig ('out/foo_' + str(settings.imgitr) + '.png')
+            strFile = 'out/foo_' + str(settings.imgitr) + '.png'
+            if os.path.isfile(strFile):
+                os.remove(strFile)   # Opt.: os.system("rm "+strFile)
+            plt.savefig (strFile)
             settings.imgitr += 1
             # plt.show() 
 

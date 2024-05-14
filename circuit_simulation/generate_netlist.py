@@ -8,8 +8,11 @@ import numpy as np
 from jinja2 import Environment, FileSystemLoader
 
 from classes.classifier_nn import ClassifierNN
+from torch import _weight_norm
 from utils.settings import settings
 from plots.parameters import plot_resistance_distribution
+from utils.misc import debugger_is_active as is_in_debug
+import matplotlib.pyplot as plt
 
 
 class NetlistGenerator:
@@ -23,23 +26,29 @@ class NetlistGenerator:
         # Iterate parameters layer by layer
         for layer_name, layer_parameters in model.named_parameters():
             # Normalise parameters between -1 and 1
+            # https://stats.stackexchange.com/questions/178626/how-to-normalize-data-between-1-and-1
+            # Get the maximum weight 
+            
             layer_parameters = layer_parameters / parameters_max
+            w_list = layer_parameters.reshape(-1).tolist()
 
             for neuron_params in layer_parameters.tolist():
                 # Weight conversion
                 if 'weight' in layer_name:
                     neuron_weights = []
                     for weight in neuron_params:
+                        w_norm = (2)*((weight - np.min(w_list)) / (np.max(w_list) - np.min(w_list))) - 1
                         neuron_weights.append(
-                            self.convert_param_to_resistances(weight, settings.sim_r_min, settings.sim_r_max))
+                            self.convert_param_to_resistances(w_norm, settings.sim_r_min[self.nb_layers], settings.sim_r_max[self.nb_layers]))
                     self.layers['weight_' + str(self.nb_layers)].append(neuron_weights)  # Add neuron to the list
                 # Bias conversion
                 elif 'bias' in layer_name:
                     self.layers['bias_' + str(self.nb_layers - 1)].append(
-                        self.convert_param_to_resistances(neuron_params, settings.sim_r_min, settings.sim_r_max))
+                        self.convert_param_to_resistances(neuron_params, settings.sim_r_min[self.nb_layers-1], settings.sim_r_max[self.nb_layers-1]))
 
             if 'weight' in layer_name:
                 self.nb_layers += 1
+                print(self.nb_layers)
 
         # Compute gain matching for TIA and sum according to the parameters max value and the physical configuration
         self.gain_tia, self.gain_sum = self.compute_gain_matching(parameters_max)
@@ -104,6 +113,7 @@ class NetlistGenerator:
 
         return r_plus, r_minus
 
+
     def compute_gain_matching(self, parameters_max_value: float) -> (float, float):
         """
         Compute the gain of transimpedance amplifiers (TIAs) and differential amplifiers to match the output amplitude.
@@ -115,8 +125,8 @@ class NetlistGenerator:
             The two gains for the TIA and the differential amplifier (A_tia, A_diff) in Ohm.
         """
         # Computing the conductance associated with a logical 1
-        g_log_1 = (1 / settings.sim_r_min + (parameters_max_value - 1) * 1 / settings.sim_r_max) / parameters_max_value
-        total_gain = 1 / (g_log_1 - 1 / settings.sim_r_max)
+        g_log_1 = (1 / settings.sim_r_min[0] + (parameters_max_value - 1) * 1 / settings.sim_r_max[0]) / parameters_max_value
+        total_gain = 1 / (g_log_1 - 1 / settings.sim_r_max[0])
         if total_gain == 7500:
             a_tia, a_diff = 2500, 780  # Set the optimal gain configuration for the OPA684/MAX4223 OpAmps
         else:
@@ -133,13 +143,16 @@ class NetlistGenerator:
 
     def convert_inputs_to_pulses(self, inputs: Union[List[List[float]], List[float]],
                                  offset: float = 0,
-                                 voltage_offset: float = 0) -> List[List[Tuple[float, float]]]:
+                                 voltage_offset: float = 0,
+                                 voltage_multiplier: float = 0.0) -> List[List[Tuple[float, float]]]:
         """
         Convert multiple inputs sequences into multiple pulse trains.
 
         Args:
             inputs: The flattened inputs to convert
             offset: A delay for each time in the sequence (s)
+            voltage_offset: Baseline voltage for every pulse
+            voltage_multiplier: Used for debug puposes
 
         Returns:
             A list of pulse train. Each pulse train is defined by a list of pair (simulation time (s), voltage (V))
@@ -150,18 +163,26 @@ class NetlistGenerator:
 
         pulses = []
         for input_value in inputs:
+            if settings.pulses_voltage_multiplier == 1.0:
+                m = voltage_multiplier
+            else:
+                m = input_value
             time = offset + settings.sim_init_latency
             pulse = [(0, voltage_offset)]  # Start at 0V
             pulse.extend(
                 [
                     # Start pulse
+                    # 1st point
                     (time, voltage_offset),
-                    (time + settings.sim_pulse_rise_delay, voltage_offset + (input_value * settings.sim_pulse_amplitude)),
-                    # End pulse
+                    # 2nd point
+                    (time + settings.sim_pulse_rise_delay, voltage_offset + (m * settings.sim_pulse_amplitude)),
+                    # 3rd point
                     (time + settings.sim_pulse_width - settings.sim_pulse_fall_delay,
-                     voltage_offset + (input_value * settings.sim_pulse_amplitude)),
-                    (time + settings.sim_pulse_width, voltage_offset)#,
-                    #(time + (settings.LTspice_num_of_layers + 1)*settings.sim_layer_latency, voltage_offset)
+                     voltage_offset + (m * settings.sim_pulse_amplitude)),
+                    # 4th point
+                    (time + settings.sim_pulse_width, voltage_offset),
+                    # 5th point
+                    (time + settings.sim_pulse_width + (settings.LTspice_num_of_layers + 5)*settings.sim_layer_latency, voltage_offset)
                 ])
 
             pulses.append(pulse)
@@ -184,12 +205,12 @@ class NetlistGenerator:
             The Xyce netlist as a string.
         """
         # Convert input pulses
-        inputs_pulses = self.convert_inputs_to_pulses(inputs,voltage_offset=settings.sim_voltage_offset)
+        inputs_pulses = self.convert_inputs_to_pulses(inputs,voltage_offset=settings.sim_voltage_offset, voltage_multiplier=1.0)
         # Create bias pulse train (will be used only if model have bias enable)
         bias_pulses = {}
         for i in range(self.nb_layers):
             if self.layers['bias_' + str(i)] is not None:
-                bias_pulses['bias_' + str(i)] = self.convert_inputs_to_pulses([1], offset=i * settings.sim_layer_latency, voltage_offset=settings.sim_voltage_offset)[0]
+                bias_pulses['bias_' + str(i)] = self.convert_inputs_to_pulses([1], offset=i * settings.sim_layer_latency, voltage_offset=settings.sim_voltage_offset, voltage_multiplier=1.0)[0]
 
         # xyce_matrix_mul(layers, inputs_pulses, bias_pulses['bias_0'])
 

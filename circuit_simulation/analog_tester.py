@@ -120,7 +120,7 @@ def inference_job(inputs: torch.tensor, label: torch.tensor, circuit_simulator: 
     if settings.use_xyce:
         sim_results, sim_output_before_thr, sim_output = circuit_simulator.run_xyce_simulation(inputs, is_first_run)
     else:
-        sim_results, sim_output_before_thr, sim_output = circuit_simulator.run_ltspice_simulation(inputs, is_first_run)
+        sim_results, sim_output_before_thr, sim_output = circuit_simulator.run_ltspice_simulation_HA(inputs, is_first_run)
 
     return {
         'input': inputs,

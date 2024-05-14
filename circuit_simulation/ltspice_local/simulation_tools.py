@@ -53,13 +53,14 @@ def run_simulations(parameter_set=None, numerical_name_start=0):
                 clean_raw_file(spice_exe_path, file_path_generated, output_path, output_header)
     else:
         # Run a simulation with the preset values of the file
-        output_path = config.output_data_path + 'result.txt'
+        output_path = config.LTspice_output_directory + 'result.txt'
         logging.debug('Starting simulation.')
-        simulate(spice_exe_path, file_path)
+        set_parameters(file_path + '.' + config.LTSpice_asc_filetype , config.LTspice_simtime_paramname, config.LTspice_simtime)
+        simulate(spice_exe_path, file_path_generated)
         # Set header and cleanup the file
         output_header = 'SPICE simulation result. Parameters: ' + ', '.join(get_parameters(file_path + '.' + config.LTSpice_asc_filetype)) + '\n' # Maybe not add the time variables
         if config.use_ltspice:
-           clean_raw_file(spice_exe_path, file_path, output_path, output_header)
+           clean_raw_file(spice_exe_path, file_path_generated, output_path, output_header)
 
     # Return the list with names of the output filenames
     return output_filenames

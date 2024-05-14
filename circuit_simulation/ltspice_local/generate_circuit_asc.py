@@ -141,7 +141,7 @@ def build_circuit():
     stment += 'TEXT -1008 -240 Left 2 !.param simtime \n'
     stment += 'TEXT -1008 -208 Left 2 !.tran {simtime} \n'
     #print(os.path.join(os. getcwd(),'ltspice/spice/components/180nm_bulk.txt'))
-    stment += 'TEXT -1008 -304 Left 2 !.include "' + os.path.join(os. getcwd(),config.LTspice_components_directory, '180nm_bulk.txt') + '"\n'
+    stment += 'TEXT -1008 -304 Left 2 !.include "' + os.path.join(os. getcwd(),config.LTspice_components_directory, '180nm_bulk_modified.txt') + '"\n'
     stment += 'TEXT -1008 -272 Left 2 !.include "' + os.path.join(os. getcwd(),config.LTspice_components_directory, 'OTA1.sub') + '"\n'
 
     write_to_ascfile(stment)
