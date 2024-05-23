@@ -110,9 +110,6 @@ class Settings:
     # ==================================================== Dataset =====================================================
     # ==================================================================================================================
 
-    # If true, the data will be loaded from the cache if possible (maybe create bug with some settings).
-    use_data_cache: bool = False
-
     # The sizes of a diagram patch send to the network input (number of pixels)
     patch_size_x: int = 18
     patch_size_y: int = 18
@@ -374,6 +371,11 @@ class Settings:
     # The voltage range in which we can choose a random starting point, for each gate.
     start_range_voltage_x: Sequence = (float('nan'), float('nan'))
     start_range_voltage_y: Sequence = (float('nan'), float('nan'))
+
+    # Use cache from previous measurements to speed up the tuning.
+    # If False, the connector will always request a new measurement.
+    # If True, the connector will use previous data when it is possible.
+    use_cached_measurement: bool = False
 
     # ==================================================================================================================
     # ============================================= Circuit Simulation =================================================
