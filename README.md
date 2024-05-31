@@ -1,9 +1,10 @@
-# Quantum dot auto tuning V2
+# Quantum dot autotuning V2
 
 Quantum dot autotuning with machine learning V2. First version
-available [here](https://github.com/3it-inpaqt/dot-calibration).
+available [here](https://github.com/3it-inpaqt/dot-calibration) (private repository).
 
-Using [QDSD](https://github.com/3it-inpaqt/qdsd-dataset) dataset.
+The model training and the offline autotuning simulations use the [QDSD](https://doi.org/10.5281/zenodo.11402792)
+dataset, which is generated using [this repository](https://github.com/3it-inpaqt/qdsd-dataset).
 
 ## Install
 
@@ -13,12 +14,11 @@ Required `python >= 3.10` and `pip`
 pip install -r requirements.txt
 ```
 
-Then download the data set
-from [this private Teams folder](https://usherbrooke.sharepoint.com/:f:/r/sites/GroupeNano/Documents%20partages/Dataset%20Machine%20Learning/QDSD?csf=1&web=1&e=NyI7i5)
+Then download the [QDSD](https://doi.org/10.5281/zenodo.11402792) dataset
 and unzip in into a `data` folder at the root of this project. The mandatory files are:
 
-* interpolated_csv.zip
-* labels.json
+* data/interpolated_csv.zip
+* data/labels.json
 
 ## Settings
 
@@ -45,7 +45,8 @@ nb_train_update: 30000
 python3 start_lines.py
 ```
 
-> **Note**: The dataset should be downloaded and extracted in the `data` folder.
+> **Note**: The [QDSD](https://doi.org/10.5281/zenodo.11402792) dataset should be downloaded and extracted in the `data`
+> folder.
 
 ### Offline charge autotuning
 
@@ -79,13 +80,13 @@ python3 start_full_exp.py --seed 42000
 
 ## Files structure
 
-### Code
+### Repository files
 
 * `autotuning/` : The different autotuning algorithm implementations
 * `circuit_simulation/` : Code to generate circuit description, run circuit simulation and benchmark the results
 * `classes/` : Custom classes and data structure definition
 * `connectors/` : Interface to connect with experimental measurement tools (for online diagrams tuning)
-* `datasets/` : Diagrams loading (from [QDSD](https://github.com/3it-inpaqt/qdsd-dataset)) and datasets in pyTorch
+* `datasets/` : Diagrams loading and datasets in pyTorch
   format
 * `models/` : Neural network definitions in pyTorch format and baseline models
 * `documentation/` : Documentation and process description
@@ -100,14 +101,15 @@ python3 start_full_exp.py --seed 42000
 
 ### Created files
 
-* `data/` : Contains diagrams data (**should be downloaded by the user**) and generated cache files
-* `out/` : Generated directory that contains run results log and plots if `run_name` setting field is defined
+* `data/` : Contains [QDSD](https://doi.org/10.5281/zenodo.11402792) diagrams data (**should be downloaded by the user
+  **) and generated cache files.
+* `out/` : Generated directory that contains run results log and plots if `run_name` setting field is defined. The
+  outputs from the paper can be downloaded [here](https://doi.org/10.5281/zenodo.11403192).
 * `settings.yaml` : Projet configuration file (**should be created by the user**)
 
 ## Workflow
 
 ![code-workflow](documentation/workflow.drawio.svg "High-level representation of the code Workflow")
-_Note: The not-solid lines represent work in progress._
 
 ## Credits
 
@@ -117,4 +119,5 @@ _Note: The not-solid lines represent work in progress._
 # Contributors
 
 * [Victor Yon](https://github.com/victor-yon): Main developer
+* [Bastien Galaup](https://github.com/assh2802): Contributor
 * [Yohan Finet](https://github.com/YohanFinet): Integrate circuit simulation and hardware-aware methods
