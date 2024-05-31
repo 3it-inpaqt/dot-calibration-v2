@@ -102,7 +102,7 @@ python3 start_full_exp.py --seed 42000
 ### Created files
 
 * `data/` : Contains [QDSD](https://doi.org/10.5281/zenodo.11402792) diagrams data (**should be downloaded by the user
-  **) and generated cache files.
+  **).
 * `out/` : Generated directory that contains run results log and plots if `run_name` setting field is defined. The
   outputs from the paper can be downloaded [here](https://doi.org/10.5281/zenodo.11403192).
 * `settings.yaml` : Projet configuration file (**should be created by the user**)
